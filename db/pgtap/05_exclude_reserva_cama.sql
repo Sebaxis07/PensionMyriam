@@ -34,13 +34,16 @@ select throws_ok(
   'Una reserva con fechas que se cruzan en la misma cama debe ser rechazada por el EXCLUDE'
 );
 
--- 3) Reserva que empieza justo donde termina la primera (sin solape):
---    debe permitirse.
+-- 3) Reserva que empieza el día DESPUÉS de que termina la primera: sin
+--    solape, debe permitirse. Ambos bordes del rango son inclusivos
+--    ('[]' en el EXCLUDE de 0003_sync_sprint1.sql), así que el mismo
+--    día no puede ser a la vez "hasta" de una reserva e "inicio" de
+--    otra en la misma cama — el día 15 ya es de la primera reserva.
 select lives_ok(
   $$ insert into public.reserva
        (tipo_cliente, cama_id, huesped_nombre, fecha_inicio, fecha_fin, creado_por, uuid_idempotente)
      values ('turista', '40000000-0000-0000-0000-0000000000d1', 'Rosa Díaz',
-             '2026-01-15', '2026-01-20', '10000000-0000-0000-0000-0000000000d1', gen_random_uuid()) $$,
+             '2026-01-16', '2026-01-20', '10000000-0000-0000-0000-0000000000d1', gen_random_uuid()) $$,
   'Una reserva consecutiva (sin solape) sobre la misma cama debe permitirse'
 );
 

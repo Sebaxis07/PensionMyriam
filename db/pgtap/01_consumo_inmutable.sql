@@ -22,7 +22,7 @@ insert into public.trabajador (id, contrato_empresa_id, nombre)
           '30000000-0000-0000-0000-000000000001', 'Trabajador Uno');
 
 insert into public.consumo
-  (id, trabajador_id, tipo_racion, registrado_por, uuid_idempotente)
+  (id, trabajador_id, tipo_consumo, registrado_por, uuid_idempotente)
   values ('50000000-0000-0000-0000-000000000001',
           '40000000-0000-0000-0000-000000000001', 'almuerzo',
           '10000000-0000-0000-0000-000000000001',
@@ -30,7 +30,7 @@ insert into public.consumo
 
 -- 1) UPDATE directo debe fallar
 select throws_ok(
-  $$ update public.consumo set tipo_racion = 'cena'
+  $$ update public.consumo set tipo_consumo = 'cena'
      where id = '50000000-0000-0000-0000-000000000001' $$,
   null,
   'consumo es un libro contable inmutable: use una fila de corrección (consumo_corregido_id), no UPDATE directo',
@@ -48,7 +48,7 @@ select throws_ok(
 -- 3) La corrección correcta (INSERT con consumo_corregido_id + justificación) sí debe pasar
 select lives_ok(
   $$ insert into public.consumo
-       (trabajador_id, tipo_racion, registrado_por, uuid_idempotente,
+       (trabajador_id, tipo_consumo, registrado_por, uuid_idempotente,
         consumo_corregido_id, justificacion_correccion)
      values
        ('40000000-0000-0000-0000-000000000001', 'cena',
@@ -62,7 +62,7 @@ select lives_ok(
 -- 4) Una corrección sin justificación debe fallar (constraint)
 select throws_ok(
   $$ insert into public.consumo
-       (trabajador_id, tipo_racion, registrado_por, uuid_idempotente,
+       (trabajador_id, tipo_consumo, registrado_por, uuid_idempotente,
         consumo_corregido_id)
      values
        ('40000000-0000-0000-0000-000000000001', 'cena',

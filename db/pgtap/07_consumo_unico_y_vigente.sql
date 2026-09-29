@@ -20,7 +20,7 @@ insert into public.trabajador (id, contrato_empresa_id, nombre) values
 
 -- 1) Primer almuerzo del día: debe aceptarse.
 select lives_ok(
-  $$ insert into public.consumo (id, trabajador_id, tipo_racion, registrado_por, fecha_hora, uuid_idempotente)
+  $$ insert into public.consumo (id, trabajador_id, tipo_consumo, registrado_por, fecha_hora, uuid_idempotente)
      values ('23000000-0000-0000-0000-0000000000f1', '22000000-0000-0000-0000-0000000000f1',
              'almuerzo', '10000000-0000-0000-0000-0000000000f1', '2026-06-01 13:00:00+00', gen_random_uuid()) $$,
   'Primer registro de almuerzo del día debe aceptarse'
@@ -29,7 +29,7 @@ select lives_ok(
 -- 2) Segundo almuerzo, mismo trabajador, mismo día: debe rechazarse
 --    (doble-toque accidental, no es una corrección).
 select throws_ok(
-  $$ insert into public.consumo (trabajador_id, tipo_racion, registrado_por, fecha_hora, uuid_idempotente)
+  $$ insert into public.consumo (trabajador_id, tipo_consumo, registrado_por, fecha_hora, uuid_idempotente)
      values ('22000000-0000-0000-0000-0000000000f1',
              'almuerzo', '10000000-0000-0000-0000-0000000000f1', '2026-06-01 13:05:00+00', gen_random_uuid()) $$,
   '23505',
@@ -39,7 +39,7 @@ select throws_ok(
 
 -- 3) Otra ración distinta (cena) el mismo día: sí debe permitirse.
 select lives_ok(
-  $$ insert into public.consumo (trabajador_id, tipo_racion, registrado_por, fecha_hora, uuid_idempotente)
+  $$ insert into public.consumo (trabajador_id, tipo_consumo, registrado_por, fecha_hora, uuid_idempotente)
      values ('22000000-0000-0000-0000-0000000000f1',
              'cena', '10000000-0000-0000-0000-0000000000f1', '2026-06-01 20:00:00+00', gen_random_uuid()) $$,
   'Una ración distinta (cena) el mismo día sí debe permitirse'
@@ -50,7 +50,7 @@ select lives_ok(
 --    aplica a consumo_corregido_id is null).
 select lives_ok(
   $$ insert into public.consumo
-       (trabajador_id, tipo_racion, registrado_por, fecha_hora, uuid_idempotente,
+       (trabajador_id, tipo_consumo, registrado_por, fecha_hora, uuid_idempotente,
         consumo_corregido_id, justificacion_correccion)
      values ('22000000-0000-0000-0000-0000000000f1', 'almuerzo',
              '10000000-0000-0000-0000-0000000000f1', '2026-06-01 13:10:00+00', gen_random_uuid(),
@@ -62,14 +62,14 @@ select lives_ok(
 --    corregido) — debe verse solo la corrección.
 select is(
   (select count(*)::int from public.v_consumo_vigente
-     where trabajador_id = '22000000-0000-0000-0000-0000000000f1' and tipo_racion = 'almuerzo'),
+     where trabajador_id = '22000000-0000-0000-0000-0000000000f1' and tipo_consumo = 'almuerzo'),
   1,
   'v_consumo_vigente debe mostrar solo 1 fila de almuerzo (la corrección, no el original)'
 );
 
 select is(
   (select consumo_corregido_id is not null from public.v_consumo_vigente
-     where trabajador_id = '22000000-0000-0000-0000-0000000000f1' and tipo_racion = 'almuerzo'),
+     where trabajador_id = '22000000-0000-0000-0000-0000000000f1' and tipo_consumo = 'almuerzo'),
   true,
   'La fila vigente de almuerzo debe ser la corrección, no el original'
 );
