@@ -29,6 +29,19 @@ client_auth:
 sync_rules:
   content: |
     bucket_definitions:
-      habitaciones:
+      # Sprint 1: ciclo de vida de habitaciones completo. Un solo bucket
+      # global (ambos roles ven y operan lo mismo del día a día — la
+      # separación por rol empieza en Sprint 2 con insumo/compra_insumo,
+      # decisión E). No incluye trabajador/contrato_empresa/consumo:
+      # llegan con Sprint 2 (EP-03), Sprint 1 no los usa.
+      operacion:
         data:
           - select * from habitacion
+          - select * from cama
+          - select * from reserva
+          - select * from checkin
+          # checkout no tiene columna "id" propia: su PK es checkin_id
+          # (1:1 con checkin, ver 0001_init.sql). PowerSync necesita un
+          # campo "id" para identificar la fila — se alias explícito.
+          - select checkin_id as id, checkin_id, realizado_por, fecha_hora, uuid_idempotente from checkout
+          - select * from aseo
