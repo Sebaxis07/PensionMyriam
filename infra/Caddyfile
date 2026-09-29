@@ -1,0 +1,25 @@
+{$SITE_DOMAIN} {
+	encode gzip
+
+	# Mismas rutas que espera supabase-js: /auth/v1 y /rest/v1.
+	handle_path /auth/v1/* {
+		reverse_proxy gotrue:9999
+	}
+
+	handle_path /rest/v1/* {
+		reverse_proxy postgrest:3000
+	}
+
+	# Canal de sincronización de PowerSync (WSS + HTTP).
+	handle_path /sync/* {
+		reverse_proxy powersync:8080
+	}
+
+	# El resto sirve el build estático de la PWA (Sprint 0: placeholder;
+	# se monta el `dist/` real cuando el CI publique un build).
+	handle {
+		root * /srv/app
+		try_files {path} /index.html
+		file_server
+	}
+}

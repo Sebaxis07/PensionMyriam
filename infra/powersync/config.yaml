@@ -1,0 +1,34 @@
+# Config mínima del Sprint 0 — solo lo necesario para el criterio de
+# cierre (una escritura offline en `habitacion` llega a Postgres).
+# Cada sprint agrega sus propias tablas y buckets aquí junto con las
+# reglas de acceso por rol.
+replication:
+  connections:
+    - type: postgresql
+      uri: !env PS_DB_URI
+      # Sin esto, el default es sslmode: verify-full — nuestro Postgres no
+      # tiene TLS configurado (red interna de Docker), así que la conexión
+      # nunca llega a negociar y falla sin dejar rastro en los logs de
+      # Postgres.
+      sslmode: disable
+
+storage:
+  type: postgresql
+  uri: !env PS_DB_URI
+  sslmode: disable
+
+client_auth:
+  # PowerSync valida el mismo JWT (HS256) que emite GoTrue. `supabase: true`
+  # activa el colector de clave estática pensado para este caso: fija la
+  # audiencia en "authenticated" y la vida máxima en 1 semana + margen,
+  # igual que GOTRUE_JWT_AUD / GOTRUE_JWT_EXP. No existe un campo genérico
+  # `secret` ni `jwks.static` en este servicio (v1.26.1).
+  supabase: true
+  supabase_jwt_secret: !env PS_JWT_SECRET
+
+sync_rules:
+  content: |
+    bucket_definitions:
+      habitaciones:
+        data:
+          - select * from habitacion

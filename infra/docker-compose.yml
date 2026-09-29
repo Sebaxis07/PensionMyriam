@@ -1,0 +1,204 @@
+name: pension-myriam
+
+# Riesgo M (revisado en la planificación) — CONFIRMADO 29-09-2026 con el
+# stack completo corriendo: PowerSync Service SÍ soporta storage:
+# postgresql contra este mismo Postgres (sin sumar Mongo), con RAM real
+# dentro de lo estimado (~90 MiB de 300 MiB límite en reposo). Detalles
+# de la verificación end-to-end (escritura en `habitacion` replicada) y
+# los ajustes que hicieron falta, en db/migrations/0001_init.sql,
+# db/migrations/0002_powersync_setup.sql e infra/powersync/config.yaml.
+
+services:
+  postgres:
+    image: supabase/postgres:15.8.1.049
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    command:
+      - postgres
+      # -D /etc/postgresql: el CMD por defecto de esta imagen (que
+      # reemplazamos al declarar `command:`) es exactamente esto. Ese
+      # directorio trae el postgresql.conf ya afinado por Supabase
+      # (shared_preload_libraries con pg_cron, listen_addresses=*,
+      # cron.database_name, etc.) — sin este flag, Postgres cae al
+      # postgresql.conf genérico autogenerado en /var/lib/postgresql/data
+      # (sin pg_cron precargado y escuchando solo en loopback), y
+      # `create extension pg_cron` falla, y ningún otro contenedor
+      # (migrate, gotrue, postgrest, powersync) puede alcanzar Postgres
+      # por la red de Docker aunque el propio healthcheck lo vea sano.
+      - -D
+      - /etc/postgresql
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=10
+      - -c
+      - max_wal_senders=10
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432" # solo loopback; sin exponer a Internet
+    healthcheck:
+      # -h 127.0.0.1 fuerza TCP a propósito: la instancia temporal que la
+      # imagen usa para correr sus scripts de bootstrap solo escucha por
+      # socket Unix (sin -h, pg_isready la detecta como sana antes de
+      # tiempo, justo antes de que se reinicie a su modo final).
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 420m
+
+  # Servicio de un solo uso: aplica db/migrations/*.sql. NO puede correr
+  # como script de /docker-entrypoint-initdb.d porque `create extension
+  # pg_cron` (en 0001_init.sql) necesita shared_preload_libraries, que la
+  # instancia temporal de Postgres que procesa esos scripts todavía no
+  # tiene activa (solo el proceso final, tras el reinicio interno del
+  # entrypoint, sí). Por eso corre después, contra Postgres ya healthy.
+  migrate:
+    image: supabase/postgres:15.8.1.049
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ../db/migrations:/migrations:ro
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        set -euo pipefail
+        for f in /migrations/*.sql; do
+          echo "Aplicando migración: $$f"
+          psql -h postgres -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f "$$f"
+        done
+
+  gotrue:
+    image: supabase/gotrue:v2.163.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      GOTRUE_DB_DRIVER: postgres
+      # Contraseña fija de desarrollo definida en db/migrations/0001_init.sql
+      # ("supabase_auth_admin" no trae contraseña de fábrica en la imagen;
+      # no es la del superusuario). En producción se reemplaza junto con
+      # esa migración.
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:dev_supabase_auth_admin_password@postgres:5432/postgres
+      GOTRUE_SITE_URL: ${SITE_URL}
+      # Requerido por GoTrue (base externa tras el proxy de Caddy en
+      # /auth/v1). OJO: a diferencia de las demás GOTRUE_*, esta variable
+      # se lee SIN el prefijo GOTRUE_ (particularidad de su config loader
+      # en v2.163.0; con el prefijo falla con "required key API_EXTERNAL_URL
+      # missing value" aunque el resto de las vars sí lo lleven).
+      API_EXTERNAL_URL: ${SITE_URL}/auth/v1
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_AUD: authenticated
+      # Tokens largos (decisión Q): la usuaria no debe quedar bloqueada
+      # por sesión vencida durante un corte de señal de días. Sin
+      # autorregistro ni SMTP: las cuentas las crea el equipo a mano.
+      GOTRUE_JWT_EXP: 604800 # 7 días
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+    ports:
+      - "127.0.0.1:9999:9999"
+    deploy:
+      resources:
+        limits:
+          memory: 100m
+
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      # Contraseña fija de desarrollo definida en db/migrations/0001_init.sql
+      # ("authenticator" no trae contraseña de fábrica en la imagen; no es
+      # la del superusuario). En producción se reemplaza junto con esa
+      # migración.
+      PGRST_DB_URI: postgres://authenticator:dev_authenticator_password@postgres:5432/postgres
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_JWT_AUD: authenticated
+      # Necesario para que current_setting('request.jwt.claims', true)
+      # funcione tal como lo usan app.uid()/app.rol() en 0001_init.sql.
+      PGRST_DB_USE_LEGACY_GUCS: "true"
+    ports:
+      - "127.0.0.1:3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 100m
+
+  powersync:
+    image: journeyapps/powersync-service:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["start", "-r", "unified"]
+    volumes:
+      - ./powersync/config.yaml:/config/config.yaml:ro
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/config.yaml
+      PS_JWT_SECRET: ${JWT_SECRET}
+      # Contraseña fija de desarrollo definida en
+      # db/migrations/0002_powersync_setup.sql (rol propio, no el
+      # superusuario). En producción se reemplaza junto con esa migración.
+      PS_DB_URI: postgres://powersync_replication:dev_powersync_password@postgres:5432/postgres
+    ports:
+      - "127.0.0.1:8081:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 300m
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      - gotrue
+      - postgrest
+      - powersync
+    environment:
+      # El Caddyfile usa {$SITE_DOMAIN}: sin pasarla como variable de
+      # entorno del propio contenedor, Caddy la ve vacía y confunde todo
+      # el primer bloque con "opciones globales" (donde `encode` no es
+      # válido) en vez de una dirección de sitio.
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../app/dist:/srv/app:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+    deploy:
+      resources:
+        limits:
+          memory: 50m
+
+volumes:
+  pg_data:
+  caddy_data:
+  caddy_config:
