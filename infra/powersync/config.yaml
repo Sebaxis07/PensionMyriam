@@ -61,6 +61,8 @@ sync_rules:
           - select * from consumo
           - select * from conciliacion_diaria
           - select * from justificacion_descuadre
+          - select * from producto_extra
+          - select * from tipo_consumo_config
 
       # Bucket separado: solo se sincroniza si la fila de `usuario` del
       # que pide sync tiene rol = administradora. Si la query de

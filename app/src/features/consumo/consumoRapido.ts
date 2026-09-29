@@ -1,4 +1,4 @@
-import { registrarConsumo, type TipoRacion } from "./registrarConsumo";
+import { registrarConsumo, type TipoConsumo } from "./registrarConsumo";
 
 export type ResultadoConsumoRapido = {
   trabajadorId: string;
@@ -11,15 +11,25 @@ export type ResultadoConsumoRapido = {
  * cada uno" — N llamadas independientes a registrarConsumo (cada una
  * con su propio uuid_idempotente generado en el cliente), no un batch
  * atómico: si uno de los N falla (ej. ya estaba registrado), el resto
- * se guarda igual.
+ * se guarda igual. Sirve para cualquiera de los 5 tipos (incluido
+ * cama_noche, para un registro manual puntual fuera de la generación
+ * automática nocturna).
  */
 export async function consumoRapido(
   usuarioId: string,
   trabajadorIds: string[],
-  tipoRacion: TipoRacion
+  tipoConsumo: TipoConsumo,
+  opciones?: { productoExtraId?: string; recargo?: number }
 ): Promise<ResultadoConsumoRapido[]> {
   const resultados = await Promise.allSettled(
-    trabajadorIds.map((trabajadorId) => registrarConsumo(usuarioId, { trabajadorId, tipoRacion }))
+    trabajadorIds.map((trabajadorId) =>
+      registrarConsumo(usuarioId, {
+        trabajadorId,
+        tipoConsumo,
+        productoExtraId: opciones?.productoExtraId,
+        recargo: opciones?.recargo
+      })
+    )
   );
 
   return resultados.map((resultado, i) => ({

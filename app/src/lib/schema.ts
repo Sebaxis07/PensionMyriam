@@ -99,10 +99,17 @@ const trabajador = new Table({
   created_at: column.text
 });
 
+// tipo_consumo: cama_noche | desayuno | almuerzo | cena | colacion
+// (0008_ledger_tipos.sql). producto_extra_id solo se llena cuando
+// tipo_consumo = 'colacion' (constraint colacion_requiere_producto).
+// registrado_por puede quedar vacío SOLO para cama_noche — es el único
+// tipo que se genera sin un clic humano detrás (pg_cron, ver
+// 0009_conciliacion_por_tipo.sql).
 const consumo = new Table({
   trabajador_id: column.text,
-  tipo_racion: column.text,
+  tipo_consumo: column.text,
   recargo: column.real,
+  producto_extra_id: column.text,
   fecha_hora: column.text,
   registrado_por: column.text,
   uuid_idempotente: column.text,
@@ -111,12 +118,34 @@ const consumo = new Table({
   created_at: column.text
 });
 
+// Catálogo de extras con tarifa diferencial (HU-15) — la Administradora
+// lo administra, el resto solo lo lee para mostrar nombre/precio.
+const producto_extra = new Table({
+  nombre: column.text,
+  precio_unitario: column.real,
+  created_at: column.text
+});
+
+// Qué tipos facturan por contrato completo (headcount) vs por consumo
+// real — hoy: todos menos "colacion" (marcada como supuesto pendiente
+// de confirmar, ver 0009_conciliacion_por_tipo.sql). Tabla chica, de
+// solo lectura para la app.
+const tipo_consumo_config = new Table({
+  tipo: column.text,
+  factura_por_contrato_completo: column.integer, // SQLite: boolean como 0/1
+  nota: column.text
+});
+
+// Ahora por (contrato, fecha, TIPO) — antes era un solo agregado del
+// día. "esperado" siempre es el headcount del contrato vigente, nunca
+// el conteo de trabajadores realmente asignados/registrados.
 const conciliacion_diaria = new Table({
   contrato_empresa_id: column.text,
   fecha: column.text,
+  tipo: column.text,
   headcount_esperado: column.integer,
-  raciones_esperadas: column.integer,
-  raciones_servidas: column.integer,
+  cantidad_esperada: column.integer,
+  cantidad_servida: column.integer,
   estado: column.text,
   calculado_at: column.text
 });
@@ -142,6 +171,8 @@ export const AppSchema = new Schema({
   contrato_empresa,
   trabajador,
   consumo,
+  producto_extra,
+  tipo_consumo_config,
   conciliacion_diaria,
   justificacion_descuadre
 });
