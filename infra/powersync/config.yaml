@@ -49,3 +49,26 @@ sync_rules:
           # campo "id" para identificar la fila — se alias explícito.
           - select checkin_id as id, checkin_id, realizado_por, fecha_hora, uuid_idempotente from checkout
           - select * from aseo
+          # Sprint 2 (EP-03): todo lo operativo de empresas/consumo que
+          # NO es sensible. tarifa_convenida se sincroniza aparte, solo
+          # a administradora (ver bucket empresa_tarifas más abajo) —
+          # PowerSync bypassa RLS de Postgres (rol de replicación con
+          # BYPASSRLS), así que ocultar una columna acá es lo único que
+          # de verdad evita que llegue al celular de la Encargada.
+          - select * from empresa
+          - select id, empresa_id, vigencia_desde, vigencia_hasta, headcount, creado_por, created_at from contrato_empresa
+          - select * from trabajador
+          - select * from consumo
+          - select * from conciliacion_diaria
+          - select * from justificacion_descuadre
+
+      # Bucket separado: solo se sincroniza si la fila de `usuario` del
+      # que pide sync tiene rol = administradora. Si la query de
+      # parámetros no devuelve filas (Encargada), este bucket
+      # simplemente no sincroniza nada para ese dispositivo.
+      empresa_tarifas:
+        parameters: |
+          select 1 as _ from usuario
+          where auth_uid = request.user_id() and rol = 'administradora'
+        data:
+          - select id, tarifa_convenida from contrato_empresa where bucket._ = 1

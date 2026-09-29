@@ -68,6 +68,68 @@ const aseo = new Table({
   uuid_idempotente: column.text
 });
 
+// Sprint 2 (EP-03): empresas, nómina y libro de consumos.
+const empresa = new Table({
+  razon_social: column.text,
+  rut: column.text,
+  contacto: column.text,
+  created_at: column.text
+});
+
+// tarifa_convenida llega SOLO al dispositivo de administradora (bucket
+// empresa_tarifas, ver infra/powersync/config.yaml) — en el celular de
+// la Encargada esta columna queda simplemente vacía, nunca se
+// sincroniza. No asumir que siempre tiene valor.
+const contrato_empresa = new Table({
+  empresa_id: column.text,
+  vigencia_desde: column.text,
+  vigencia_hasta: column.text,
+  headcount: column.integer,
+  tarifa_convenida: column.real,
+  creado_por: column.text,
+  created_at: column.text
+});
+
+const trabajador = new Table({
+  contrato_empresa_id: column.text,
+  nombre: column.text,
+  rut: column.text,
+  cama_id: column.text,
+  anonimizado_at: column.text,
+  created_at: column.text
+});
+
+const consumo = new Table({
+  trabajador_id: column.text,
+  tipo_racion: column.text,
+  recargo: column.real,
+  fecha_hora: column.text,
+  registrado_por: column.text,
+  uuid_idempotente: column.text,
+  consumo_corregido_id: column.text,
+  justificacion_correccion: column.text,
+  created_at: column.text
+});
+
+const conciliacion_diaria = new Table({
+  contrato_empresa_id: column.text,
+  fecha: column.text,
+  headcount_esperado: column.integer,
+  raciones_esperadas: column.integer,
+  raciones_servidas: column.integer,
+  estado: column.text,
+  calculado_at: column.text
+});
+
+const justificacion_descuadre = new Table({
+  conciliacion_diaria_id: column.text,
+  motivo: column.text,
+  supervisor_nombre: column.text,
+  supervisor_anonimizado_at: column.text,
+  registrado_por: column.text,
+  created_at: column.text
+});
+
 export const AppSchema = new Schema({
   usuario,
   habitacion,
@@ -75,7 +137,13 @@ export const AppSchema = new Schema({
   reserva,
   checkin,
   checkout,
-  aseo
+  aseo,
+  empresa,
+  contrato_empresa,
+  trabajador,
+  consumo,
+  conciliacion_diaria,
+  justificacion_descuadre
 });
 
 export type Database = (typeof AppSchema)["types"];
