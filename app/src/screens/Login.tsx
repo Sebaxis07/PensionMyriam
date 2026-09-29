@@ -52,4 +52,12 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
-          disabled
+          disabled={loading}
+          className="w-full rounded-lg bg-brand-terracotta p-3 text-lg font-semibold text-white transition-colors hover:bg-brand-terracotta-deep disabled:opacity-50"
+        >
+          {loading ? "Ingresando…" : "Ingresar"}
+        </button>
+      </form>
+    </div>
+  );
+}

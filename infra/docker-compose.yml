@@ -112,6 +112,11 @@ services:
       GOTRUE_MAILER_AUTOCONFIRM: "true"
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      # CORS para dev se resuelve en infra/Caddyfile (un solo lugar para
+      # auth/rest/sync). NO agregar GOTRUE_CORS_ALLOWED_ORIGINS aquí:
+      # sumaría un segundo Access-Control-Allow-Origin a la respuesta
+      # (uno de Caddy, otro de GoTrue) y el navegador la rechaza entera
+      # por encabezado duplicado.
     ports:
       - "127.0.0.1:9999:9999"
     deploy:
@@ -193,6 +198,13 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # SITE_DOMAIN de desarrollo (infra/.env.example) es ":8080" — un
+      # bloque de sitio por puerto, sin dominio real, para levantar todo
+      # en localhost sin certificado. Sin publicar este puerto, Caddy
+      # escucha 8080 solo dentro del contenedor y nunca es alcanzable
+      # desde el host. En producción, SITE_DOMAIN pasa a ser el dominio
+      # real (HTTPS automático por 80/443) y este puerto queda sin uso.
+      - "8080:8080"
     deploy:
       resources:
         limits:

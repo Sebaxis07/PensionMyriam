@@ -5,3 +5,11 @@
 html, body, #root {
   height: 100%;
 }
+
+body {
+  @apply bg-brand-sand font-sans text-brand-ink;
+}
+
+h1, h2, h3, h4 {
+  @apply font-display;
+}

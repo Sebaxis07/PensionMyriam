@@ -60,3 +60,6 @@ export function Habitaciones() {
           </p>
         )}
       </div>
+    </div>
+  );
+}

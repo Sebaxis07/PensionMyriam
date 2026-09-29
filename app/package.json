@@ -33,4 +33,7 @@
     "vitest": "^2.0.5"
   },
   "allowScripts": {
-    "@journeyapps/wa-sqlite@1.7.2": tr
+    "@journeyapps/wa-sqlite@1.7.2": true,
+    "esbuild@0.21.5": true
+  }
+}
