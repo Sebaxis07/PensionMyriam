@@ -36,6 +36,10 @@ sync_rules:
       # llegan con Sprint 2 (EP-03), Sprint 1 no los usa.
       operacion:
         data:
+          # Solo lectura de la propia fila: la app la usa para resolver
+          # su usuario.id (no auth_uid) al escribir realizado_por /
+          # responsable / creado_por sin depender de la red.
+          - select * from usuario
           - select * from habitacion
           - select * from cama
           - select * from reserva

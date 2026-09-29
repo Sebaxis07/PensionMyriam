@@ -7,6 +7,15 @@ import { Schema, Table, column } from "@powersync/web";
 // siguen 1:1 a db/migrations/0001_init.sql; los uuid/fecha/timestamp de
 // Postgres se replican como texto (PowerSync/SQLite no tiene esos tipos
 // nativos).
+// Solo para resolver el propio usuario.id a partir de auth_uid (ver
+// useUsuarioActual) — no se lista ni edita a otras personas con esto.
+const usuario = new Table({
+  auth_uid: column.text,
+  rol: column.text,
+  nombre: column.text,
+  created_at: column.text
+});
+
 const habitacion = new Table({
   numero: column.integer,
   capacidad: column.integer,
@@ -60,6 +69,7 @@ const aseo = new Table({
 });
 
 export const AppSchema = new Schema({
+  usuario,
   habitacion,
   cama,
   reserva,
