@@ -92,3 +92,25 @@ export async function asignarTrabajador(usuarioId: string, input: AsignacionInpu
     await tx.execute("update trabajador set cama_id = ? where id = ?", [datos.camaId, datos.trabajadorId]);
   });
 }
+
+/** Desasigna la cama de un trabajador cancelando su reserva activa. */
+export async function desasignarTrabajador(trabajadorId: string): Promise<void> {
+  await powersync.writeTransaction(async (tx) => {
+    await tx.execute(
+      `update reserva set estado = 'cancelada' where trabajador_id = ? and estado in ('confirmada', 'en_curso')`,
+      [trabajadorId]
+    );
+    await tx.execute("update trabajador set cama_id = null where id = ?", [trabajadorId]);
+  });
+}
+
+/** Elimina un trabajador de la nómina y libera su reserva. */
+export async function eliminarTrabajador(trabajadorId: string): Promise<void> {
+  await powersync.writeTransaction(async (tx) => {
+    await tx.execute(
+      `update reserva set estado = 'cancelada' where trabajador_id = ? and estado in ('confirmada', 'en_curso')`,
+      [trabajadorId]
+    );
+    await tx.execute("delete from trabajador where id = ?", [trabajadorId]);
+  });
+}
