@@ -14,12 +14,30 @@ export type ConciliacionRow = {
   cantidad_esperada: number;
   cantidad_servida: number;
   estado: string;
+  motivo?: string | null;
+  supervisor_nombre?: string | null;
 };
 
 /** HU-16/17: lectura offline — se sincroniza igual que el resto. */
 export function useConciliacion(contratoEmpresaId: string) {
   const { data } = useQuery<ConciliacionRow>(
-    "select * from conciliacion_diaria where contrato_empresa_id = ? order by fecha desc, tipo",
+    `select cd.id, cd.contrato_empresa_id, cd.fecha, cd.tipo,
+            cd.headcount_esperado, cd.cantidad_esperada, cd.cantidad_servida,
+            case
+              when cd.cantidad_esperada = cd.cantidad_servida then 'conciliado'
+              when jd.id is not null or cd.estado = 'con_diferencia_justificada' then 'con_diferencia_justificada'
+              else cd.estado
+            end as estado,
+            jd.motivo,
+            jd.supervisor_nombre
+     from conciliacion_diaria cd
+     left join (
+       select conciliacion_diaria_id, id, motivo, supervisor_nombre,
+              row_number() over (partition by conciliacion_diaria_id order by created_at desc) as rn
+       from justificacion_descuadre
+     ) jd on jd.conciliacion_diaria_id = cd.id and jd.rn = 1
+     where cd.contrato_empresa_id = ?
+     order by cd.fecha desc, cd.tipo`,
     [contratoEmpresaId]
   );
   return data ?? [];

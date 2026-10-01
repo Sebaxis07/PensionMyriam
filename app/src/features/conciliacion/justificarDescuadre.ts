@@ -23,11 +23,19 @@ export type JustificacionInput = z.infer<typeof JustificacionSchema>;
 export async function justificarDescuadre(usuarioId: string, input: JustificacionInput): Promise<string> {
   const datos = JustificacionSchema.parse(input);
   const id = crypto.randomUUID();
-  await powersync.execute(
-    `insert into justificacion_descuadre
-       (id, conciliacion_diaria_id, motivo, supervisor_nombre, registrado_por, created_at)
-     values (?, ?, ?, ?, ?, ?)`,
-    [id, datos.conciliacionDiariaId, datos.motivo, datos.supervisorNombre, usuarioId, new Date().toISOString()]
-  );
+  await powersync.writeTransaction(async (tx) => {
+    await tx.execute(
+      `insert into justificacion_descuadre
+         (id, conciliacion_diaria_id, motivo, supervisor_nombre, registrado_por, created_at)
+       values (?, ?, ?, ?, ?, ?)`,
+      [id, datos.conciliacionDiariaId, datos.motivo, datos.supervisorNombre, usuarioId, new Date().toISOString()]
+    );
+    await tx.execute(
+      `update conciliacion_diaria
+       set estado = 'con_diferencia_justificada'
+       where id = ?`,
+      [datos.conciliacionDiariaId]
+    );
+  });
   return id;
 }

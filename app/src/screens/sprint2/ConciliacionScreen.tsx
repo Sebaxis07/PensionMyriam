@@ -181,6 +181,16 @@ export function ConciliacionScreen({
                     </span>
                   )}
                 </div>
+
+                {esJustificado && (
+                  <div className="rounded-lg bg-blue-50/80 border border-blue-200/80 px-2.5 py-1 text-[11px] text-blue-900 inline-flex flex-wrap items-center gap-1.5">
+                    <span className="font-bold">✓ Justificado:</span>
+                    <span>{ETIQUETAS_MOTIVO[d.motivo as MotivoDescuadre] || d.motivo || "Autorizado"}</span>
+                    {d.supervisor_nombre && (
+                      <span className="text-blue-700 font-medium">· Sup: {d.supervisor_nombre}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Botones de acción para el día */}
@@ -194,6 +204,20 @@ export function ConciliacionScreen({
                     className="rounded-xl bg-brand-terracotta px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-terracotta-deep active:scale-95"
                   >
                     Justificar diferencia
+                  </button>
+                )}
+
+                {esJustificado && (
+                  <button
+                    onClick={() => {
+                      setDiaJustificando(d);
+                      if (d.motivo) setMotivo(d.motivo as MotivoDescuadre);
+                      if (d.supervisor_nombre) setSupervisorNombre(d.supervisor_nombre);
+                      setError(null);
+                    }}
+                    className="rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-semibold text-brand-muted hover:text-brand-ink active:scale-95"
+                  >
+                    Modificar
                   </button>
                 )}
 
