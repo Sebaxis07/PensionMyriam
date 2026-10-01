@@ -2,13 +2,20 @@ import { useState, useMemo } from "react";
 import { useInsumos, useComprasRecientes } from "../../features/costos/useInsumos";
 import { RegistrarCompraModal } from "./RegistrarCompraModal";
 import {
+  IconApple,
   IconChartBar,
   IconClipboardCheck,
   IconDollarSign,
+  IconDrumstick,
   IconFilter,
+  IconFlame,
+  IconPackage,
   IconPlus,
   IconSearch,
-  IconShoppingCart
+  IconShoppingCart,
+  IconSparkles,
+  IconTag,
+  IconUtensils
 } from "../../components/Icons";
 
 interface ModuloCostosProps {
@@ -17,13 +24,46 @@ interface ModuloCostosProps {
 
 type SubTabCostos = "compras" | "pmp" | "gastos";
 
-const CATEGORIAS_INFO: Record<string, { label: string; icon: string; bg: string; text: string }> = {
-  carnes: { label: "Carnes y Pollo", icon: "🥩", bg: "bg-red-50 border-red-200", text: "text-red-800" },
-  verduras: { label: "Verduras y Frutas", icon: "🥦", bg: "bg-emerald-50 border-emerald-200", text: "text-emerald-800" },
-  abarrotes: { label: "Abarrotes y Despensa", icon: "🍚", bg: "bg-amber-50 border-amber-200", text: "text-amber-800" },
-  gas_combustible: { label: "Gas y Combustible", icon: "⛽", bg: "bg-orange-50 border-orange-200", text: "text-orange-800" },
-  aseo: { label: "Aseo y Limpieza", icon: "🧹", bg: "bg-sky-50 border-sky-200", text: "text-sky-800" },
-  otro: { label: "Otros Insumos", icon: "📦", bg: "bg-stone-50 border-stone-200", text: "text-stone-800" }
+const CATEGORIAS_INFO: Record<
+  string,
+  { label: string; renderIcon: (className?: string) => JSX.Element; bg: string; text: string }
+> = {
+  carnes: {
+    label: "Carnes y Pollo",
+    renderIcon: (cls) => <IconDrumstick className={cls} />,
+    bg: "bg-red-50 border-red-200",
+    text: "text-red-800"
+  },
+  verduras: {
+    label: "Verduras y Frutas",
+    renderIcon: (cls) => <IconApple className={cls} />,
+    bg: "bg-emerald-50 border-emerald-200",
+    text: "text-emerald-800"
+  },
+  abarrotes: {
+    label: "Abarrotes y Despensa",
+    renderIcon: (cls) => <IconPackage className={cls} />,
+    bg: "bg-amber-50 border-amber-200",
+    text: "text-amber-800"
+  },
+  gas_combustible: {
+    label: "Gas y Combustible",
+    renderIcon: (cls) => <IconFlame className={cls} />,
+    bg: "bg-orange-50 border-orange-200",
+    text: "text-orange-800"
+  },
+  aseo: {
+    label: "Aseo y Limpieza",
+    renderIcon: (cls) => <IconSparkles className={cls} />,
+    bg: "bg-sky-50 border-sky-200",
+    text: "text-sky-800"
+  },
+  otro: {
+    label: "Otros Insumos",
+    renderIcon: (cls) => <IconTag className={cls} />,
+    bg: "bg-stone-50 border-stone-200",
+    text: "text-stone-800"
+  }
 };
 
 export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
@@ -107,10 +147,10 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-display text-2xl font-black text-brand-ink leading-tight">
-                Control de Compras y Costos PMP
+                Control de Compras y Costos
               </h2>
               <span className="rounded-full bg-brand-terracotta/10 px-2.5 py-0.5 text-xs font-bold text-brand-terracotta border border-brand-terracotta/20">
-                Módulo Oficial
+                Mercadería
               </span>
             </div>
             <p className="text-xs text-brand-muted mt-0.5">
@@ -157,7 +197,7 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
             {insumos.length} productos
           </p>
           <p className="text-[11px] text-brand-muted mt-1">
-            Con cálculo automático de PMP
+            Con costo promedio calculado
           </p>
         </div>
 
@@ -202,7 +242,7 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
           }`}
         >
           <IconClipboardCheck className="h-4 w-4" />
-          <span>Catálogo y Precios PMP ({insumos.length})</span>
+          <span>Catálogo y Precios Promedio ({insumos.length})</span>
         </button>
 
         <button
@@ -219,7 +259,7 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
         </button>
       </div>
 
-      {/* 4. Barra de Filtros y Búsqueda (aplica a Compras y Catálogo) */}
+      {/* 4. Barra de Filtros y Búsqueda */}
       {(subTab === "compras" || subTab === "pmp") && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Buscador */}
@@ -264,13 +304,13 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
                   key={key}
                   type="button"
                   onClick={() => setFiltroCategoria(key)}
-                  className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition flex items-center gap-1 ${
+                  className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition flex items-center gap-1.5 ${
                     activo
                       ? "bg-brand-ink text-white"
                       : "bg-brand-sand-light text-brand-muted hover:bg-brand-sand"
                   }`}
                 >
-                  <span>{info.icon}</span>
+                  {info.renderIcon("h-3.5 w-3.5")}
                   <span className="hidden sm:inline">{info.label.split(" ")[0]}</span>
                 </button>
               );
@@ -284,7 +324,7 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
         <div className="space-y-3">
           {comprasFiltradas.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-brand-border/90 bg-brand-card p-12 text-center shadow-card">
-              <div className="text-4xl mb-3">🛒</div>
+              <IconShoppingCart className="h-10 w-10 text-brand-muted/60 mx-auto mb-3" />
               <h3 className="font-display text-lg font-bold text-brand-ink">
                 No se encontraron compras
               </h3>
@@ -309,7 +349,7 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
               {comprasFiltradas.map((c) => {
                 const cat = CATEGORIAS_INFO[c.categoria] || {
                   label: c.categoria,
-                  icon: "📦",
+                  renderIcon: (cls?: string) => <IconTag className={cls} />,
                   bg: "bg-gray-50 border-gray-200",
                   text: "text-gray-800"
                 };
@@ -325,11 +365,11 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
                     className="flex flex-col justify-between rounded-3xl border border-brand-border/80 bg-brand-card p-4 md:p-5 shadow-card hover:border-brand-terracotta/40 transition"
                   >
                     <div>
-                      {/* Cabecera de tarjeta: Icono + Nombre + Fecha */}
+                      {/* Cabecera de tarjeta: Icono SVG + Nombre + Fecha */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-sand-light border border-brand-border text-2xl shadow-xs">
-                            {cat.icon}
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-sand-light border border-brand-border shadow-xs text-brand-ink">
+                            {cat.renderIcon("h-5 w-5 text-brand-terracotta")}
                           </div>
                           <div>
                             <h4 className="font-display text-base font-bold text-brand-ink leading-tight">
@@ -354,17 +394,20 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
 
                       {/* Detalles de volumen y costo unitario */}
                       <div className="mt-3.5 flex flex-wrap items-center gap-2 pt-3 border-t border-brand-border/50 text-xs">
-                        <div className="rounded-xl bg-brand-sand-light px-2.5 py-1 font-semibold text-brand-ink border border-brand-border/50">
-                          📦 {c.cantidad} unidades/kg
+                        <div className="rounded-xl bg-brand-sand-light px-2.5 py-1 font-semibold text-brand-ink border border-brand-border/50 flex items-center gap-1">
+                          <IconPackage className="h-3.5 w-3.5 text-brand-muted" />
+                          <span>{c.cantidad} unidades/kg</span>
                         </div>
                         {costoUnitario !== null && (
-                          <div className="rounded-xl bg-brand-sand-light px-2.5 py-1 font-semibold text-brand-ink border border-brand-border/50">
-                            💲 ${costoUnitario.toLocaleString("es-CL")} / unidad
+                          <div className="rounded-xl bg-brand-sand-light px-2.5 py-1 font-semibold text-brand-ink border border-brand-border/50 flex items-center gap-1">
+                            <IconDollarSign className="h-3.5 w-3.5 text-brand-muted" />
+                            <span>${costoUnitario.toLocaleString("es-CL")} / unidad</span>
                           </div>
                         )}
                         {costoPorRacion !== null && (
-                          <div className="rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 font-bold">
-                            🍽️ {c.rendimiento_estimado} raciones (${costoPorRacion.toLocaleString("es-CL")}/ración)
+                          <div className="rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 font-bold flex items-center gap-1">
+                            <IconUtensils className="h-3.5 w-3.5 text-emerald-700" />
+                            <span>{c.rendimiento_estimado} raciones (${costoPorRacion.toLocaleString("es-CL")}/ración)</span>
                           </div>
                         )}
                       </div>
@@ -385,11 +428,10 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
       {/* 6. Contenido de la Sub-Pestaña: Catálogo de Insumos y Costos PMP */}
       {subTab === "pmp" && (
         <div className="space-y-4">
-          {/* Explicación en lenguaje directo de baja alfabetización digital */}
           <div className="rounded-3xl border border-amber-200 bg-amber-50/80 p-4 md:p-5 shadow-card flex items-start gap-3.5">
-            <span className="text-2xl shrink-0">💡</span>
+            <IconSparkles className="h-5 w-5 text-amber-800 shrink-0 mt-0.5" />
             <div className="text-xs text-amber-950 space-y-1">
-              <p className="font-bold text-sm">¿Cómo funciona el Precio Medio Ponderado (PMP)?</p>
+              <p className="font-bold text-sm">¿Cómo funciona el Costo Promedio Ponderado?</p>
               <p className="text-amber-900 leading-relaxed">
                 Cuando compras mercadería a diferentes precios según el mercado, el sistema calcula automáticamente el costo exacto promedio ponderado por kilo o unidad. Así siempre sabes con exactitud cuánto te cuesta preparar cada colación y evitas cobrar tarifas por debajo de tu gasto real.
               </p>
@@ -398,7 +440,7 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
 
           {insumosFiltrados.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-brand-border/90 bg-brand-card p-12 text-center shadow-card">
-              <div className="text-4xl mb-3">📋</div>
+              <IconClipboardCheck className="h-10 w-10 text-brand-muted/60 mx-auto mb-3" />
               <h3 className="font-display text-lg font-bold text-brand-ink">
                 No hay insumos en el catálogo
               </h3>
@@ -411,7 +453,7 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
               {insumosFiltrados.map((ins) => {
                 const cat = CATEGORIAS_INFO[ins.categoria] || {
                   label: ins.categoria,
-                  icon: "📦",
+                  renderIcon: (cls?: string) => <IconTag className={cls} />,
                   bg: "bg-gray-50 border-gray-200",
                   text: "text-gray-800"
                 };
@@ -423,7 +465,9 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
                   >
                     <div>
                       <div className="flex items-center gap-2.5">
-                        <span className="text-2xl">{cat.icon}</span>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-sand-light border border-brand-border/60 text-brand-ink">
+                          {cat.renderIcon("h-4 w-4 text-brand-terracotta")}
+                        </div>
                         <div className="min-w-0 flex-1">
                           <h4 className="font-display font-bold text-sm text-brand-ink truncate">
                             {ins.nombre}
@@ -482,7 +526,7 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
                   <div key={key} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 font-bold text-brand-ink">
-                        <span>{info.icon}</span>
+                        {info.renderIcon("h-4 w-4 text-brand-terracotta")}
                         <span>{info.label}</span>
                       </div>
                       <div className="flex items-center gap-2">

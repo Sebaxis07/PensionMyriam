@@ -2,7 +2,17 @@ import { useState, FormEvent } from "react";
 import { CategoriaCompra } from "../../features/costos/types";
 import { registrarCompraInsumo } from "../../features/costos/registrarCompraInsumo";
 import { useInsumos } from "../../features/costos/useInsumos";
-import { IconCheck, IconClose } from "../../components/Icons";
+import {
+  IconApple,
+  IconCheck,
+  IconClose,
+  IconDrumstick,
+  IconFlame,
+  IconPackage,
+  IconShoppingCart,
+  IconSparkles,
+  IconTag
+} from "../../components/Icons";
 
 interface RegistrarCompraModalProps {
   usuarioId: string;
@@ -13,49 +23,49 @@ interface RegistrarCompraModalProps {
 const CATEGORIAS_CONFIG: Array<{
   id: CategoriaCompra;
   label: string;
-  icon: string;
+  renderIcon: (className?: string) => JSX.Element;
   unidadDefault: string;
   ejemplos: string[];
 }> = [
   {
     id: "carnes",
     label: "Carnes y Pollo",
-    icon: "🥩",
+    renderIcon: (className) => <IconDrumstick className={className} />,
     unidadDefault: "kg",
     ejemplos: ["Carne de Vacuno", "Pechuga de Pollo", "Chuletas de Cerdo", "Carne Molida", "Pescado"]
   },
   {
     id: "verduras",
     label: "Verduras y Frutas",
-    icon: "🥦",
+    renderIcon: (className) => <IconApple className={className} />,
     unidadDefault: "kg",
     ejemplos: ["Papas", "Tomates", "Cebollas", "Lechuga", "Zanahorias", "Plátanos / Fruta"]
   },
   {
     id: "abarrotes",
     label: "Abarrotes y Despensa",
-    icon: "🍚",
+    renderIcon: (className) => <IconPackage className={className} />,
     unidadDefault: "kg",
     ejemplos: ["Arroz", "Fideos / Tallarines", "Aceite (Litros)", "Pan de molde", "Huevos (Bandeja)", "Té / Café"]
   },
   {
     id: "gas_combustible",
     label: "Gas y Combustible",
-    icon: "⛽",
+    renderIcon: (className) => <IconFlame className={className} />,
     unidadDefault: "cilindros",
     ejemplos: ["Cilindro Gas 45 kg", "Cilindro Gas 15 kg", "Combustible generador"]
   },
   {
     id: "aseo",
     label: "Aseo y Limpieza",
-    icon: "🧹",
+    renderIcon: (className) => <IconSparkles className={className} />,
     unidadDefault: "unidades",
     ejemplos: ["Detergente industrial", "Cloro / Lavandina", "Papel higiénico", "Bolsas de basura", "Lavalozas"]
   },
   {
     id: "otro",
     label: "Otros Gastos",
-    icon: "📦",
+    renderIcon: (className) => <IconTag className={className} />,
     unidadDefault: "unidades",
     ejemplos: ["Envases desechables", "Servilletas", "Mantención menor"]
   }
@@ -145,8 +155,8 @@ export function RegistrarCompraModal({
         {/* Cabecera amigable */}
         <div className="flex items-start justify-between gap-3 border-b border-brand-border/60 pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-900 border border-amber-300 text-2xl">
-              🛒
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+              <IconShoppingCart className="h-6 w-6 text-amber-900" />
             </div>
             <div>
               <h3 className="font-display text-xl font-black text-brand-ink leading-tight">
@@ -186,7 +196,9 @@ export function RegistrarCompraModal({
                         : "border-brand-border/70 bg-white text-brand-ink hover:bg-brand-sand-light/50"
                     }`}
                   >
-                    <span className="text-2xl mb-1">{c.icon}</span>
+                    <div className="mb-1 flex items-center justify-center">
+                      {c.renderIcon(`h-6 w-6 ${seleccionada ? "text-brand-terracotta" : "text-brand-ink"}`)}
+                    </div>
                     <span className="text-xs">{c.label}</span>
                   </button>
                 );

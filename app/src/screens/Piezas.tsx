@@ -190,6 +190,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                   onIrACostos={() => setTab("costos")}
                   onIrAConciliacion={() => setTab("empresas")}
                   onIrAEmpresas={() => setTab("empresas")}
+                  onIrACalendario={() => setTab("rack")}
                 />
               ) : (
                 <div className="space-y-6">
