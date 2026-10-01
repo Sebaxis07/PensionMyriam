@@ -1,0 +1,14 @@
+# Dependencias
+node_modules/
+
+# Builds
+app/dist/
+dist/
+
+# Env locales (nunca commitear secretos reales)
+.env
+infra/.env
+
+# Editor / OS
+.DS_Store
+Thumbs.db

@@ -29,6 +29,40 @@ client_auth:
 sync_rules:
   content: |
     bucket_definitions:
-      habitaciones:
+      # Sprint 1: ciclo de vida de habitaciones completo. Un solo bucket
+      # global (ambos roles ven y operan lo mismo del día a día — la
+      # separación por rol empieza en Sprint 2 con insumo/compra_insumo,
+      # decisión E). No incluye trabajador/contrato_empresa/consumo:
+      # llegan con Sprint 2 (EP-03), Sprint 1 no los usa.
+      operacion:
         data:
+          # Solo lectura de la propia fila: la app la usa para resolver
+          # su usuario.id (no auth_uid) al escribir realizado_por /
+          # responsable / creado_por sin depender de la red.
+          - select * from usuario
           - select * from habitacion
+          - select * from cama
+          - select * from reserva
+          - select * from checkin
+          # checkout no tiene columna "id" propia: su PK es checkin_id
+          # (1:1 con checkin, ver 0001_init.sql). PowerSync necesita un
+          # campo "id" para identificar la fila — se alias explícito.
+          - select checkin_id as id, checkin_id, realizado_por, fecha_hora, uuid_idempotente from checkout
+          - select * from aseo
+          # Sprint 2 (EP-03): todo lo operativo de empresas/consumo que
+          # NO es sensible. tarifa_convenida se sincroniza aparte, solo
+          # a administradora (ver bucket empresa_tarifas más abajo) —
+          # PowerSync bypassa RLS de Postgres (rol de replicación con
+          # BYPASSRLS), así que ocultar una columna acá es lo único que
+          # de verdad evita que llegue al celular de la Encargada.
+          - select * from empresa
+          - select * from contrato_empresa
+          - select * from trabajador
+          - select * from consumo
+          - select * from conciliacion_diaria
+          - select * from justificacion_descuadre
+          - select * from producto_extra
+          - select * from tipo_consumo_config
+          # Sprint 4 (EP-04): Costos de insumos y compras
+          - select * from insumo
+          - select * from compra_insumo

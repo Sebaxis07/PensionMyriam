@@ -3,5 +3,19 @@
 @tailwind utilities;
 
 html, body, #root {
-  height: 100%;
+  min-height: 100%;
+}
+
+body {
+  @apply bg-brand-sand font-sans text-brand-ink antialiased selection:bg-brand-terracotta/20 selection:text-brand-terracotta-deep;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, h4 {
+  @apply font-display;
+}
+
+/* Área segura para dispositivos móviles */
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
 }

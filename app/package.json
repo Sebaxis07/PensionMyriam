@@ -15,12 +15,15 @@
     "@powersync/react": "^1.4.4",
     "@powersync/web": "^1.16.2",
     "@supabase/supabase-js": "^2.45.4",
+    "exceljs": "^4.4.0",
+    "pdfmake": "^0.3.11",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/pdfmake": "^0.3.3",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
@@ -33,4 +36,7 @@
     "vitest": "^2.0.5"
   },
   "allowScripts": {
-    "@journeyapps/wa-sqlite@1.7.2": tr
+    "@journeyapps/wa-sqlite@1.7.2": true,
+    "esbuild@0.21.5": true
+  }
+}

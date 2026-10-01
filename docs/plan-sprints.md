@@ -41,30 +41,59 @@ Si algo no llega, el orden de recorte antes de sacrificar Must-Have es:
 HU-29 → HU-20 → HU-19 → HU-03, en ese orden, dejando siempre HU-16/17/18/04
 (Must-Have) intactas. Lo aviso apenas se vea venir, no al final del sprint.
 
-## Sprint 4 — Costos, margen y dashboard · 17 – 30 nov (5 HU + 2 stretch)
-Después del checkpoint de 75%, antes de la defensa.
-HU-22, 23, 24, 25, 30 (Should-Have restantes).
-Stretch si sobra tiempo: HU-21, HU-26 (Could-Have).
+## Sprint 4 — Costos, margen y doble modo · 17 – 23 nov (6 HU)
+EP-04 (Costos y Margen) y EP-06 (Dashboard doble modo).
+- HU-22: Registrar compra de insumos con costeo por Promedio Móvil Ponderado (PMP).
+- HU-23: Categorizar compras y estimar rendimiento de insumos.
+- HU-24: Proyectar margen de ganancia del mes en curso.
+- HU-25: Calcular costo diario real por trabajador y tarifa mínima sugerida.
+- HU-26: Recibir recomendación ante margen bajo (integrada desde backlog Could-Have).
+- HU-30: Doble modo: cambiar entre modo operativo (Encargada) y administrativo (Administradora con PIN).
+**Cierre:** verificación de KPI-06 (actualización del margen proyectado en menos de 24 horas tras cada compra de insumos).
 
-## Cierre · 1 – 12 dic
-Medición final de los 8 KPI, Lighthouse, OWASP ASVS L2, capacitación
-presencial, cierre de informe, defensa 12/12/2026.
+## Sprint 5 — Protección de datos (Ley 21.719), seguridad y reportes externos · 24 – 30 nov (1 HU + cumplimiento normativo)
+Transversal y extensión de EP-03.
+- HU-21: Enviar reporte diario por WhatsApp al supervisor de faena (integrada desde backlog Could-Have).
+- Cumplimiento estricto Ley N° 21.719 (Protección de Datos Personales):
+  - Job de purga automática programada en `pg_cron`: eliminación y anonimización de nóminas y RUTs de trabajadores a los 7 días de cerrado el mes de facturación.
+  - Minimización de datos y reforzamiento de políticas RLS en Postgres.
+  - Bitácora de accesos y auditoría de eventos de datos personales.
+- Verificación de seguridad OWASP ASVS Nivel 2 y auditoría Lighthouse PWA.
+**Cierre:** verificación completa del KPI-08 (100% de controles de protección de datos verificados y 0 nóminas vigentes tras 7 días del cierre).
+
+## Sprint 6 — Marcha blanca, verificación de KPIs y defensa final · 1 – 12 dic
+Operación real, estabilidad y cierre del proyecto.
+- Marcha blanca en producción: operación en paralelo en Pensión Señora Miriam (Paposo).
+- Medición y validación de los 8 KPI SMART del proyecto:
+  - KPI-01: Conciliación automática de consumos B2B (meta ≥ 98%).
+  - KPI-02: Integridad ante desconexión (0 registros perdidos, 0 duplicados).
+  - KPI-03: Tiempo de registro diario (< 2 minutos por jornada).
+  - KPI-04: Tasa de adopción efectiva en el sistema (meta ≥ 85%).
+  - KPI-05: Reducción de horas de auditoría manual (reducción ≥ 75%, ≤ 1 hora/mes).
+  - KPI-06: Oportunidad de proyección de margen (< 24 h tras compra).
+  - KPI-07: Sincronización offline en reconexión (≥ 95% en ≤ 5 minutos).
+  - KPI-08: Cumplimiento de protección de datos Ley 21.719 (100% controles, 0 fugas).
+- Monitoreo de los 4 SLAs (SLA-01 Disponibilidad, SLA-02 RTO/RPO, SLA-03 Sincronización, SLA-04 Tasa de Error).
+- Capacitación presencial de la Sra. Miriam y entrega de manuales en lenguaje de baja alfabetización digital.
+- Cierre del informe final de titulación y defensa del proyecto (12/12/2026).
 
 ---
 
-## HU que quedan fuera del 75% de la reunión 3
+## Cobertura Total del Backlog
 
-No se sacrifican del proyecto: se mueven al Sprint 4, después del checkpoint.
+**100% de las 30 Historias de Usuario (HU-01 a HU-30) quedan implementadas y calendarizadas en los 6 Sprints:**
 
-| HU | Épica | Motivo para dejarla después |
-|----|-------|------------------------------|
-| HU-22 | Costos | Depende de tener consumos e ingresos reales corriendo (Sprint 2-3) antes de que el costeo tenga sentido. |
-| HU-23 | Costos | Extiende HU-22. |
-| HU-24 | Costos | Necesita HU-22/23 para proyectar margen. |
-| HU-25 | Costos | Necesita HU-24. |
-| HU-30 | Dashboard | Es una vista que combina indicadores de todo lo anterior; tiene más sentido cuando el resto ya existe. |
-| HU-21 | Reportes (Could-Have) | Baja prioridad declarada en el MoSCoW original. |
-| HU-26 | Costos (Could-Have) | Baja prioridad declarada; depende de HU-24. |
+| Sprint | Enfoque Principal | HUs Asignadas | Total HU |
+|--------|-------------------|---------------|----------|
+| Sprint 1 | Habitaciones y Ciclo de Vida | HU-01, 05, 06, 07, 08, 09, 10, 27, 28 | 9 HU |
+| Sprint 2 | Empresas y Ledger de Consumos | HU-02, 11, 12, 13, 14, 15 | 6 HU |
+| Sprint 3 | Conciliación, Cierre Mensual y Reportes | HU-03, 04, 16, 17, 18, 19, 20, 29 | 8 HU |
+| Sprint 4 | Costos, Margen PMP y Modo Administrativo | HU-22, 23, 24, 25, 26, 30 | 6 HU |
+| Sprint 5 | Ley 21.719 (Purga), Auditoría y Supervisor | HU-21 + Controles Ley 21.719 | 1 HU |
+| Sprint 6 | Marcha Blanca, 8 KPIs SMART y Defensa | Monitoreo 8 KPIs, SLAs y Cierre | Validación |
+| **Total** | **Proyecto Completo** | **HU-01 a HU-30** | **30 HU (100%)** |
 
-Total: 7 HU (23% del backlog), todas Should-Have o Could-Have — ninguna
-Must-Have queda fuera del checkpoint de 75%.
+**Ninguna HU queda descartada:**
+- **HU-21** (WhatsApp a supervisores) se incorpora en el **Sprint 5**.
+- **HU-26** (Recomendación ante margen bajo) se incorpora en el **Sprint 4**.
+- La reunión 3 con la Administradora mantiene su checkpoint intermedio de 23 HU completas (~75% de avance funcional).
