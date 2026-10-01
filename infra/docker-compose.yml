@@ -73,9 +73,16 @@ services:
     command:
       - |
         set -euo pipefail
+        psql -h postgres -U supabase_admin -d postgres -c "create table if not exists public.schema_migrations (version text primary key, applied_at timestamptz default now());"
         for f in /migrations/*.sql; do
-          echo "Aplicando migración: $$f"
-          psql -h postgres -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f "$$f"
+          base=$$(basename "$$f")
+          if psql -h postgres -U supabase_admin -d postgres -tA -c "select 1 from public.schema_migrations where version = '$$base'" | grep -q 1; then
+            echo "Migración ya aplicada: $$base"
+          else
+            echo "Aplicando migración: $$f"
+            psql -h postgres -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f "$$f"
+            psql -h postgres -U supabase_admin -d postgres -c "insert into public.schema_migrations (version) values ('$$base');"
+          fi
         done
 
   gotrue:
@@ -145,6 +152,7 @@ services:
       # Necesario para que current_setting('request.jwt.claims', true)
       # funcione tal como lo usan app.uid()/app.rol() en 0001_init.sql.
       PGRST_DB_USE_LEGACY_GUCS: "true"
+      PGRST_LOG_LEVEL: info
     ports:
       - "127.0.0.1:3000:3000"
     deploy:

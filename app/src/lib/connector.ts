@@ -32,32 +32,52 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
     const transaction = await database.getNextCrudTransaction();
     if (!transaction) return;
 
-    for (const op of transaction.crud) {
-      const table = supabase.from(op.table);
-      // `checkout` no tiene columna "id" propia: su PK real es
-      // checkin_id (1:1 con checkin, decisión deliberada en
-      // 0001_init.sql para no sumar un surrogate). Localmente igualamos
-      // el id de PowerSync a ese mismo valor al escribir (ver
-      // Piezas.tsx), así que acá basta con NO mandar "id" y resolver el
-      // conflicto por checkin_id en vez de por id.
-      const pk = PK_POR_TABLA[op.table] ?? "id";
-      switch (op.op) {
-        case UpdateType.PUT:
-          await table
-            .upsert(pk === "id" ? { ...(op.opData ?? {}), id: op.id } : { ...(op.opData ?? {}) }, {
-              onConflict: pk
-            })
-            .throwOnError();
-          break;
-        case UpdateType.PATCH:
-          await table.update(op.opData ?? {}).eq(pk, op.id).throwOnError();
-          break;
-        case UpdateType.DELETE:
-          await table.delete().eq(pk, op.id).throwOnError();
-          break;
-      }
-    }
+    try {
+      for (const op of transaction.crud) {
+        const table = supabase.from(op.table);
+        const pk = PK_POR_TABLA[op.table] ?? "id";
+        try {
+          switch (op.op) {
+            case UpdateType.PUT:
+              await table
+                .upsert(pk === "id" ? { ...(op.opData ?? {}), id: op.id } : { ...(op.opData ?? {}) }, {
+                  onConflict: pk
+                })
+                .throwOnError();
+              break;
+            case UpdateType.PATCH:
+              await table.update(op.opData ?? {}).eq(pk, op.id).throwOnError();
+              break;
+            case UpdateType.DELETE:
+              await table.delete().eq(pk, op.id).throwOnError();
+              break;
+          }
+        } catch (opError: any) {
+          // Si es un error irrecuperable de Postgres (código 23xxx de constraint,
+          // 42xxx de esquema, PGRSTxxx de PostgREST o HTTP 4xx), no bloquear la cola:
+          const status = Number(opError?.status || opError?.statusCode);
+          const code = String(opError?.code ?? "");
+          const esErrorPermanente =
+            (status >= 400 && status < 500) ||
+            code.startsWith("23") || // 23503 (FK), 23505 (Unique), 23P01 (Exclusion), 23514 (Check)
+            code.startsWith("42") || // Error de esquema o sintaxis
+            code.startsWith("PGRST"); // Error de validación de PostgREST
 
-    await transaction.complete();
+          if (esErrorPermanente) {
+            console.warn(
+              `[PowerSync] Descartando operación no recuperable en ${op.table} (${op.op}):`,
+              opError?.message || opError
+            );
+          } else {
+            // Error transitorio de red o 5xx del servidor: re-lanzar para reintentar
+            throw opError;
+          }
+        }
+      }
+      await transaction.complete();
+    } catch (err) {
+      console.error("[PowerSync] Error subiendo transacción (se reintentará):", err);
+      throw err;
+    }
   }
 }

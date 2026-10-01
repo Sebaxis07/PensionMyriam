@@ -2,12 +2,13 @@ import { SyncStatusBadge } from "./SyncStatusBadge";
 import { IconCalendar, IconDoorExit, IconUser } from "./Icons";
 import logo from "../assets/logo.webp";
 
-export type TabType = "inicio" | "aseo" | "reservar";
+export type TabType = "inicio" | "aseo" | "reservar" | "consumo" | "empresas" | "rack";
 
 interface HeaderProps {
   tab: TabType;
   usuario?: { nombre: string; rol: string } | null;
   onLogout?: () => void;
+  onAbrirSyncModal?: () => void;
 }
 
 const META_VISTAS: Record<TabType, { titulo: string; descripcion: string }> = {
@@ -18,6 +19,18 @@ const META_VISTAS: Record<TabType, { titulo: string; descripcion: string }> = {
   aseo: {
     titulo: "Aseo de hoy",
     descripcion: "Registro de aseos diarios obligatorios para piezas ocupadas"
+  },
+  consumo: {
+    titulo: "Consumos de Raciones",
+    descripcion: "Registro rápido de desayuno, almuerzo, cena y extras"
+  },
+  empresas: {
+    titulo: "Empresas y Contratos",
+    descripcion: "Gestión de empresas contratistas, nómina y conciliación diaria"
+  },
+  rack: {
+    titulo: "Calendario de Ocupación",
+    descripcion: "Disponibilidad mensual de las 8 piezas estilo rack hotelero"
   },
   reservar: {
     titulo: "Nueva reserva",
@@ -39,7 +52,7 @@ function fechaHoyTexto() {
   }
 }
 
-export function Header({ tab, usuario, onLogout }: HeaderProps) {
+export function Header({ tab, usuario, onLogout, onAbrirSyncModal }: HeaderProps) {
   const vistaActual = META_VISTAS[tab] ?? META_VISTAS.inicio;
   const esAdmin = usuario?.rol === "administradora";
   const labelRol = esAdmin ? "Administradora" : "Encargada";
@@ -63,7 +76,7 @@ export function Header({ tab, usuario, onLogout }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <SyncStatusBadge />
+          <SyncStatusBadge onClick={onAbrirSyncModal} />
           {onLogout && (
             <button
               onClick={onLogout}

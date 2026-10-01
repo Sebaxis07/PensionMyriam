@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@powersync/react";
+import { powersync } from "../lib/powersync";
+import { nuevoUuidIdempotente } from "../lib/idempotencia";
 import { SyncStatusBadge } from "../components/SyncStatusBadge";
 import { RoomCard } from "../components/RoomCard";
 import { RoomSheet } from "../components/RoomSheet";
@@ -7,8 +9,12 @@ import { AseoHoy } from "./AseoHoy";
 import { Reservar } from "./Reservar";
 import { QUERY_PIEZAS, type PiezaRow } from "../lib/queries";
 import { useUsuarioActual } from "../lib/useUsuarioActual";
-import { IconBroom, IconHome, IconPlus } from "../components/Icons";
+import { IconBed, IconBriefcase, IconBroom, IconCalendar, IconCheck, IconCheckCircle, IconHome, IconPlus, IconUtensils } from "../components/Icons";
 import { Header, type TabType } from "../components/Header";
+import { ModuloEmpresas } from "./sprint2/ModuloEmpresas";
+import { ModuloConsumos } from "./sprint2/ModuloConsumos";
+import { RackHotelero } from "./RackHotelero";
+import { SyncStatusModal } from "../components/SyncStatusModal";
 import logo from "../assets/logo.webp";
 
 export function Piezas({ onLogout }: { onLogout?: () => void }) {
@@ -17,6 +23,8 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
   const [tab, setTab] = useState<TabType>("inicio");
   const [piezaAbierta, setPiezaAbierta] = useState<PiezaRow | null>(null);
   const [preseleccionReserva, setPreseleccionReserva] = useState<string | null>(null);
+  const [fechaPreseleccionadaReserva, setFechaPreseleccionadaReserva] = useState<string | undefined>(undefined);
+  const [mostrarSyncModal, setMostrarSyncModal] = useState(false);
 
   const stats = useMemo(() => {
     const disponibles = piezas?.filter((p) => p.estado === "disponible").length ?? 0;
@@ -26,6 +34,23 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
   }, [piezas]);
 
   const pendientesAseo = piezas?.filter((p) => p.estado === "ocupada" && p.aseo_hoy_count === 0).length ?? 0;
+
+  const piezasPendientesAseo = useMemo(() => {
+    return piezas?.filter((p) => p.estado === "ocupada" && p.aseo_hoy_count === 0) ?? [];
+  }, [piezas]);
+
+  const porcentajeOcupacion = useMemo(() => {
+    const total = piezas?.length || 8;
+    return Math.round((stats.ocupadas / total) * 100);
+  }, [piezas, stats.ocupadas]);
+
+  async function handleMarcarAseoRapido(habitacionId: string) {
+    if (!usuario) return;
+    await powersync.execute(
+      "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'diario', ?, ?, ?)",
+      [crypto.randomUUID(), habitacionId, usuario.id, new Date().toISOString(), nuevoUuidIdempotente()]
+    );
+  }
 
   if (!usuario) {
     return (
@@ -67,12 +92,32 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
               onClick={() => setTab("inicio")}
             />
             <SidebarButton
+              activo={tab === "rack"}
+              icon={<IconCalendar className="h-5 w-5" />}
+              label="Calendario"
+              onClick={() => setTab("rack")}
+            />
+            <SidebarButton
               activo={tab === "aseo"}
               icon={<IconBroom className="h-5 w-5" />}
               label="Aseo de hoy"
               badge={pendientesAseo > 0 ? pendientesAseo : undefined}
               onClick={() => setTab("aseo")}
             />
+            <SidebarButton
+              activo={tab === "consumo"}
+              icon={<IconUtensils className="h-5 w-5" />}
+              label="Consumos"
+              onClick={() => setTab("consumo")}
+            />
+            {usuario.rol === "administradora" && (
+              <SidebarButton
+                activo={tab === "empresas"}
+                icon={<IconBriefcase className="h-5 w-5" />}
+                label="Empresas"
+                onClick={() => setTab("empresas")}
+              />
+            )}
             <SidebarButton
               activo={tab === "reservar"}
               icon={<IconPlus className="h-5 w-5" />}
@@ -88,10 +133,10 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
             <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
               Estado de red
             </span>
-            <SyncStatusBadge />
+            <SyncStatusBadge onClick={() => setMostrarSyncModal(true)} />
           </div>
           <p className="text-[11px] text-brand-muted/80">
-            Sprint 1 · PWA Offline-first
+            PWA Offline-first · Paposo
           </p>
         </div>
       </aside>
@@ -101,57 +146,239 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
       {/* ========================================================= */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Cabecera unificada y responsiva */}
-        <Header tab={tab} usuario={usuario} onLogout={onLogout} />
+        <Header tab={tab} usuario={usuario} onLogout={onLogout} onAbrirSyncModal={() => setMostrarSyncModal(true)} />
 
         {/* Área scrolleable de contenido */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="mx-auto w-full max-w-5xl">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-[1550px]">
             {tab === "inicio" && (
-              <div className="space-y-5 md:space-y-6">
-                {/* Métricas destacadas de estado */}
-                <div className="grid grid-cols-3 gap-2.5 md:gap-5">
+              <div className="space-y-6">
+                {/* Métricas destacadas de estado (2 cols en mobile, 4 cols en md/desktop) */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                   <StatTile
                     n={stats.disponibles}
                     label="Disponibles"
                     dotColor="bg-emerald-600"
                     numColor="text-emerald-800"
-                  />
-                  <StatTile
-                    n={stats.checkinPronto}
-                    label="Check-in hoy"
-                    dotColor="bg-brand-terracotta"
-                    numColor="text-brand-terracotta-deep"
+                    sublabel="Listas para uso"
                   />
                   <StatTile
                     n={stats.ocupadas}
                     label="Ocupadas"
                     dotColor="bg-amber-500"
                     numColor="text-amber-900"
+                    sublabel={`${porcentajeOcupacion}% ocupación`}
+                  />
+                  <StatTile
+                    n={stats.checkinPronto}
+                    label="Check-in hoy"
+                    dotColor="bg-brand-terracotta"
+                    numColor="text-brand-terracotta-deep"
+                    sublabel="Llegadas hoy"
+                  />
+                  <StatTile
+                    n={pendientesAseo}
+                    label="Aseo pendiente"
+                    dotColor="bg-red-500"
+                    numColor="text-red-700"
+                    sublabel={pendientesAseo === 0 ? "Al día" : "Por limpiar"}
                   />
                 </div>
 
-                {/* Cuadrícula de 8 habitaciones: 2 columnas en mobile, 4 columnas en desktop (4x2) */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                  {piezas?.map((p) => (
-                    <RoomCard key={p.id} pieza={p} onTap={() => setPiezaAbierta(p)} />
-                  ))}
-                  {!piezas?.length && (
-                    <div className="col-span-full rounded-2xl border border-brand-border/70 bg-brand-card p-6 text-center text-sm text-brand-muted">
-                      Sin piezas cargadas todavía (esperando primera sincronización).
+                {/* Layout Desktop: Habitaciones (izquierda) + Centro de Operaciones (derecha) */}
+                <div className="xl:grid xl:grid-cols-12 xl:gap-6 items-start">
+                  {/* Cuadrícula de 8 habitaciones */}
+                  <div className="xl:col-span-8 space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IconBed className="h-5 w-5 text-brand-terracotta" />
+                        <h2 className="font-display text-base md:text-lg font-bold text-brand-ink">
+                          Habitaciones de la Pensión
+                        </h2>
+                        <span className="rounded-full bg-brand-sand-light px-2.5 py-0.5 text-xs font-semibold text-brand-muted border border-brand-border/70">
+                          {piezas?.length ?? 8} habitaciones
+                        </span>
+                      </div>
+                      <span className="hidden sm:inline text-xs text-brand-muted">
+                        Haz clic en una habitación para ver o editar su estado
+                      </span>
                     </div>
-                  )}
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                      {piezas?.map((p) => (
+                        <RoomCard key={p.id} pieza={p} onTap={() => setPiezaAbierta(p)} />
+                      ))}
+                      {!piezas?.length && (
+                        <div className="col-span-full rounded-2xl border border-brand-border/70 bg-brand-card p-6 text-center text-sm text-brand-muted">
+                          Sin piezas cargadas todavía (esperando primera sincronización).
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Centro de Operaciones en Tiempo Real (visible en pantallas grandes desktop xl:) */}
+                  <div className="hidden xl:flex xl:col-span-4 flex-col gap-4">
+                    {/* Widget Aseo Rápido Diario */}
+                    <div className="rounded-2xl border border-brand-border/80 bg-brand-card p-5 shadow-card">
+                      <div className="flex items-center justify-between pb-3 border-b border-brand-border/60">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-sand-light text-brand-terracotta">
+                            <IconBroom className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h3 className="font-display text-sm font-bold text-brand-ink">Aseo Diario de Hoy</h3>
+                            <p className="text-[11px] text-brand-muted">Habitaciones ocupadas por revisar</p>
+                          </div>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                          piezasPendientesAseo.length > 0
+                            ? "bg-red-100 text-red-700"
+                            : "bg-emerald-100 text-emerald-800"
+                        }`}>
+                          {piezasPendientesAseo.length} pendientes
+                        </span>
+                      </div>
+
+                      <div className="mt-3 divide-y divide-brand-border/40 max-h-64 overflow-y-auto pr-1">
+                        {piezasPendientesAseo.length === 0 ? (
+                          <div className="py-6 text-center">
+                            <IconCheckCircle className="mx-auto h-8 w-8 text-emerald-600 mb-2" />
+                            <p className="text-xs font-semibold text-emerald-800">¡Todo el aseo de hoy está al día!</p>
+                            <p className="text-[11px] text-brand-muted mt-0.5">No hay habitaciones ocupadas pendientes.</p>
+                          </div>
+                        ) : (
+                          piezasPendientesAseo.map((p) => (
+                            <div key={p.id} className="py-2.5 flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-brand-ink">
+                                  Pieza {p.numero}
+                                  <span className="ml-1.5 font-normal text-brand-muted text-[11px]">
+                                    ({p.capacidad} camas)
+                                  </span>
+                                </p>
+                                <p className="text-[11px] text-brand-muted truncate">
+                                  {p.huesped_actual ? `Huésped: ${p.huesped_actual}` : "Ocupada"}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleMarcarAseoRapido(p.id)}
+                                className="shrink-0 flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700 transition active:scale-95 shadow-xs"
+                              >
+                                <IconCheck className="h-3.5 w-3.5" />
+                                <span>Listo</span>
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {piezasPendientesAseo.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-brand-border/50">
+                          <button
+                            type="button"
+                            onClick={() => setTab("aseo")}
+                            className="w-full text-center text-xs font-semibold text-brand-terracotta hover:underline"
+                          >
+                            Ver módulo completo de Aseo →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Widget Resumen de Capacidad */}
+                    <div className="rounded-2xl border border-brand-border/80 bg-brand-card p-5 shadow-card">
+                      <h3 className="font-display text-sm font-bold text-brand-ink mb-2">
+                        Ocupación General
+                      </h3>
+                      <div className="flex items-end justify-between mb-1.5">
+                        <span className="text-xs font-medium text-brand-muted">Capacidad ocupada</span>
+                        <span className="font-display text-lg font-black text-brand-ink">{porcentajeOcupacion}%</span>
+                      </div>
+                      <div className="w-full h-2.5 bg-brand-sand-light rounded-full overflow-hidden border border-brand-border/60">
+                        <div
+                          className="h-full bg-brand-terracotta transition-all duration-500 rounded-full"
+                          style={{ width: `${porcentajeOcupacion}%` }}
+                        />
+                      </div>
+                      <div className="mt-3.5 grid grid-cols-3 gap-2 text-center text-xs pt-3 border-t border-brand-border/50">
+                        <div className="rounded-xl bg-brand-sand-light p-2 border border-brand-border/40">
+                          <p className="font-bold text-emerald-800 text-sm">{stats.disponibles}</p>
+                          <p className="text-[10px] text-brand-muted font-medium">Libres</p>
+                        </div>
+                        <div className="rounded-xl bg-brand-sand-light p-2 border border-brand-border/40">
+                          <p className="font-bold text-amber-900 text-sm">{stats.ocupadas}</p>
+                          <p className="text-[10px] text-brand-muted font-medium">Ocupadas</p>
+                        </div>
+                        <div className="rounded-xl bg-brand-sand-light p-2 border border-brand-border/40">
+                          <p className="font-bold text-brand-terracotta-deep text-sm">{stats.checkinPronto}</p>
+                          <p className="text-[10px] text-brand-muted font-medium">Reservas</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Acciones Rápidas */}
+                    <div className="rounded-2xl border border-brand-border/80 bg-brand-card p-5 shadow-card">
+                      <h3 className="font-display text-sm font-bold text-brand-ink mb-2.5">
+                        Accesos Directos
+                      </h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTab("reservar")}
+                          className="flex items-center gap-2 rounded-xl border border-brand-border/80 bg-brand-sand-light p-3 text-left hover:border-brand-terracotta/40 hover:bg-brand-sand transition"
+                        >
+                          <IconPlus className="h-4 w-4 text-brand-terracotta shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-brand-ink">Nueva Reserva</p>
+                            <p className="text-[10px] text-brand-muted">Asignar pasajero</p>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTab("consumo")}
+                          className="flex items-center gap-2 rounded-xl border border-brand-border/80 bg-brand-sand-light p-3 text-left hover:border-brand-terracotta/40 hover:bg-brand-sand transition"
+                        >
+                          <IconUtensils className="h-4 w-4 text-brand-terracotta shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-brand-ink">Consumos</p>
+                            <p className="text-[10px] text-brand-muted">Colaciones de hoy</p>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
+            {tab === "rack" && (
+              <RackHotelero
+                onSeleccionarParaReservar={(habitacionId, fecha) => {
+                  setPreseleccionReserva(habitacionId);
+                  setFechaPreseleccionadaReserva(fecha);
+                  setTab("reservar");
+                }}
+                onVolver={() => setTab("inicio")}
+              />
+            )}
+
             {tab === "aseo" && <AseoHoy usuarioId={usuario.id} />}
+
+            {tab === "consumo" && <ModuloConsumos usuarioId={usuario.id} usuarioRol={usuario.rol} />}
+
+            {tab === "empresas" && usuario.rol === "administradora" && (
+              <ModuloEmpresas usuarioId={usuario.id} />
+            )}
 
             {tab === "reservar" && (
               <Reservar
                 usuarioId={usuario.id}
                 preseleccion={preseleccionReserva}
+                fechaPreseleccionada={fechaPreseleccionadaReserva}
                 onListo={() => {
                   setPreseleccionReserva(null);
+                  setFechaPreseleccionadaReserva(undefined);
                   setTab("inicio");
                 }}
               />
@@ -161,23 +388,43 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
 
         {/* Barra de navegación inferior (visible SOLO en mobile < md:) */}
         <nav className="sticky bottom-0 z-10 flex md:hidden border-t border-brand-border/80 bg-brand-card/95 pb-safe pt-1 shadow-lg backdrop-blur-md">
-          <div className="flex w-full items-center justify-around px-2">
+          <div className="flex w-full items-center justify-around px-1">
             <NavButton
               activo={tab === "inicio"}
-              icon={<IconHome className="h-6 w-6" />}
+              icon={<IconHome className="h-5 w-5" />}
               label="Inicio"
               onClick={() => setTab("inicio")}
             />
             <NavButton
+              activo={tab === "rack"}
+              icon={<IconCalendar className="h-5 w-5" />}
+              label="Rack"
+              onClick={() => setTab("rack")}
+            />
+            <NavButton
               activo={tab === "aseo"}
-              icon={<IconBroom className="h-6 w-6" />}
-              label="Aseo de hoy"
+              icon={<IconBroom className="h-5 w-5" />}
+              label="Aseo"
               badge={pendientesAseo > 0 ? pendientesAseo : undefined}
               onClick={() => setTab("aseo")}
             />
             <NavButton
+              activo={tab === "consumo"}
+              icon={<IconUtensils className="h-5 w-5" />}
+              label="Consumos"
+              onClick={() => setTab("consumo")}
+            />
+            {usuario.rol === "administradora" && (
+              <NavButton
+                activo={tab === "empresas"}
+                icon={<IconBriefcase className="h-5 w-5" />}
+                label="Empresas"
+                onClick={() => setTab("empresas")}
+              />
+            )}
+            <NavButton
               activo={tab === "reservar"}
-              icon={<IconPlus className="h-6 w-6" />}
+              icon={<IconPlus className="h-5 w-5" />}
               label="Reservar"
               onClick={() => setTab("reservar")}
             />
@@ -197,6 +444,11 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
             setTab("reservar");
           }}
         />
+      )}
+
+      {/* Modal Centro de Sincronización y Cola de Operaciones */}
+      {mostrarSyncModal && (
+        <SyncStatusModal onCerrar={() => setMostrarSyncModal(false)} />
       )}
     </div>
   );
@@ -243,12 +495,14 @@ function StatTile({
   n,
   label,
   dotColor,
-  numColor
+  numColor,
+  sublabel
 }: {
   n: number;
   label: string;
   dotColor: string;
   numColor: string;
+  sublabel?: string;
 }) {
   return (
     <div className="flex flex-col justify-between rounded-2xl border border-brand-border/80 bg-brand-card p-3.5 md:p-4 shadow-card">
@@ -258,9 +512,16 @@ function StatTile({
           {label}
         </span>
       </div>
-      <p className={`mt-2 font-display text-3xl md:text-4xl font-extrabold leading-none ${numColor}`}>
-        {n}
-      </p>
+      <div className="mt-2 flex items-baseline justify-between gap-1">
+        <p className={`font-display text-3xl md:text-4xl font-extrabold leading-none ${numColor}`}>
+          {n}
+        </p>
+        {sublabel && (
+          <span className="text-[10px] md:text-xs text-brand-muted font-medium truncate">
+            {sublabel}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

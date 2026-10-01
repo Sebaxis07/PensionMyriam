@@ -20,7 +20,8 @@
 	header @origin_dev {
 		Access-Control-Allow-Origin "{header.Origin}"
 		Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-		Access-Control-Allow-Headers "Authorization, Content-Type, apikey, x-client-info, x-supabase-api-version, prefer"
+		Access-Control-Allow-Headers "Authorization, Content-Type, apikey, x-client-info, x-supabase-api-version, prefer, content-profile, accept-profile, range, x-upsert, if-match, if-none-match"
+		Access-Control-Expose-Headers "content-range, content-location, content-profile, accept-profile"
 		Access-Control-Allow-Credentials "true"
 		Access-Control-Max-Age "3600"
 		Vary "Origin"

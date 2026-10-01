@@ -25,6 +25,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // no cachear la API/auth: solo el shell de la app. Los datos
         // los maneja PowerSync (SQLite local), no el service worker.
         navigateFallbackDenylist: [/^\/auth/, /^\/rest/],

@@ -27,10 +27,10 @@ describe("ContratoEmpresaSchema", () => {
 describe("crearContratoEmpresa (HU-02)", () => {
   beforeEach(() => {
     execute.mockClear();
-    getAll.mockReset().mockResolvedValue([{ n: 0 }]);
+    getAll.mockReset().mockResolvedValue([]);
   });
 
-  it("crea el contrato cuando no hay vigencia solapada", async () => {
+  it("crea el contrato cuando no hay vigencia previa", async () => {
     await crearContratoEmpresa("usuario-1", {
       empresaId,
       vigenciaDesde: "2026-01-01",
@@ -41,10 +41,33 @@ describe("crearContratoEmpresa (HU-02)", () => {
     expect(execute.mock.calls[0][0]).toMatch(/insert into contrato_empresa/i);
   });
 
-  it("avisa temprano (sin escribir) si ya hay una vigencia que se cruza", async () => {
-    getAll.mockResolvedValueOnce([{ n: 1 }]);
+  it("cierra la vigencia del contrato anterior (vigencia_hasta = ayer) y crea el nuevo", async () => {
+    getAll.mockResolvedValueOnce([
+      { id: "contrato-previo", vigencia_desde: "2025-01-01", vigencia_hasta: null }
+    ]);
+    await crearContratoEmpresa("usuario-1", {
+      empresaId,
+      vigenciaDesde: "2026-02-01",
+      headcount: 25,
+      tarifaConvenida: 22000
+    });
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(execute.mock.calls[0][0]).toMatch(/update contrato_empresa set vigencia_hasta = \? where id = \?/i);
+    expect(execute.mock.calls[0][1]).toEqual(["2026-01-31", "contrato-previo"]);
+    expect(execute.mock.calls[1][0]).toMatch(/insert into contrato_empresa/i);
+  });
+
+  it("avisa temprano si el nuevo contrato intenta iniciar en o antes del inicio del contrato existente", async () => {
+    getAll.mockResolvedValueOnce([
+      { id: "contrato-previo", vigencia_desde: "2026-05-01", vigencia_hasta: null }
+    ]);
     await expect(
-      crearContratoEmpresa("usuario-1", { empresaId, vigenciaDesde: "2026-01-01", headcount: 30, tarifaConvenida: 20000 })
+      crearContratoEmpresa("usuario-1", {
+        empresaId,
+        vigenciaDesde: "2026-05-01",
+        headcount: 30,
+        tarifaConvenida: 20000
+      })
     ).rejects.toBeInstanceOf(ContratoSolapadoError);
     expect(execute).not.toHaveBeenCalled();
   });

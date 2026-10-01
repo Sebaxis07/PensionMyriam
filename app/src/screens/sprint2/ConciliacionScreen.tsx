@@ -18,12 +18,21 @@ const ETIQUETAS_MOTIVO: Record<MotivoDescuadre, string> = {
   otro: "Otro motivo"
 };
 
+const ETIQUETAS_TIPO: Record<string, string> = {
+  cama_noche: "Noche de cama",
+  desayuno: "Desayuno",
+  almuerzo: "Almuerzo",
+  cena: "Cena"
+};
+
 export function ConciliacionScreen({
   usuarioId,
-  contratoEmpresaId
+  contratoEmpresaId,
+  onAbrirCierre
 }: {
   usuarioId: string;
   contratoEmpresaId: string;
+  onAbrirCierre?: () => void;
 }) {
   const dias = useConciliacion(contratoEmpresaId);
   const [diaJustificando, setDiaJustificando] = useState<ConciliacionRow | null>(null);
@@ -68,14 +77,37 @@ export function ConciliacionScreen({
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
       {/* Cabecera y Regla de Facturación de Negocio */}
       <div className="rounded-3xl border border-brand-border/70 bg-brand-card p-5 md:p-6 shadow-card">
-        <div className="flex items-center gap-2.5">
-          <IconClipboardCheck className="h-6 w-6 text-brand-terracotta" />
-          <h2 className="font-display text-2xl font-bold text-brand-ink">
-            Conciliación Diaria (HU-16/17)
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <IconClipboardCheck className="h-6 w-6 text-brand-terracotta" />
+            <h2 className="font-display text-2xl font-bold text-brand-ink">
+              Conciliación Diaria
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleRecalcular(new Date().toISOString().slice(0, 10))}
+              disabled={recalculandoFecha === new Date().toISOString().slice(0, 10)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3.5 py-2 text-xs font-bold text-brand-ink shadow-sm hover:bg-brand-sand/40"
+            >
+              <IconRefresh className="h-3.5 w-3.5" />
+              <span>Conciliar Hoy</span>
+            </button>
+
+            {onAbrirCierre && (
+              <button
+                onClick={onAbrirCierre}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-brand-terracotta px-3.5 py-2 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep"
+              >
+                <span>Cierre Mensual →</span>
+              </button>
+            )}
+          </div>
         </div>
-        <p className="mt-1 text-xs text-brand-muted">
-          Comparativa entre raciones esperadas según nómina y consumos reales servidos.
+
+        <p className="mt-2 text-xs text-brand-muted">
+          Comparativa entre raciones esperadas según nómina y consumos reales servidos por cada servicio.
         </p>
 
         <div className="mt-3.5 rounded-2xl border border-emerald-600/30 bg-emerald-50/70 p-3.5 text-xs text-emerald-950 font-medium">
@@ -109,9 +141,12 @@ export function ConciliacionScreen({
               className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-2xl border border-brand-border/80 bg-brand-card p-4 shadow-card"
             >
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-display text-base font-bold text-brand-ink">
                     {d.fecha}
+                  </span>
+                  <span className="rounded-md bg-brand-sand/60 px-2 py-0.5 text-[11px] font-bold text-brand-ink">
+                    {ETIQUETAS_TIPO[d.tipo] || d.tipo}
                   </span>
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
@@ -135,7 +170,7 @@ export function ConciliacionScreen({
                     Contratados: <strong className="text-brand-ink">{d.headcount_esperado}</strong>
                   </span>
                   <span>
-                    Raciones esperadas: <strong className="text-brand-ink">{d.cantidad_esperada}</strong>
+                    Esperadas: <strong className="text-brand-ink">{d.cantidad_esperada}</strong>
                   </span>
                   <span>
                     Servidas: <strong className="text-brand-ink">{d.cantidad_servida}</strong>

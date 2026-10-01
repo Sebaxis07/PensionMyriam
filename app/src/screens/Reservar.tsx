@@ -3,37 +3,37 @@ import { useQuery } from "@powersync/react";
 import { powersync } from "../lib/powersync";
 import { nuevoUuidIdempotente } from "../lib/idempotencia";
 import { QUERY_CAMAS_LIBRES, type CamaLibreRow } from "../lib/queries";
-import { IconBed, IconCalendar, IconCheck, IconUser } from "../components/Icons";
+import { IconBed, IconCalendar, IconCheck, IconFileText, IconUser } from "../components/Icons";
+import { descargarVoucherTuristaPdf, type DatosVoucherTurista } from "../features/reportes/generarVoucherTuristaPdf";
+import { abrirEnlaceWhatsApp } from "../features/reservas/compartirWhatsApp";
 
 function hoyISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-/**
- * HU-01: pantalla propia, no atada a tocar una pieza primero — sirve
- * tanto para "llega alguien ahora" (fecha desde = hoy, queda lista para
- * check-in de inmediato) como para una reserva a futuro (solo confirma,
- * sin tocar el estado de la pieza). Solo turista por ahora: la reserva
- * de empresa (HU-02, con nómina y tarifa) llega en el Sprint 2.
- */
 export function Reservar({
   usuarioId,
   preseleccion,
+  fechaPreseleccionada,
   onListo
 }: {
   usuarioId: string;
   preseleccion: string | null;
+  fechaPreseleccionada?: string;
   onListo: () => void;
 }) {
   const { data: camasLibres } = useQuery<CamaLibreRow>(QUERY_CAMAS_LIBRES);
   const [camaId, setCamaId] = useState<string>("");
   const [nombre, setNombre] = useState("");
-  const [desde, setDesde] = useState(hoyISO());
+  const [desde, setDesde] = useState(fechaPreseleccionada || hoyISO());
   const [hasta, setHasta] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reservaConfirmada, setReservaConfirmada] = useState<DatosVoucherTurista | null>(null);
 
   const camaSeleccionada = camaId || camasLibres?.find((c) => c.habitacion_id === preseleccion)?.cama_id || "";
+  const camaObj = camasLibres?.find((c) => c.cama_id === (camaSeleccionada || camasLibres?.[0]?.cama_id));
 
   async function confirmar(e: FormEvent) {
     e.preventDefault();
@@ -41,13 +41,14 @@ export function Reservar({
     if (!cama || !nombre.trim()) return;
     setError(null);
     setGuardando(true);
+    const nuevoId = crypto.randomUUID();
     try {
       await powersync.execute(
         `insert into reserva
            (id, tipo_cliente, cama_id, huesped_nombre, fecha_inicio, fecha_fin, estado, creado_por, uuid_idempotente, created_at)
          values (?, 'turista', ?, ?, ?, ?, 'confirmada', ?, ?, ?)`,
         [
-          crypto.randomUUID(),
+          nuevoId,
           cama,
           nombre.trim(),
           desde,
@@ -57,15 +58,102 @@ export function Reservar({
           new Date().toISOString()
         ]
       );
-      onListo();
+
+      // Calcular noches si hay fecha fin
+      let noches = 1;
+      if (hasta && hasta > desde) {
+        const diffMs = new Date(hasta).getTime() - new Date(desde).getTime();
+        noches = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+      }
+
+      setReservaConfirmada({
+        reservaId: nuevoId,
+        huespedNombre: nombre.trim(),
+        habitacionNumero: camaObj?.numero ?? 1,
+        fechaInicio: desde,
+        fechaFin: hasta || null,
+        nochesEstimadas: noches,
+        tarifaNoche: 15000
+      });
     } catch {
-      // Optimista: esto solo puede fallar por datos mal formados (la
-      // pieza ya no aparecería en camasLibres si estuviera ocupada). Sin
-      // jerga técnica ni códigos de error en pantalla.
       setError("No se pudo guardar la reserva. Revisa los datos e intenta de nuevo.");
     } finally {
       setGuardando(false);
     }
+  }
+
+  if (reservaConfirmada) {
+    return (
+      <div className="mx-auto max-w-xl rounded-3xl border border-brand-border/80 bg-brand-card p-6 md:p-8 shadow-card text-center space-y-5">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white">
+          <IconCheck className="h-7 w-7" />
+        </div>
+
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-800">
+            Reserva Confirmada
+          </p>
+          <h2 className="font-display text-2xl font-bold text-brand-ink">
+            ¡Reserva de Turista Guardada!
+          </h2>
+          <p className="mt-1 text-xs text-brand-muted">
+            Pieza #{reservaConfirmada.habitacionNumero} asignada a {reservaConfirmada.huespedNombre} para el {reservaConfirmada.fechaInicio}.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-brand-border bg-white p-4 text-xs text-left space-y-1.5">
+          <div className="flex justify-between">
+            <span className="text-brand-muted">Tarifa por noche:</span>
+            <span className="font-bold text-brand-ink">$15.000 CLP</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-brand-muted">Estadía:</span>
+            <span className="font-bold text-brand-ink">{reservaConfirmada.nochesEstimadas} noche(s)</span>
+          </div>
+          <div className="flex justify-between border-t border-brand-border/60 pt-1.5">
+            <span className="font-bold text-brand-terracotta">Total Estimado:</span>
+            <span className="font-bold text-brand-terracotta text-sm">
+              ${((reservaConfirmada.nochesEstimadas ?? 1) * 15000).toLocaleString("es-CL")} CLP
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <button
+            onClick={() => descargarVoucherTuristaPdf(reservaConfirmada)}
+            className="flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep px-4 py-3 text-xs font-bold text-white shadow-brand transition-all"
+          >
+            <IconFileText className="h-4 w-4" />
+            <span>Descargar Comprobante (PDF)</span>
+          </button>
+
+          <button
+            onClick={() =>
+              abrirEnlaceWhatsApp({
+                huespedNombre: reservaConfirmada.huespedNombre,
+                habitacionNumero: reservaConfirmada.habitacionNumero,
+                fechaInicio: reservaConfirmada.fechaInicio,
+                fechaFin: reservaConfirmada.fechaFin,
+                nochesEstimadas: reservaConfirmada.nochesEstimadas,
+                telefonoDestino: telefono
+              })
+            }
+            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-3 text-xs font-bold text-white shadow-sm transition-all"
+          >
+            <span>💬 Compartir por WhatsApp</span>
+          </button>
+        </div>
+
+        <div className="pt-2">
+          <button
+            onClick={onListo}
+            className="rounded-xl px-5 py-2 text-xs font-bold text-brand-muted hover:text-brand-ink underline"
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!camasLibres?.length) {
@@ -119,6 +207,20 @@ export function Reservar({
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             className="w-full rounded-xl border border-brand-border bg-white px-3.5 py-3 text-base text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
+          />
+        </div>
+
+        {/* Teléfono para WhatsApp */}
+        <div>
+          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-muted">
+            <span>Teléfono / WhatsApp (opcional)</span>
+          </label>
+          <input
+            type="tel"
+            placeholder="Ej: +56912345678"
+            value={telefono}
+            onChange={(e) => setTelefono(e.target.value)}
+            className="w-full rounded-xl border border-brand-border bg-white px-3.5 py-2.5 text-sm text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
           />
         </div>
 

@@ -46,7 +46,7 @@ crear_usuario_si_falta() {
   resp=$(curl -s -X POST "$GOTRUE_URL/admin/users" \
     -H "Authorization: Bearer $service_key" -H "apikey: $service_key" \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"$email\",\"password\":\"$password\",\"email_confirm\":true}")
+    -d "{\"email\":\"$email\",\"password\":\"$password\",\"email_confirm\":true,\"role\":\"authenticated\"}")
   auth_id=$(node -e "console.log(JSON.parse(process.argv[1]).id)" "$resp")
   psql_admin -c "insert into public.usuario (auth_uid, rol, nombre) values ('$auth_id', '$rol', '$nombre')"
   echo "  usuario '$nombre' creado ($auth_id)"

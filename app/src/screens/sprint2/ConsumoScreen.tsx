@@ -1,57 +1,93 @@
 import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@powersync/react";
 import { useConsumoHoy, type TrabajadorConsumoRow } from "../../features/consumo/useConsumoHoy";
 import { consumoRapido } from "../../features/consumo/consumoRapido";
 import { registrarConsumo, type TipoConsumo } from "../../features/consumo/registrarConsumo";
 import { corregirConsumo } from "../../features/consumo/corregirConsumo";
 import { useProductosExtra } from "../../features/consumo/useProductosExtra";
+import { CatalogoExtrasModal } from "../../components/CatalogoExtrasModal";
 import {
   IconCheck,
   IconSearch,
-  IconUtensils
+  IconUtensils,
+  IconPlus,
+  IconUser
 } from "../../components/Icons";
 
-// Corrección de alcance (Sprint 2): "colacion_extra" y "plato_especial"
-// ya no son tipos de enum separados — son productos del catálogo
-// producto_extra (nombre + precio propios), bajo el único tipo
-// "colacion". La lista de raciones principales de la barra rápida
-// ahora es de 4 (se excluye "colacion": ese registro individual, con
-// selector de producto, vive en el modal de abajo — y "cama_noche" es
-// automática vía pg_cron, normalmente no se marca a mano acá).
-const RACIONES_PRINCIPALES: TipoConsumo[] = ["desayuno", "almuerzo", "cena"];
+const TIPOS_SELECTOR: { tipo: TipoConsumo; label: string; icon: string }[] = [
+  { tipo: "desayuno", label: "Desayuno", icon: "☕" },
+  { tipo: "almuerzo", label: "Almuerzo", icon: "🍲" },
+  { tipo: "cena", label: "Cena", icon: "🍽️" },
+  { tipo: "colacion", label: "Colación", icon: "🥪" },
+  { tipo: "cama_noche", label: "Noche de cama", icon: "🛏️" }
+];
 
-const NOMBRES_RACION: Record<TipoConsumo, { label: string; icon: string }> = {
-  cama_noche: { label: "Cama-noche", icon: "🛏️" },
+const NOMBRES_TIPO: Record<TipoConsumo, { label: string; icon: string }> = {
+  cama_noche: { label: "Noche de cama", icon: "🛏️" },
   desayuno: { label: "Desayuno", icon: "☕" },
   almuerzo: { label: "Almuerzo", icon: "🍲" },
   cena: { label: "Cena", icon: "🍽️" },
-  colacion: { label: "Colación / Plato especial", icon: "🥪" }
+  colacion: { label: "Colación / Extra", icon: "🥪" }
 };
 
-export function ConsumoScreen({ usuarioId, contratoEmpresaId }: { usuarioId: string; contratoEmpresaId: string }) {
+type ConsumoRecienteRow = {
+  id: string;
+  tipo_consumo: TipoConsumo;
+  recargo: number;
+  fecha_hora: string;
+  producto_nombre?: string | null;
+};
+
+interface ConsumoScreenProps {
+  usuarioId: string;
+  contratoEmpresaId: string;
+  usuarioRol?: string;
+}
+
+export function ConsumoScreen({
+  usuarioId,
+  contratoEmpresaId,
+  usuarioRol
+}: ConsumoScreenProps) {
   const [tipoRacion, setTipoRacion] = useState<TipoConsumo>("almuerzo");
   const filas = useConsumoHoy(contratoEmpresaId, tipoRacion);
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [mensajesError, setMensajesError] = useState<string[]>([]);
 
-  // Estado para modal de extras o corrección individual
-  const [trabajadorSeleccionado, setTrabajadorSeleccionado] = useState<TrabajadorConsumoRow | null>(null);
+  // Catálogo de productos extra
   const productosExtra = useProductosExtra();
   const [productoExtraId, setProductoExtraId] = useState<string>("");
   const [recargoExtra, setRecargoExtra] = useState<number>(0);
+  const [mostrarModalCatalogo, setMostrarModalCatalogo] = useState(false);
 
+  // Sincronizar producto extra inicial
   useEffect(() => {
-    if (!productoExtraId && productosExtra.length) {
+    if (!productoExtraId && productosExtra.length > 0) {
       setProductoExtraId(productosExtra[0].id);
       setRecargoExtra(productosExtra[0].precio_unitario);
     }
   }, [productosExtra, productoExtraId]);
-  const [guardandoExtra, setGuardandoExtra] = useState(false);
-  const [modoCorregir, setModoCorregir] = useState(false);
+
+  // Modal de opciones individuales / corrección
+  const [trabajadorSeleccionado, setTrabajadorSeleccionado] = useState<TrabajadorConsumoRow | null>(null);
+  const [guardandoAccion, setGuardandoAccion] = useState(false);
+  const [consumoACorregir, setConsumoACorregir] = useState<ConsumoRecienteRow | null>(null);
   const [motivoCorreccion, setMotivoCorreccion] = useState("");
-  const [consumoOriginalId, setConsumoOriginalId] = useState("");
+
+  // Búsqueda y filtros
   const [busquedaTrabajador, setBusquedaTrabajador] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "pendientes" | "servidos">("todos");
+
+  // Consultar consumos del trabajador seleccionado para facilitar corrección
+  const { data: consumosTrabajador } = useQuery<ConsumoRecienteRow>(
+    `select c.id, c.tipo_consumo, c.recargo, c.fecha_hora, pe.nombre as producto_nombre
+     from consumo c
+     left join producto_extra pe on pe.id = c.producto_extra_id
+     where c.trabajador_id = ? and c.consumo_corregido_id is null
+     order by c.fecha_hora desc limit 8`,
+    [trabajadorSeleccionado?.id ?? ""]
+  );
 
   const pendientes = filas.filter((f) => !f.ya_registrado);
   const servidos = filas.filter((f) => !!f.ya_registrado);
@@ -84,10 +120,24 @@ export function ConsumoScreen({ usuarioId, contratoEmpresaId }: { usuarioId: str
 
   async function handleMarcarRapido() {
     if (!seleccionados.length) return;
+
+    if (tipoRacion === "colacion" && !productoExtraId) {
+      alert("Por favor selecciona primero un producto del catálogo para la colación.");
+      return;
+    }
+
     setGuardando(true);
     setMensajesError([]);
     try {
-      const resultados = await consumoRapido(usuarioId, seleccionados, tipoRacion);
+      const opciones =
+        tipoRacion === "colacion"
+          ? {
+              productoExtraId,
+              recargo: Number(recargoExtra) || 0
+            }
+          : undefined;
+
+      const resultados = await consumoRapido(usuarioId, seleccionados, tipoRacion, opciones);
       const fallidos = resultados.filter((r) => !r.ok && r.error);
       if (fallidos.length) {
         setMensajesError(fallidos.map((f) => f.error!));
@@ -98,9 +148,9 @@ export function ConsumoScreen({ usuarioId, contratoEmpresaId }: { usuarioId: str
     }
   }
 
-  async function handleGuardarExtra() {
+  async function handleGuardarColacionIndividual() {
     if (!trabajadorSeleccionado || !productoExtraId) return;
-    setGuardandoExtra(true);
+    setGuardandoAccion(true);
     try {
       await registrarConsumo(usuarioId, {
         trabajadorId: trabajadorSeleccionado.id,
@@ -110,67 +160,158 @@ export function ConsumoScreen({ usuarioId, contratoEmpresaId }: { usuarioId: str
       });
       setTrabajadorSeleccionado(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al registrar extra.");
+      alert(err instanceof Error ? err.message : "Error al registrar la colación.");
     } finally {
-      setGuardandoExtra(false);
+      setGuardandoAccion(false);
     }
   }
 
   async function handleGuardarCorreccion() {
-    if (!trabajadorSeleccionado || !motivoCorreccion.trim() || !consumoOriginalId) return;
-    setGuardandoExtra(true);
+    if (!trabajadorSeleccionado || !motivoCorreccion.trim() || !consumoACorregir) return;
+    setGuardandoAccion(true);
     try {
       await corregirConsumo(usuarioId, {
-        consumoOriginalId,
+        consumoOriginalId: consumoACorregir.id,
         trabajadorId: trabajadorSeleccionado.id,
-        tipoConsumo: tipoRacion,
+        tipoConsumo: consumoACorregir.tipo_consumo,
         justificacion: motivoCorreccion.trim()
       });
       setTrabajadorSeleccionado(null);
-      setModoCorregir(false);
+      setConsumoACorregir(null);
       setMotivoCorreccion("");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al guardar corrección.");
+      alert(err instanceof Error ? err.message : "Error al guardar la corrección.");
     } finally {
-      setGuardandoExtra(false);
+      setGuardandoAccion(false);
     }
   }
 
+  const esAdmin = usuarioRol === "administradora";
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-      {/* Selector de Ración Principal */}
+      {/* Selector de Tipo de Consumo */}
       <div className="rounded-3xl border border-brand-border/70 bg-brand-card p-4 md:p-5 shadow-card">
-        <div className="flex items-center gap-2 mb-3">
-          <IconUtensils className="h-5 w-5 text-brand-terracotta" />
-          <h2 className="font-display text-xl font-bold text-brand-ink">
-            Consumo Rápido de Raciones (HU-14)
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <IconUtensils className="h-5 w-5 text-brand-terracotta" />
+            <h2 className="font-display text-xl font-bold text-brand-ink">
+              Registro Rápido de Consumos
+            </h2>
+          </div>
+
+          {esAdmin && (
+            <button
+              onClick={() => setMostrarModalCatalogo(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-brand-sand/40 px-3 py-1.5 text-xs font-bold text-brand-ink hover:bg-brand-sand transition"
+            >
+              <IconPlus className="h-3.5 w-3.5 text-brand-terracotta" />
+              <span>Catálogo de Extras ({productosExtra.length})</span>
+            </button>
+          )}
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          {RACIONES_PRINCIPALES.map((racion) => {
-            const activo = tipoRacion === racion;
-            const info = NOMBRES_RACION[racion];
+        {/* Botones de selección de tipo */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {TIPOS_SELECTOR.map((t) => {
+            const activo = tipoRacion === t.tipo;
             return (
               <button
-                key={racion}
+                key={t.tipo}
                 onClick={() => {
-                  setTipoRacion(racion);
+                  setTipoRacion(t.tipo);
                   setSeleccionados([]);
                   setMensajesError([]);
                 }}
-                className={`flex min-h-[50px] items-center justify-center gap-2 rounded-2xl border px-3 py-2.5 text-sm font-bold transition-all active:scale-95 ${
+                className={`flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border px-3 py-2 text-xs md:text-sm font-bold transition-all active:scale-95 ${
                   activo
                     ? "border-brand-terracotta bg-brand-terracotta text-white shadow-brand"
                     : "border-brand-border bg-white text-brand-ink hover:bg-brand-sand/30"
                 }`}
               >
-                <span>{info.icon}</span>
-                <span>{info.label}</span>
+                <span>{t.icon}</span>
+                <span className="truncate">{t.label}</span>
               </button>
             );
           })}
         </div>
+
+        {/* Panel condicional según tipo seleccionado */}
+        {tipoRacion === "cama_noche" && (
+          <div className="mt-3 rounded-2xl border border-brand-border/60 bg-brand-sand/30 p-3 text-xs text-brand-muted">
+            ℹ️ Las noches de cama se generan automáticamente cada noche para los trabajadores con cama asignada.
+            Puedes registrar manualmente aquí en casos excepcionales de arribos no agendados.
+          </div>
+        )}
+
+        {tipoRacion === "colacion" && (
+          <div className="mt-3 rounded-2xl border border-brand-terracotta/30 bg-brand-sand/40 p-3.5 animate-in fade-in duration-150 space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-xs font-bold text-brand-ink">
+                Producto o plato especial a marcar:
+              </span>
+              {esAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalCatalogo(true)}
+                  className="text-xs font-semibold text-brand-terracotta hover:underline self-start sm:self-auto"
+                >
+                  + Administrar lista de precios
+                </button>
+              )}
+            </div>
+
+            {productosExtra.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <select
+                  value={productoExtraId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setProductoExtraId(id);
+                    const prod = productosExtra.find((p) => p.id === id);
+                    if (prod) setRecargoExtra(prod.precio_unitario);
+                  }}
+                  className="rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                >
+                  {productosExtra.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre} — ${p.precio_unitario.toLocaleString("es-CL")}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-brand-muted">Precio:</span>
+                  <input
+                    type="number"
+                    step="100"
+                    value={recargoExtra}
+                    onChange={(e) => setRecargoExtra(Number(e.target.value) || 0)}
+                    className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-brand-border bg-white p-3 text-center">
+                <p className="text-xs font-semibold text-brand-ink">
+                  No hay productos registrados en el catálogo de colaciones.
+                </p>
+                {esAdmin ? (
+                  <button
+                    onClick={() => setMostrarModalCatalogo(true)}
+                    className="mt-2 rounded-xl bg-brand-terracotta px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-brand-terracotta-deep"
+                  >
+                    Crear primer producto
+                  </button>
+                ) : (
+                  <p className="text-[11px] text-brand-muted mt-1">
+                    La Administradora debe cargar los precios en el catálogo antes de registrar colaciones.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Barra de acción rápida para marcar */}
@@ -187,14 +328,14 @@ export function ConsumoScreen({ usuarioId, contratoEmpresaId }: { usuarioId: str
 
         <button
           onClick={handleMarcarRapido}
-          disabled={guardando || !seleccionados.length}
-          className="inline-flex min-h-[46px] items-center gap-2 rounded-xl bg-brand-terracotta px-5 py-2 text-sm font-bold text-white shadow-brand transition-all hover:bg-brand-terracotta-deep active:scale-95 disabled:opacity-50"
+          disabled={guardando || !seleccionados.length || (tipoRacion === "colacion" && !productoExtraId)}
+          className="inline-flex min-h-[46px] items-center gap-2 rounded-xl bg-brand-terracotta px-5 py-2 text-xs md:text-sm font-bold text-white shadow-brand transition-all hover:bg-brand-terracotta-deep active:scale-95 disabled:opacity-50"
         >
           <IconCheck className="h-4 w-4" />
           <span>
             {guardando
               ? "Registrando…"
-              : `Marcar ${NOMBRES_RACION[tipoRacion].label} (${seleccionados.length})`}
+              : `Marcar ${NOMBRES_TIPO[tipoRacion].label} (${seleccionados.length})`}
           </span>
         </button>
       </div>
@@ -297,7 +438,7 @@ export function ConsumoScreen({ usuarioId, contratoEmpresaId }: { usuarioId: str
                     {f.nombre}
                   </p>
                   <p className="text-[11px] font-medium text-brand-muted">
-                    {yaRegistrado ? "✓ Ya servido hoy" : "Pendiente de marcar"}
+                    {yaRegistrado ? "✓ Ya registrado hoy" : "Pendiente de marcar"}
                   </p>
                 </div>
               </label>
@@ -307,12 +448,13 @@ export function ConsumoScreen({ usuarioId, contratoEmpresaId }: { usuarioId: str
                 type="button"
                 onClick={() => {
                   setTrabajadorSeleccionado(f);
-                  setModoCorregir(false);
+                  setConsumoACorregir(null);
+                  setMotivoCorreccion("");
                 }}
-                title="Opciones individuales y colación extra"
-                className="shrink-0 rounded-lg p-2 text-xs font-semibold text-brand-muted hover:bg-brand-sand/50 hover:text-brand-ink"
+                title="Opciones individuales y corrección"
+                className="shrink-0 rounded-xl border border-brand-border/60 bg-brand-sand/40 px-2.5 py-1.5 text-xs font-bold text-brand-muted hover:bg-brand-sand hover:text-brand-ink transition"
               >
-                ⋯
+                Opciones
               </button>
             </div>
           );
@@ -327,147 +469,205 @@ export function ConsumoScreen({ usuarioId, contratoEmpresaId }: { usuarioId: str
         )}
       </div>
 
-      {/* Modal de Detalle Individual, Colación Extra (HU-15) y Corrección (HU-13) */}
+      {/* Modal de Detalle Individual, Colación Extra y Corrección Inmutable */}
       {trabajadorSeleccionado && (
         <div
-          className="fixed inset-0 z-30 flex items-center justify-center bg-brand-ink/45 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm animate-in fade-in duration-150"
           onClick={() => setTrabajadorSeleccionado(null)}
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-brand-border/60 bg-brand-card p-6 shadow-2xl space-y-4"
+            className="w-full max-w-lg rounded-3xl border border-brand-border/80 bg-brand-card p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Cabecera modal */}
             <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
-              <div>
-                <h3 className="font-display text-xl font-bold text-brand-ink">
-                  {trabajadorSeleccionado.nombre}
-                </h3>
-                <p className="text-xs text-brand-muted">Opciones individuales de consumo</p>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-sand text-brand-ink">
+                  <IconUser className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-brand-ink">
+                    {trabajadorSeleccionado.nombre}
+                  </h3>
+                  <p className="text-xs text-brand-muted">Detalle individual de consumos</p>
+                </div>
               </div>
               <button
                 onClick={() => setTrabajadorSeleccionado(null)}
-                className="text-xs font-bold text-brand-muted hover:text-brand-ink"
+                className="rounded-full p-1 text-brand-muted hover:bg-brand-sand hover:text-brand-ink"
               >
                 ✕
               </button>
             </div>
 
-            {!modoCorregir ? (
-              <div className="space-y-4">
-                {/* Registro de Colación Extra o Plato Especial */}
+            {/* Sub-formulario de Corrección Activa */}
+            {consumoACorregir ? (
+              <div className="rounded-2xl border border-amber-300 bg-amber-50/70 p-4 space-y-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-brand-muted mb-2">
-                    Registrar Ración Adicional (HU-15)
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900">
+                    Corrección de Registro
+                  </span>
+                  <h4 className="font-display text-base font-bold text-brand-ink">
+                    Corregir {NOMBRES_TIPO[consumoACorregir.tipo_consumo]?.label}
+                  </h4>
+                  <p className="text-[11px] text-brand-muted mt-0.5">
+                    El registro original queda auditado. La corrección crea una nueva transacción compensatoria.
                   </p>
-                  {/* Producto del catálogo (nombre + precio propios,
-                      ver features/consumo/useProductosExtra) — la
-                      Administradora administra la lista de precios,
-                      esto solo la muestra. */}
-                  <select
-                    value={productoExtraId}
-                    onChange={(e) => {
-                      setProductoExtraId(e.target.value);
-                      const p = productosExtra.find((x) => x.id === e.target.value);
-                      if (p) setRecargoExtra(p.precio_unitario);
-                    }}
-                    className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-sm font-bold text-brand-ink"
-                  >
-                    {!productosExtra.length && <option value="">Sin productos cargados</option>}
-                    {productosExtra.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre} — ${p.precio_unitario}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="mt-3">
-                    <label className="mb-1 block text-xs font-semibold text-brand-muted">
-                      Monto a cobrar ($)
-                    </label>
-                    <input
-                      type="number"
-                      step="500"
-                      value={recargoExtra}
-                      onChange={(e) => setRecargoExtra(Number(e.target.value) || 0)}
-                      className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-sm font-bold text-brand-ink"
-                    />
-                  </div>
-
-                  <button
-                    onClick={handleGuardarExtra}
-                    disabled={guardandoExtra || !productoExtraId}
-                    className="mt-3 w-full rounded-xl bg-brand-terracotta py-2.5 text-xs font-bold text-white shadow-sm hover:bg-brand-terracotta-deep disabled:opacity-50"
-                  >
-                    {guardandoExtra ? "Guardando…" : "Guardar colación / plato especial"}
-                  </button>
-                </div>
-
-                <div className="border-t border-brand-border/60 pt-3">
-                  <button
-                    onClick={() => setModoCorregir(true)}
-                    className="w-full py-2 text-center text-xs font-bold text-brand-muted hover:text-brand-ink underline"
-                  >
-                    ¿Necesitas corregir un consumo previo?
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-brand-muted">
-                  Corrección Justificada (Libro Contable Inmutable)
-                </p>
-                <p className="text-xs text-brand-muted">
-                  Los consumos no se pueden eliminar. La corrección crea una nueva transacción referenciando la original.
-                </p>
-
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-brand-muted">
-                    ID de Transacción Original
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Pega el ID del consumo"
-                    value={consumoOriginalId}
-                    onChange={(e) => setConsumoOriginalId(e.target.value)}
-                    className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-xs"
-                  />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-brand-muted">
-                    Motivo obligatorio de corrección
+                  <label className="block text-xs font-bold text-brand-ink mb-1">
+                    Motivo obligatorio de la corrección <span className="text-brand-terracotta">*</span>
                   </label>
                   <textarea
                     rows={2}
                     required
-                    placeholder="Ej: Marcado por error en turno nocturno"
+                    placeholder="Ej: Turno extraordinario en faena / Marcado por error"
                     value={motivoCorreccion}
                     onChange={(e) => setMotivoCorreccion(e.target.value)}
-                    className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-xs"
+                    className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
                   />
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 justify-end">
                   <button
-                    onClick={() => setModoCorregir(false)}
-                    className="flex-1 rounded-xl bg-brand-sand/60 py-2.5 text-xs font-semibold text-brand-ink"
+                    type="button"
+                    onClick={() => {
+                      setConsumoACorregir(null);
+                      setMotivoCorreccion("");
+                    }}
+                    className="rounded-xl border border-brand-border bg-white px-3.5 py-2 text-xs font-bold text-brand-muted hover:text-brand-ink"
                   >
-                    Volver
+                    Cancelar
                   </button>
                   <button
+                    type="button"
                     onClick={handleGuardarCorreccion}
-                    disabled={!motivoCorreccion.trim() || !consumoOriginalId.trim() || guardandoExtra}
-                    className="flex-1 rounded-xl bg-brand-terracotta py-2.5 text-xs font-bold text-white shadow-sm hover:bg-brand-terracotta-deep disabled:opacity-50"
+                    disabled={!motivoCorreccion.trim() || guardandoAccion}
+                    className="rounded-xl bg-brand-terracotta px-4 py-2 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep disabled:opacity-50"
                   >
-                    Guardar corrección
+                    {guardandoAccion ? "Guardando…" : "Confirmar corrección"}
                   </button>
                 </div>
               </div>
-            )}
+            ) : null}
+
+            {/* Listado de Consumos Recientes del Trabajador */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+                Consumos registrados recientemente
+              </h4>
+
+              {consumosTrabajador && consumosTrabajador.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {consumosTrabajador.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between rounded-xl border border-brand-border/60 bg-white p-2.5 shadow-sm"
+                    >
+                      <div>
+                        <p className="text-xs font-bold text-brand-ink">
+                          {c.producto_nombre ? `${c.producto_nombre} (Colación)` : NOMBRES_TIPO[c.tipo_consumo]?.label}
+                        </p>
+                        <p className="text-[10px] text-brand-muted">
+                          {new Date(c.fecha_hora).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                          {c.recargo > 0 && ` · Cobro: $${c.recargo.toLocaleString("es-CL")}`}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConsumoACorregir(c);
+                          setMotivoCorreccion("");
+                        }}
+                        className="rounded-lg border border-brand-border bg-brand-sand/30 px-2.5 py-1 text-[11px] font-bold text-brand-muted hover:border-brand-terracotta hover:text-brand-terracotta transition"
+                      >
+                        Corregir
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-xl border border-brand-border/40 bg-brand-sand/20 p-3 text-center text-xs text-brand-muted">
+                  No hay consumos registrados para este trabajador hoy.
+                </p>
+              )}
+            </div>
+
+            {/* Sección para registrar Colación Individual */}
+            <div className="border-t border-brand-border/60 pt-3 space-y-2.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-ink">
+                Registrar Colación o Plato Especial
+              </h4>
+
+              {productosExtra.length > 0 ? (
+                <div className="space-y-2">
+                  <select
+                    value={productoExtraId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setProductoExtraId(id);
+                      const prod = productosExtra.find((p) => p.id === id);
+                      if (prod) setRecargoExtra(prod.precio_unitario);
+                    }}
+                    className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-xs font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                  >
+                    {productosExtra.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre} — ${p.precio_unitario.toLocaleString("es-CL")}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-brand-muted">Monto:</span>
+                    <input
+                      type="number"
+                      step="100"
+                      value={recargoExtra}
+                      onChange={(e) => setRecargoExtra(Number(e.target.value) || 0)}
+                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleGuardarColacionIndividual}
+                    disabled={guardandoAccion || !productoExtraId}
+                    className="w-full rounded-xl bg-brand-terracotta py-2.5 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition disabled:opacity-50"
+                  >
+                    {guardandoAccion ? "Guardando…" : "Registrar colación para este trabajador"}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-brand-muted">
+                  No hay productos cargados en el catálogo de colaciones.
+                </p>
+              )}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setTrabajadorSeleccionado(null)}
+                className="rounded-xl border border-brand-border bg-brand-sand/40 px-4 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Modal de Catálogo de Extras */}
+      <CatalogoExtrasModal
+        abierto={mostrarModalCatalogo}
+        onCerrar={() => setMostrarModalCatalogo(false)}
+        onProductoCreado={(nuevoId) => {
+          setProductoExtraId(nuevoId);
+        }}
+      />
     </div>
   );
 }

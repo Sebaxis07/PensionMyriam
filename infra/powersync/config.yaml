@@ -56,21 +56,10 @@ sync_rules:
           # BYPASSRLS), así que ocultar una columna acá es lo único que
           # de verdad evita que llegue al celular de la Encargada.
           - select * from empresa
-          - select id, empresa_id, vigencia_desde, vigencia_hasta, headcount, creado_por, created_at from contrato_empresa
+          - select * from contrato_empresa
           - select * from trabajador
           - select * from consumo
           - select * from conciliacion_diaria
           - select * from justificacion_descuadre
           - select * from producto_extra
           - select * from tipo_consumo_config
-
-      # Bucket separado: solo se sincroniza si la fila de `usuario` del
-      # que pide sync tiene rol = administradora. Si la query de
-      # parámetros no devuelve filas (Encargada), este bucket
-      # simplemente no sincroniza nada para ese dispositivo.
-      empresa_tarifas:
-        parameters: |
-          select 1 as _ from usuario
-          where auth_uid = request.user_id() and rol = 'administradora'
-        data:
-          - select id, tarifa_convenida from contrato_empresa where bucket._ = 1
