@@ -4,18 +4,24 @@ import { RegistrarCompraModal } from "./RegistrarCompraModal";
 import { InsumosHistorialModal } from "./InsumosHistorialModal";
 import { useComprasRecientes } from "../../features/costos/useInsumos";
 import {
+  IconBriefcase,
+  IconChartBar,
+  IconClipboardCheck,
   IconChevronRight,
-  IconPlus
+  IconPlus,
+  IconShoppingCart
 } from "../../components/Icons";
 
 interface DashboardAdminProps {
   usuarioId: string;
+  onIrACostos?: () => void;
   onIrAConciliacion?: () => void;
   onIrAEmpresas?: () => void;
 }
 
 export function DashboardAdmin({
   usuarioId,
+  onIrACostos,
   onIrAConciliacion,
   onIrAEmpresas
 }: DashboardAdminProps) {
@@ -55,8 +61,8 @@ export function DashboardAdmin({
       {/* 1. Cabecera Ejecutiva */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-sand-light text-brand-terracotta border border-brand-border text-2xl">
-            📊
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-sand-light text-brand-terracotta border border-brand-border shadow-xs">
+            <IconChartBar className="h-6 w-6 text-brand-terracotta" />
           </div>
           <div>
             <h2 className="font-display text-2xl font-black text-brand-ink leading-tight">
@@ -220,7 +226,13 @@ export function DashboardAdmin({
 
           <button
             type="button"
-            onClick={() => setMostrarModalHistorial(true)}
+            onClick={() => {
+              if (onIrACostos) {
+                onIrACostos();
+              } else {
+                setMostrarModalHistorial(true);
+              }
+            }}
             className="rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs font-bold text-brand-terracotta hover:bg-brand-sand transition"
           >
             Ver todas las compras →
@@ -272,7 +284,30 @@ export function DashboardAdmin({
       </div>
 
       {/* 6. Enlaces de Gestión Rápida */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {onIrACostos && (
+          <button
+            type="button"
+            onClick={onIrACostos}
+            className="flex items-center justify-between p-4 rounded-2xl border border-brand-border/80 bg-white hover:bg-brand-sand-light transition shadow-card text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-900 shadow-xs">
+                <IconShoppingCart className="h-5 w-5 text-amber-900" />
+              </div>
+              <div>
+                <p className="font-display font-bold text-sm text-brand-ink">
+                  Módulo de Compras y Costos
+                </p>
+                <p className="text-[11px] text-brand-muted">
+                  Historial de mercadería y catálogo PMP
+                </p>
+              </div>
+            </div>
+            <IconChevronRight className="h-4 w-4 text-brand-muted" />
+          </button>
+        )}
+
         {onIrAEmpresas && (
           <button
             type="button"
@@ -280,8 +315,8 @@ export function DashboardAdmin({
             className="flex items-center justify-between p-4 rounded-2xl border border-brand-border/80 bg-white hover:bg-brand-sand-light transition shadow-card text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-sand text-brand-terracotta text-lg">
-                🏢
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-sand text-brand-terracotta shadow-xs">
+                <IconBriefcase className="h-5 w-5 text-brand-terracotta" />
               </div>
               <div>
                 <p className="font-display font-bold text-sm text-brand-ink">
@@ -303,8 +338,8 @@ export function DashboardAdmin({
             className="flex items-center justify-between p-4 rounded-2xl border border-brand-border/80 bg-white hover:bg-brand-sand-light transition shadow-card text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 text-lg">
-                ⚖️
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 shadow-xs">
+                <IconClipboardCheck className="h-5 w-5 text-emerald-800" />
               </div>
               <div>
                 <p className="font-display font-bold text-sm text-brand-ink">

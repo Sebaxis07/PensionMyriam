@@ -9,12 +9,13 @@ import { AseoHoy } from "./AseoHoy";
 import { Reservar } from "./Reservar";
 import { QUERY_PIEZAS, type PiezaRow } from "../lib/queries";
 import { useUsuarioActual } from "../lib/useUsuarioActual";
-import { IconBed, IconBriefcase, IconBroom, IconCalendar, IconCheck, IconCheckCircle, IconHome, IconPlus, IconUtensils } from "../components/Icons";
+import { IconBed, IconBriefcase, IconBroom, IconCalendar, IconChartBar, IconCheck, IconCheckCircle, IconHome, IconPlus, IconShoppingCart, IconUtensils } from "../components/Icons";
 import { Header, type TabType } from "../components/Header";
 import { ModuloEmpresas } from "./sprint2/ModuloEmpresas";
 import { ModuloConsumos } from "./sprint2/ModuloConsumos";
 import { RackHotelero } from "./RackHotelero";
 import { DashboardAdmin } from "./sprint4/DashboardAdmin";
+import { ModuloCostos } from "./sprint4/ModuloCostos";
 import { SyncStatusModal } from "../components/SyncStatusModal";
 import logo from "../assets/logo.webp";
 
@@ -99,7 +100,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
             {usuario.rol === "administradora" && (
               <SidebarButton
                 activo={tab === "inicio" && modo === "admin"}
-                icon={<span className="text-lg">📊</span>}
+                icon={<IconChartBar className="h-5 w-5" />}
                 label="Administración"
                 onClick={() => {
                   setTab("inicio");
@@ -132,6 +133,14 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                 icon={<IconBriefcase className="h-5 w-5" />}
                 label="Empresas"
                 onClick={() => setTab("empresas")}
+              />
+            )}
+            {usuario.rol === "administradora" && (
+              <SidebarButton
+                activo={tab === "costos"}
+                icon={<IconShoppingCart className="h-5 w-5" />}
+                label="Compras y Costos"
+                onClick={() => setTab("costos")}
               />
             )}
             <SidebarButton
@@ -178,6 +187,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
               modo === "admin" && usuario.rol === "administradora" ? (
                 <DashboardAdmin
                   usuarioId={usuario.id}
+                  onIrACostos={() => setTab("costos")}
                   onIrAConciliacion={() => setTab("empresas")}
                   onIrAEmpresas={() => setTab("empresas")}
                 />
@@ -402,6 +412,10 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
               <ModuloEmpresas usuarioId={usuario.id} />
             )}
 
+            {tab === "costos" && usuario.rol === "administradora" && (
+              <ModuloCostos usuarioId={usuario.id} />
+            )}
+
             {tab === "reservar" && (
               <Reservar
                 usuarioId={usuario.id}
@@ -451,6 +465,14 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                 icon={<IconBriefcase className="h-5 w-5" />}
                 label="Empresas"
                 onClick={() => setTab("empresas")}
+              />
+            )}
+            {usuario.rol === "administradora" && (
+              <NavButton
+                activo={tab === "costos"}
+                icon={<IconShoppingCart className="h-5 w-5" />}
+                label="Costos"
+                onClick={() => setTab("costos")}
               />
             )}
             <NavButton

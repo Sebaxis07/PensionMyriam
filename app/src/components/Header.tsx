@@ -2,7 +2,7 @@ import { SyncStatusBadge } from "./SyncStatusBadge";
 import { IconCalendar, IconDoorExit, IconUser } from "./Icons";
 import logo from "../assets/logo.webp";
 
-export type TabType = "inicio" | "aseo" | "reservar" | "consumo" | "empresas" | "rack";
+export type TabType = "inicio" | "aseo" | "reservar" | "consumo" | "empresas" | "rack" | "costos";
 
 interface HeaderProps {
   tab: TabType;
@@ -29,6 +29,10 @@ const META_VISTAS: Record<TabType, { titulo: string; descripcion: string }> = {
   empresas: {
     titulo: "Empresas y Contratos",
     descripcion: "Gestión de empresas contratistas, nómina y conciliación diaria"
+  },
+  costos: {
+    titulo: "Compras y Costos PMP",
+    descripcion: "Registro de mercadería, cálculo de precios promedio y gastos"
   },
   rack: {
     titulo: "Calendario de Ocupación",
