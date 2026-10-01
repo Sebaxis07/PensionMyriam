@@ -159,6 +159,27 @@ const justificacion_descuadre = new Table({
   created_at: column.text
 });
 
+// Sprint 4 (EP-04): Control de costos de insumos y compras (PMP).
+const insumo = new Table({
+  nombre: column.text,
+  categoria: column.text,
+  unidad_medida: column.text,
+  costo_promedio: column.real,
+  cantidad_total: column.real
+});
+
+const compra_insumo = new Table({
+  insumo_id: column.text,
+  categoria: column.text,
+  monto_total: column.real,
+  cantidad: column.real,
+  rendimiento_estimado: column.real,
+  fecha: column.text,
+  registrado_por: column.text,
+  uuid_idempotente: column.text,
+  created_at: column.text
+});
+
 export const AppSchema = new Schema({
   usuario,
   habitacion,
@@ -174,7 +195,9 @@ export const AppSchema = new Schema({
   producto_extra,
   tipo_consumo_config,
   conciliacion_diaria,
-  justificacion_descuadre
+  justificacion_descuadre,
+  insumo,
+  compra_insumo
 });
 
 export type Database = (typeof AppSchema)["types"];

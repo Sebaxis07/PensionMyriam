@@ -63,3 +63,6 @@ sync_rules:
           - select * from justificacion_descuadre
           - select * from producto_extra
           - select * from tipo_consumo_config
+          # Sprint 4 (EP-04): Costos de insumos y compras
+          - select * from insumo
+          - select * from compra_insumo

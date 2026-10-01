@@ -14,6 +14,7 @@ import { Header, type TabType } from "../components/Header";
 import { ModuloEmpresas } from "./sprint2/ModuloEmpresas";
 import { ModuloConsumos } from "./sprint2/ModuloConsumos";
 import { RackHotelero } from "./RackHotelero";
+import { DashboardAdmin } from "./sprint4/DashboardAdmin";
 import { SyncStatusModal } from "../components/SyncStatusModal";
 import logo from "../assets/logo.webp";
 
@@ -21,6 +22,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
   const usuario = useUsuarioActual();
   const { data: piezas } = useQuery<PiezaRow>(QUERY_PIEZAS);
   const [tab, setTab] = useState<TabType>("inicio");
+  const [modo, setModo] = useState<"operativo" | "admin">("operativo");
   const [piezaAbierta, setPiezaAbierta] = useState<PiezaRow | null>(null);
   const [preseleccionReserva, setPreseleccionReserva] = useState<string | null>(null);
   const [fechaPreseleccionadaReserva, setFechaPreseleccionadaReserva] = useState<string | undefined>(undefined);
@@ -86,11 +88,25 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
           {/* Menú de Navegación Vertical */}
           <nav className="mt-6 flex flex-col gap-2">
             <SidebarButton
-              activo={tab === "inicio"}
+              activo={tab === "inicio" && modo === "operativo"}
               icon={<IconHome className="h-5 w-5" />}
               label="Habitaciones"
-              onClick={() => setTab("inicio")}
+              onClick={() => {
+                setTab("inicio");
+                setModo("operativo");
+              }}
             />
+            {usuario.rol === "administradora" && (
+              <SidebarButton
+                activo={tab === "inicio" && modo === "admin"}
+                icon={<span className="text-lg">📊</span>}
+                label="Administración"
+                onClick={() => {
+                  setTab("inicio");
+                  setModo("admin");
+                }}
+              />
+            )}
             <SidebarButton
               activo={tab === "rack"}
               icon={<IconCalendar className="h-5 w-5" />}
@@ -146,13 +162,27 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
       {/* ========================================================= */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Cabecera unificada y responsiva */}
-        <Header tab={tab} usuario={usuario} onLogout={onLogout} onAbrirSyncModal={() => setMostrarSyncModal(true)} />
+        <Header
+          tab={tab}
+          usuario={usuario}
+          modoActivo={modo}
+          onCambiarModo={setModo}
+          onLogout={onLogout}
+          onAbrirSyncModal={() => setMostrarSyncModal(true)}
+        />
 
         {/* Área scrolleable de contenido */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-[1550px]">
             {tab === "inicio" && (
-              <div className="space-y-6">
+              modo === "admin" && usuario.rol === "administradora" ? (
+                <DashboardAdmin
+                  usuarioId={usuario.id}
+                  onIrAConciliacion={() => setTab("empresas")}
+                  onIrAEmpresas={() => setTab("empresas")}
+                />
+              ) : (
+                <div className="space-y-6">
                 {/* Métricas destacadas de estado (2 cols en mobile, 4 cols en md/desktop) */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                   <StatTile
@@ -350,7 +380,8 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                   </div>
                 </div>
               </div>
-            )}
+          )
+        )}
 
             {tab === "rack" && (
               <RackHotelero

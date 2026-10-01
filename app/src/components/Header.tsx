@@ -7,6 +7,8 @@ export type TabType = "inicio" | "aseo" | "reservar" | "consumo" | "empresas" | 
 interface HeaderProps {
   tab: TabType;
   usuario?: { nombre: string; rol: string } | null;
+  modoActivo?: "operativo" | "admin";
+  onCambiarModo?: (modo: "operativo" | "admin") => void;
   onLogout?: () => void;
   onAbrirSyncModal?: () => void;
 }
@@ -52,41 +54,89 @@ function fechaHoyTexto() {
   }
 }
 
-export function Header({ tab, usuario, onLogout, onAbrirSyncModal }: HeaderProps) {
-  const vistaActual = META_VISTAS[tab] ?? META_VISTAS.inicio;
+export function Header({
+  tab,
+  usuario,
+  modoActivo = "operativo",
+  onCambiarModo,
+  onLogout,
+  onAbrirSyncModal
+}: HeaderProps) {
+  const metaBase = META_VISTAS[tab] ?? META_VISTAS.inicio;
   const esAdmin = usuario?.rol === "administradora";
   const labelRol = esAdmin ? "Administradora" : "Encargada";
+
+  // Si estamos en la pestaña inicio y en modo admin, cambiar título
+  const tituloHeader =
+    tab === "inicio" && modoActivo === "admin"
+      ? "Panel de Administración"
+      : metaBase.titulo;
+
+  const descHeader =
+    tab === "inicio" && modoActivo === "admin"
+      ? "Control de ganancias, costos de mercadería y tarifas mínimas"
+      : metaBase.descripcion;
 
   return (
     <>
       {/* ========================================================= */}
       {/* CABECERA MOBILE (< 768px / md:)                           */}
       {/* ========================================================= */}
-      <header className="sticky top-0 z-20 flex md:hidden items-center justify-between border-b border-brand-border/60 bg-brand-sand/95 px-3.5 py-2.5 backdrop-blur-md">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <img src={logo} alt="Pensión Señora Miriam" className="h-9 w-9 shrink-0 object-contain drop-shadow-sm" />
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-brand-terracotta truncate">
-              Pensión Señora Miriam
-            </p>
-            <h1 className="font-display text-lg font-extrabold leading-tight text-brand-ink truncate">
-              {vistaActual.titulo}
-            </h1>
+      <header className="sticky top-0 z-20 flex md:hidden flex-col border-b border-brand-border/60 bg-brand-sand/95 px-3.5 py-2.5 backdrop-blur-md gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img src={logo} alt="Pensión Señora Miriam" className="h-9 w-9 shrink-0 object-contain drop-shadow-sm" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-terracotta truncate">
+                Pensión Señora Miriam
+              </p>
+              <h1 className="font-display text-lg font-extrabold leading-tight text-brand-ink truncate">
+                {tituloHeader}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <SyncStatusBadge onClick={onAbrirSyncModal} />
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                title="Cerrar sesión"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-border/80 bg-brand-card text-brand-muted hover:text-brand-terracotta active:scale-95 transition-all shadow-sm"
+              >
+                <IconDoorExit className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <SyncStatusBadge onClick={onAbrirSyncModal} />
-          {onLogout && (
+        {/* Switch de Doble Modo en Mobile (solo visible para Administradora en inicio) */}
+        {esAdmin && tab === "inicio" && onCambiarModo && (
+          <div className="flex items-center rounded-xl bg-white p-1 border border-brand-border/70 shadow-xs">
             <button
-              onClick={onLogout}
-              title="Cerrar sesión"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-border/80 bg-brand-card text-brand-muted hover:text-brand-terracotta active:scale-95 transition-all shadow-sm"
+              type="button"
+              onClick={() => onCambiarModo("operativo")}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
+                modoActivo === "operativo"
+                  ? "bg-brand-sand-light text-brand-ink shadow-xs"
+                  : "text-brand-muted hover:text-brand-ink"
+              }`}
             >
-              <IconDoorExit className="h-4 w-4" />
+              🛠️ Modo Día a Día
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={() => onCambiarModo("admin")}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
+                modoActivo === "admin"
+                  ? "bg-brand-terracotta text-white shadow-xs"
+                  : "text-brand-muted hover:text-brand-ink"
+              }`}
+            >
+              📊 Modo Administración
+            </button>
+          </div>
+        )}
       </header>
 
       {/* ========================================================= */}
@@ -95,14 +145,42 @@ export function Header({ tab, usuario, onLogout, onAbrirSyncModal }: HeaderProps
       <header className="hidden md:flex items-center justify-between border-b border-brand-border/60 bg-brand-sand/80 px-8 py-5 backdrop-blur-md">
         <div>
           <h1 className="font-display text-2xl font-black text-brand-ink">
-            {vistaActual.titulo}
+            {tituloHeader}
           </h1>
           <p className="mt-0.5 text-xs text-brand-muted">
-            {vistaActual.descripcion}
+            {descHeader}
           </p>
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Switch de Doble Modo (solo Administradora en inicio) */}
+          {esAdmin && tab === "inicio" && onCambiarModo && (
+            <div className="inline-flex items-center rounded-xl bg-brand-sand-light/90 p-1 border border-brand-border/70 shadow-xs">
+              <button
+                type="button"
+                onClick={() => onCambiarModo("operativo")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  modoActivo === "operativo"
+                    ? "bg-white text-brand-ink shadow-xs"
+                    : "text-brand-muted hover:text-brand-ink"
+                }`}
+              >
+                🛠️ Modo Día a Día
+              </button>
+              <button
+                type="button"
+                onClick={() => onCambiarModo("admin")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  modoActivo === "admin"
+                    ? "bg-brand-terracotta text-white shadow-xs"
+                    : "text-brand-muted hover:text-brand-ink"
+                }`}
+              >
+                📊 Modo Administración
+              </button>
+            </div>
+          )}
+
           {/* Chip de fecha actual en Paposo */}
           <div className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border/70 bg-brand-card/90 px-3 py-1.5 text-xs font-semibold text-brand-muted shadow-sm">
             <IconCalendar className="h-3.5 w-3.5 text-brand-terracotta" />
