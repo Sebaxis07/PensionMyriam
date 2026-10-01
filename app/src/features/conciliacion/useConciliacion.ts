@@ -73,3 +73,23 @@ export async function generarCamaNoche(fecha: string): Promise<number> {
   }
   return data as number;
 }
+
+/**
+ * Concilia un período completo o rango de fechas en Postgres en una sola operación.
+ */
+export async function conciliarPeriodo(
+  contratoEmpresaId: string,
+  desde: string,
+  hasta: string
+): Promise<number> {
+  const { data, error } = await supabase.rpc("conciliar_periodo", {
+    p_contrato_empresa_id: contratoEmpresaId,
+    p_desde: desde,
+    p_hasta: hasta
+  });
+  if (error) {
+    throw new Error("No se pudo conciliar el período. Revisa tu conexión e intenta de nuevo.");
+  }
+  return Number(data ?? 0);
+}
+

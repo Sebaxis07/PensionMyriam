@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCierreMensual } from "../../features/cierre/useCierreMensual";
+import { conciliarPeriodo } from "../../features/conciliacion/useConciliacion";
 import { descargarPreFacturaPdf } from "../../features/reportes/generarPreFacturaPdf";
 import { descargarPlanillaExcel } from "../../features/reportes/generarPlanillaExcel";
 import { formatearMonedaCLP } from "../../lib/pdf/pdfMakeConfig";
@@ -43,9 +44,26 @@ export function CierreMensualModal({
   const [mes, setMes] = useState(hoy.getMonth() + 1);
   const [descargandoPdf, setDescargandoPdf] = useState(false);
   const [descargandoExcel, setDescargandoExcel] = useState(false);
+  const [procesandoPeriodo, setProcesandoPeriodo] = useState(false);
 
   const cierre = useCierreMensual(contratoEmpresaId, anio, mes);
   const periodoTexto = `${NOMBRES_MESES[mes - 1]} ${anio}`;
+
+  async function handleConciliarPendientes() {
+    setProcesandoPeriodo(true);
+    try {
+      const mesPadded = String(mes).padStart(2, "0");
+      const primerDia = `${anio}-${mesPadded}-01`;
+      const hoyStr = new Date().toISOString().slice(0, 10);
+      const ultimoDia = `${anio}-${mesPadded}-${new Date(anio, mes, 0).getDate()}`;
+      const fin = hoyStr < ultimoDia ? hoyStr : ultimoDia;
+      await conciliarPeriodo(contratoEmpresaId, primerDia, fin);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProcesandoPeriodo(false);
+    }
+  }
 
   async function handleDescargarPdf() {
     try {
@@ -215,19 +233,29 @@ export function CierreMensualModal({
                 ))}
               </div>
 
-              {onIrAConciliacion && (
-                <div className="pt-2">
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleConciliarPendientes}
+                  disabled={procesandoPeriodo}
+                  className="rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep px-4 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
+                >
+                  {procesandoPeriodo ? "Conciliando días…" : "Conciliar días del mes automáticamente"}
+                </button>
+
+                {onIrAConciliacion && (
                   <button
+                    type="button"
                     onClick={() => {
                       onCerrar();
                       onIrAConciliacion();
                     }}
-                    className="rounded-xl bg-amber-700 hover:bg-amber-800 px-4 py-2 text-xs font-bold text-white transition-colors"
+                    className="rounded-xl border border-amber-400 bg-white hover:bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900 transition-colors"
                   >
-                    Ir a Conciliación Diaria →
+                    Justificar Diferencias →
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ) : (
             /* Mes completo y listo para cerrar */

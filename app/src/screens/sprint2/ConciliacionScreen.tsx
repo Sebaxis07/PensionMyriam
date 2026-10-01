@@ -1,11 +1,18 @@
 import { useState } from "react";
-import { useConciliacion, recalcularConciliacion, type ConciliacionRow } from "../../features/conciliacion/useConciliacion";
+import {
+  useConciliacion,
+  recalcularConciliacion,
+  conciliarPeriodo,
+  generarCamaNoche,
+  type ConciliacionRow
+} from "../../features/conciliacion/useConciliacion";
 import {
   justificarDescuadre,
   MOTIVOS_DESCUADRE,
   type MotivoDescuadre
 } from "../../features/conciliacion/justificarDescuadre";
 import {
+  IconCalendar,
   IconClipboardCheck,
   IconRefresh
 } from "../../components/Icons";
@@ -39,20 +46,40 @@ export function ConciliacionScreen({
   const [motivo, setMotivo] = useState<MotivoDescuadre>("ausencia_justificada");
   const [supervisorNombre, setSupervisorNombre] = useState("");
   const [recalculandoFecha, setRecalculandoFecha] = useState<string | null>(null);
+  const [procesandoPeriodo, setProcesandoPeriodo] = useState(false);
+  const [fechaManual, setFechaManual] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const primerDiaMes = `${hoy.slice(0, 7)}-01`;
 
   async function handleRecalcular(fecha: string) {
     setError(null);
     setMensajeExito(null);
     setRecalculandoFecha(fecha);
     try {
+      await generarCamaNoche(fecha);
       await recalcularConciliacion(contratoEmpresaId, fecha);
-      setMensajeExito(`Conciliación del ${fecha} recalculada.`);
+      setMensajeExito(`Conciliación del ${fecha} actualizada.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al recalcular.");
     } finally {
       setRecalculandoFecha(null);
+    }
+  }
+
+  async function handleConciliarMesCompleto() {
+    setError(null);
+    setMensajeExito(null);
+    setProcesandoPeriodo(true);
+    try {
+      const cantidad = await conciliarPeriodo(contratoEmpresaId, primerDiaMes, hoy);
+      setMensajeExito(`Se procesaron ${cantidad} días del mes hasta hoy.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al conciliar período.");
+    } finally {
+      setProcesandoPeriodo(false);
     }
   }
 
@@ -67,7 +94,7 @@ export function ConciliacionScreen({
       });
       setDiaJustificando(null);
       setSupervisorNombre("");
-      setMensajeExito("Diferencia justificada registrada en el celular.");
+      setMensajeExito("Diferencia justificada guardada exitosamente.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al justificar descuadre.");
     }
@@ -75,42 +102,81 @@ export function ConciliacionScreen({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-      {/* Cabecera y Regla de Facturación de Negocio */}
-      <div className="rounded-3xl border border-brand-border/70 bg-brand-card p-5 md:p-6 shadow-card">
+      {/* Cabecera y Herramientas de Conciliación */}
+      <div className="rounded-3xl border border-brand-border/70 bg-brand-card p-5 md:p-6 shadow-card space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <IconClipboardCheck className="h-6 w-6 text-brand-terracotta" />
-            <h2 className="font-display text-2xl font-bold text-brand-ink">
-              Conciliación Diaria
-            </h2>
+            <div>
+              <h2 className="font-display text-2xl font-bold text-brand-ink">
+                Conciliación Diaria
+              </h2>
+              <p className="text-xs text-brand-muted">
+                Comparativa entre raciones esperadas según nómina y consumos reales servidos.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {onAbrirCierre && (
             <button
-              onClick={() => handleRecalcular(new Date().toISOString().slice(0, 10))}
-              disabled={recalculandoFecha === new Date().toISOString().slice(0, 10)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3.5 py-2 text-xs font-bold text-brand-ink shadow-sm hover:bg-brand-sand/40"
+              onClick={onAbrirCierre}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-brand-terracotta px-4 py-2.5 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep self-start sm:self-auto transition"
             >
-              <IconRefresh className="h-3.5 w-3.5" />
+              <span>Cierre Mensual →</span>
+            </button>
+          )}
+        </div>
+
+        {/* Barra de Procesamiento de Fechas */}
+        <div className="rounded-2xl border border-brand-border/80 bg-brand-sand-light/50 p-4 space-y-3">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-brand-muted block">
+            Acciones de Conciliación
+          </span>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Botón Conciliar Hoy */}
+            <button
+              onClick={() => handleRecalcular(hoy)}
+              disabled={recalculandoFecha === hoy}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3.5 py-2 text-xs font-bold text-brand-ink shadow-sm hover:bg-brand-sand/40 disabled:opacity-50"
+            >
+              <IconRefresh className={`h-3.5 w-3.5 ${recalculandoFecha === hoy ? "animate-spin text-brand-terracotta" : ""}`} />
               <span>Conciliar Hoy</span>
             </button>
 
-            {onAbrirCierre && (
+            {/* Botón Conciliar Todo el Mes */}
+            <button
+              onClick={handleConciliarMesCompleto}
+              disabled={procesandoPeriodo}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3.5 py-2 text-xs font-bold text-brand-terracotta shadow-sm hover:bg-brand-sand/40 disabled:opacity-50"
+            >
+              <IconCalendar className="h-3.5 w-3.5 text-brand-terracotta" />
+              <span>{procesandoPeriodo ? "Procesando mes…" : "Conciliar Todo el Mes"}</span>
+            </button>
+
+            {/* Selector de Fecha arbitraria */}
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-xs text-brand-muted font-medium hidden sm:inline">Otra fecha:</span>
+              <input
+                type="date"
+                max={hoy}
+                value={fechaManual}
+                onChange={(e) => setFechaManual(e.target.value)}
+                className="rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+              />
               <button
-                onClick={onAbrirCierre}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand-terracotta px-3.5 py-2 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep"
+                type="button"
+                onClick={() => handleRecalcular(fechaManual)}
+                disabled={recalculandoFecha === fechaManual}
+                className="rounded-xl bg-brand-ink px-3 py-1.5 text-xs font-bold text-white hover:bg-black disabled:opacity-50"
               >
-                <span>Cierre Mensual →</span>
+                {recalculandoFecha === fechaManual ? "Calculando…" : "Conciliar Fecha"}
               </button>
-            )}
+            </div>
           </div>
         </div>
 
-        <p className="mt-2 text-xs text-brand-muted">
-          Comparativa entre raciones esperadas según nómina y consumos reales servidos por cada servicio.
-        </p>
-
-        <div className="mt-3.5 rounded-2xl border border-emerald-600/30 bg-emerald-50/70 p-3.5 text-xs text-emerald-950 font-medium">
+        <div className="rounded-2xl border border-emerald-600/30 bg-emerald-50/70 p-3.5 text-xs text-emerald-950 font-medium">
           📋 <strong>Regla de negocio:</strong> La facturación se emite por el contrato completo convenido. Las diferencias se justifican formalmente pero no cambian el cobro pactado.
         </div>
       </div>

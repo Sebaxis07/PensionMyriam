@@ -182,8 +182,10 @@ export function useCierreMensual(
 
     const diasPendientes: DiaPendienteConciliacion[] = [];
     let diasConciliadosContador = 0;
+    const hoyStr = new Date().toISOString().slice(0, 10);
+    const diasEvaluables = listaDiasEfectivos.filter((f) => f <= hoyStr);
 
-    for (const f of listaDiasEfectivos) {
+    for (const f of diasEvaluables) {
       const mapaTipos = conciliacionesPorDia.get(f);
       const faltantes: string[] = [];
 
@@ -201,7 +203,7 @@ export function useCierreMensual(
       }
     }
 
-    const estaCerrable = listaDiasEfectivos.length > 0 && diasPendientes.length === 0;
+    const estaCerrable = diasEvaluables.length > 0 && diasPendientes.length === 0;
 
     // Calcular montos de contrato completo
     const totalDiasContrato = listaDiasEfectivos.length;
