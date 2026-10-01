@@ -11,38 +11,77 @@ export function GraficoTacometroMargen({
   ingresosTotales,
   costosTotales
 }: GraficoTacometroMargenProps) {
-  // Limitar el valor entre 0 y 100 para el velocímetro
+  // Limitar el valor visual entre 0 y 100
   const valorClamped = Math.max(0, Math.min(100, margenPorcentaje));
 
-  // En un arco de 180 grados (de 180° a 0°):
-  // 0% -> 180°, 100% -> 0°
-  // Ángulo en radianes: anguloDeg = 180 - (valorClamped / 100) * 180
-  const anguloDeg = 180 - (valorClamped / 100) * 180;
-  const anguloRad = (anguloDeg * Math.PI) / 180;
-
-  // Radio y centro del tacómetro
-  const cx = 100;
-  const cy = 90;
+  // Geometría del tacómetro
+  const cx = 110;
+  const cy = 96;
   const radio = 70;
 
-  // Posición de la punta de la aguja
-  const agujaX = cx + radio * 0.75 * Math.cos(anguloRad);
-  const agujaY = cy - radio * 0.75 * Math.sin(anguloRad);
+  // Conversión polar a cartesiana (y decrece hacia arriba)
+  const polarACartesiana = (r: number, anguloDeg: number) => {
+    const rad = (anguloDeg * Math.PI) / 180;
+    return {
+      x: Number((cx + r * Math.cos(rad)).toFixed(2)),
+      y: Number((cy - r * Math.sin(rad)).toFixed(2))
+    };
+  };
+
+  // Generador de comando de arco SVG para semicírculo superior (en sentido horario)
+  const crearArco = (r: number, anguloInicio: number, anguloFin: number) => {
+    const inicio = polarACartesiana(r, anguloInicio);
+    const fin = polarACartesiana(r, anguloFin);
+    return `M ${inicio.x} ${inicio.y} A ${r} ${r} 0 0 1 ${fin.x} ${fin.y}`;
+  };
+
+  // Segmentos del velocímetro con pequeñas holguras estéticas:
+  // Zona Roja: 0% a 20% (176° a 146°)
+  const arcoRojo = crearArco(radio, 176, 146);
+  // Zona Amarilla: 20% a 35% (142° a 119°)
+  const arcoAmarillo = crearArco(radio, 142, 119);
+  // Zona Verde: 35% a 100% (115° a 4°)
+  const arcoVerde = crearArco(radio, 115, 4);
+
+  // Cálculo del ángulo de la aguja: 0% = 180°, 100% = 0°
+  const anguloAgujaDeg = 180 - (valorClamped / 100) * 180;
+  const anguloAgujaRad = (anguloAgujaDeg * Math.PI) / 180;
+
+  // Punta de la aguja
+  const largoAguja = 56;
+  const puntaX = Number((cx + largoAguja * Math.cos(anguloAgujaRad)).toFixed(2));
+  const puntaY = Number((cy - largoAguja * Math.sin(anguloAgujaRad)).toFixed(2));
+
+  // Base de la aguja (ancho 4.5px a cada lado)
+  const anguloPerp = anguloAgujaRad + Math.PI / 2;
+  const base1X = Number((cx + 4.5 * Math.cos(anguloPerp)).toFixed(2));
+  const base1Y = Number((cy - 4.5 * Math.sin(anguloPerp)).toFixed(2));
+  const base2X = Number((cx - 4.5 * Math.cos(anguloPerp)).toFixed(2));
+  const base2Y = Number((cy + 4.5 * Math.sin(anguloPerp)).toFixed(2));
+
+  // Cola trasera de contrapeso
+  const colaX = Number((cx - 10 * Math.cos(anguloAgujaRad)).toFixed(2));
+  const colaY = Number((cy + 10 * Math.sin(anguloAgujaRad)).toFixed(2));
+
+  const puntosAguja = `${puntaX},${puntaY} ${base1X},${base1Y} ${colaX},${colaY} ${base2X},${base2Y}`;
 
   const configSemaforo = {
     verde: {
+      colorStroke: "#10b981", // Emerald 500
       colorTexto: "text-emerald-700",
       colorBadge: "bg-emerald-100 text-emerald-900 border-emerald-300",
       etiqueta: "Rentabilidad Saludable",
-      mensaje: "Tus ingresos cubren con holgura los costos quincenales calculados por PMP."
+      mensaje: "Tus ingresos cubren con holgura los costos quincenales de compras calculados por PMP."
     },
     amarillo: {
+      colorStroke: "#f59e0b", // Amber 500
       colorTexto: "text-amber-700",
       colorBadge: "bg-amber-100 text-amber-900 border-amber-300",
       etiqueta: "Margen en Observación",
       mensaje: "El costo de insumos subió. Considera revisar tus compras de carnes o gas."
     },
     rojo: {
+      colorStroke: "#ef4444", // Red 500
       colorTexto: "text-red-700",
       colorBadge: "bg-red-100 text-red-900 border-red-300",
       etiqueta: "Alerta Crítica de Margen",
@@ -52,6 +91,7 @@ export function GraficoTacometroMargen({
 
   return (
     <div className="flex flex-col items-center justify-between rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card">
+      {/* Cabecera limpia */}
       <div className="w-full text-center">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
@@ -69,105 +109,119 @@ export function GraficoTacometroMargen({
         </p>
       </div>
 
-      {/* Tacómetro SVG */}
-      <div className="relative my-2 w-full max-w-[240px] flex items-center justify-center">
-        <svg viewBox="0 0 200 115" className="w-full overflow-visible">
-          <defs>
-            <linearGradient id="gradTacometro" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#ef4444" />
-              <stop offset="25%" stopColor="#f59e0b" />
-              <stop offset="50%" stopColor="#10b981" />
-              <stop offset="100%" stopColor="#059669" />
-            </linearGradient>
-          </defs>
-
-          {/* Arco de Fondo Base */}
+      {/* Tacómetro Instrumentado SVG con aguja limpia y espacio totalmente libre */}
+      <div className="relative my-2 w-full max-w-[280px] flex flex-col items-center justify-center">
+        <svg viewBox="0 0 220 118" className="w-full overflow-visible">
+          {/* Pista base suave */}
           <path
-            d="M 25 90 A 75 75 0 0 1 175 90"
+            d="M 38 96 A 72 72 0 0 1 182 96"
             fill="none"
             stroke="#f1e9de"
-            strokeWidth="16"
+            strokeWidth="12"
             strokeLinecap="round"
           />
 
-          {/* Zona Roja: 0% - 20% (180° a 144°) */}
+          {/* Segmento 1: Crítico / Rojo (0% a 20%) */}
           <path
-            d="M 25 90 A 75 75 0 0 1 39.3 45.9"
+            d={arcoRojo}
             fill="none"
             stroke="#ef4444"
-            strokeWidth="16"
+            strokeWidth="10"
             strokeLinecap="round"
           />
 
-          {/* Zona Amarilla: 20% - 35% (144° a 117°) */}
+          {/* Segmento 2: Precaución / Amarillo (20% a 35%) */}
           <path
-            d="M 39.3 45.9 A 75 75 0 0 1 65.9 23.2"
+            d={arcoAmarillo}
             fill="none"
             stroke="#f59e0b"
-            strokeWidth="16"
+            strokeWidth="10"
+            strokeLinecap="round"
           />
 
-          {/* Zona Verde: 35% - 100% (117° a 0°) */}
+          {/* Segmento 3: Saludable / Verde (35% a 100%) */}
           <path
-            d="M 65.9 23.2 A 75 75 0 0 1 175 90"
+            d={arcoVerde}
             fill="none"
             stroke="#10b981"
-            strokeWidth="16"
+            strokeWidth="10"
             strokeLinecap="round"
           />
 
-          {/* Aguja del Tacómetro */}
-          <line
-            x1={cx}
-            y1={cy}
-            x2={agujaX}
-            y2={agujaY}
-            stroke="#261e19"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-          />
-          {/* Centro del eje de la aguja */}
-          <circle cx={cx} cy={cy} r="6" fill="#261e19" />
-          <circle cx={cx} cy={cy} r="2.5" fill="#fcfbf9" />
+          {/* Ticks y Marcas de escala en los extremos */}
+          <text x="26" y="108" textAnchor="middle" className="text-[10px] font-bold fill-brand-muted">
+            0%
+          </text>
+          <text x="194" y="108" textAnchor="middle" className="text-[10px] font-bold fill-brand-muted">
+            100%
+          </text>
+
+          {/* Aguja indicadora cónica estilizada tipo instrumento */}
+          <g className="transition-all duration-700 ease-out">
+            {/* Polígono estilizado de la aguja */}
+            <polygon
+              points={puntosAguja}
+              fill="#1e293b"
+              className="drop-shadow-sm"
+            />
+            {/* Casquillo central (pivote) */}
+            <circle cx={cx} cy={cy} r="8" fill="#1e293b" />
+            <circle cx={cx} cy={cy} r="3.5" fill="#f8fafc" />
+          </g>
         </svg>
 
-        {/* Valor al Centro */}
-        <div className="absolute bottom-1 left-0 right-0 text-center">
-          <span className={`font-display text-3xl font-black ${configSemaforo.colorTexto}`}>
-            {margenPorcentaje}%
-          </span>
-          <p className="text-[10px] font-bold text-brand-muted uppercase tracking-wider">
-            Margen Proyectado
-          </p>
+        {/* Marcador de meta 35% como etiqueta flotante sutil */}
+        <div className="absolute top-1 left-12 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-xs pointer-events-none">
+          Meta 35%
         </div>
       </div>
 
-      {/* Badge de Estado y Explicación para baja alfabetización digital */}
-      <div className="w-full space-y-2.5 text-center mt-1">
+      {/* Lectura Digital Destacada: Ubicada abajo del tacómetro con total holgura */}
+      <div className="text-center my-1">
+        <div className="flex items-baseline justify-center gap-1.5">
+          <span
+            className={`font-display text-4xl md:text-5xl font-black tracking-tight ${configSemaforo.colorTexto} leading-none`}
+          >
+            {margenPorcentaje}%
+          </span>
+          <span className="text-xs font-black uppercase tracking-wider text-brand-muted">
+            Margen
+          </span>
+        </div>
+        <p className="text-xs text-brand-muted font-medium mt-1">
+          Margen proyectado del mes en curso
+        </p>
+      </div>
+
+      {/* Insignia / Estado dinámico con explicación */}
+      <div className="mt-2 w-full text-center">
         <span
-          className={`inline-block rounded-full px-3.5 py-1 text-xs font-black border ${configSemaforo.colorBadge}`}
+          className={`inline-block px-3.5 py-1 text-xs font-black rounded-full border ${configSemaforo.colorBadge}`}
         >
           {configSemaforo.etiqueta}
         </span>
-
-        <p className="text-xs text-brand-ink/90 leading-relaxed max-w-sm mx-auto">
+        <p className="text-xs text-brand-ink/90 mt-2 px-2 leading-relaxed">
           {configSemaforo.mensaje}
         </p>
+      </div>
 
-        {/* Resumen numérico rápido */}
-        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-brand-border/60 text-xs">
-          <div className="rounded-xl bg-brand-sand-light p-2 border border-brand-border/50">
-            <span className="text-[10px] text-brand-muted block font-semibold">Total Ingresos</span>
-            <span className="font-display font-bold text-brand-ink text-sm">
-              ${ingresosTotales.toLocaleString("es-CL")}
-            </span>
-          </div>
-          <div className="rounded-xl bg-brand-sand-light p-2 border border-brand-border/50">
-            <span className="text-[10px] text-brand-muted block font-semibold">Compras Insumos</span>
-            <span className="font-display font-bold text-brand-terracotta text-sm">
-              ${costosTotales.toLocaleString("es-CL")}
-            </span>
-          </div>
+      {/* Datos clave de apoyo financiero */}
+      <div className="mt-4 grid grid-cols-2 gap-2 w-full pt-3 border-t border-brand-border/60 text-xs">
+        <div className="text-center p-2.5 rounded-xl bg-brand-sand-light border border-brand-border/50">
+          <span className="text-[10px] font-semibold text-brand-muted block uppercase">
+            Total Ingresos
+          </span>
+          <span className="font-display text-sm font-bold text-brand-ink block mt-0.5">
+            ${ingresosTotales.toLocaleString("es-CL")}
+          </span>
+        </div>
+        <div className="text-center p-2.5 rounded-xl bg-brand-sand-light border border-brand-border/50">
+          <span className="text-[10px] font-semibold text-brand-muted block uppercase">
+            Compras Insumos
+          </span>
+          <span className="font-display text-sm font-bold text-brand-terracotta block mt-0.5">
+            ${costosTotales.toLocaleString("es-CL")}
+          </span>
         </div>
       </div>
     </div>
