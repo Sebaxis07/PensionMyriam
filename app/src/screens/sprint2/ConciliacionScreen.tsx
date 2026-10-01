@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@powersync/react";
 import {
   useConciliacion,
   recalcularConciliacion,
@@ -85,8 +86,35 @@ export function ConciliacionScreen({
   const hoy = hoyISO();
   const diasRaw = useConciliacion(contratoEmpresaId);
 
-  // Fecha actualmente seleccionada para revisar (por defecto HOY)
+  // Consultar vigencia del contrato
+  const { data: contratosInfo } = useQuery<{
+    id: string;
+    empresa_id: string;
+    vigencia_desde: string;
+    vigencia_hasta: string | null;
+    headcount: number;
+  }>(
+    "select id, empresa_id, vigencia_desde, vigencia_hasta, headcount from contrato_empresa where id = ?",
+    [contratoEmpresaId]
+  );
+  const contrato = contratosInfo?.[0];
+
+  // Fecha actualmente seleccionada para revisar (por defecto HOY o último día válido)
   const [fechaSeleccionada, setFechaSeleccionada] = useState(hoy);
+
+  // Ajustar fecha inicial si el contrato ya finalizó o empieza a futuro
+  useEffect(() => {
+    if (!contrato) return;
+    setFechaSeleccionada((actual) => {
+      if (contrato.vigencia_hasta && actual > contrato.vigencia_hasta) {
+        return contrato.vigencia_hasta;
+      }
+      if (actual < contrato.vigencia_desde) {
+        return contrato.vigencia_desde;
+      }
+      return actual;
+    });
+  }, [contrato]);
 
   // Estados de justificación
   const [diaJustificando, setDiaJustificando] = useState<ConciliacionRow | null>(null);
@@ -98,6 +126,25 @@ export function ConciliacionScreen({
   const [procesandoPeriodo, setProcesandoPeriodo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+
+  // Validaciones de vigencia
+  const estaFueraDeVigencia = useMemo(() => {
+    if (!contrato) return false;
+    if (fechaSeleccionada < contrato.vigencia_desde) return true;
+    if (contrato.vigencia_hasta && fechaSeleccionada > contrato.vigencia_hasta) return true;
+    return false;
+  }, [contrato, fechaSeleccionada]);
+
+  const puedeRetroceder = useMemo(() => {
+    if (!contrato) return true;
+    return fechaSeleccionada > contrato.vigencia_desde;
+  }, [contrato, fechaSeleccionada]);
+
+  const puedeAvanzar = useMemo(() => {
+    if (fechaSeleccionada >= hoy) return false;
+    if (contrato?.vigencia_hasta && fechaSeleccionada >= contrato.vigencia_hasta) return false;
+    return true;
+  }, [contrato, fechaSeleccionada, hoy]);
 
   // Agrupar filas de conciliación por fecha
   const conciliacionesPorFecha = useMemo(() => {
@@ -160,10 +207,19 @@ export function ConciliacionScreen({
     setError(null);
     setMensajeExito(null);
     setProcesandoPeriodo(true);
-    const primerDia = `${hoy.slice(0, 7)}-01`;
     try {
-      const cantidad = await conciliarPeriodo(contratoEmpresaId, primerDia, hoy);
-      setMensajeExito(`¡Listo! Se actualizaron ${cantidad} días del mes.`);
+      const mesInicio = `${fechaSeleccionada.slice(0, 7)}-01`;
+      let desde = mesInicio;
+      let hasta = hoy;
+      if (contrato) {
+        if (desde < contrato.vigencia_desde) desde = contrato.vigencia_desde;
+        if (contrato.vigencia_hasta && hasta > contrato.vigencia_hasta) hasta = contrato.vigencia_hasta;
+      }
+      if (desde > hasta) {
+        throw new Error("Este contrato no tiene días activos dentro de este mes.");
+      }
+      const cantidad = await conciliarPeriodo(contratoEmpresaId, desde, hasta);
+      setMensajeExito(`¡Listo! Se actualizaron ${cantidad} días del período (${desde} al ${hasta}).`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al procesar el mes.");
     } finally {
@@ -227,8 +283,9 @@ export function ConciliacionScreen({
         <div className="flex items-center justify-between gap-2 bg-brand-sand-light/60 p-2.5 rounded-2xl border border-brand-border/60">
           <button
             type="button"
+            disabled={!puedeRetroceder || actualizandoDia}
             onClick={() => setFechaSeleccionada(cambiarDia(fechaSeleccionada, -1))}
-            className="flex items-center gap-1 rounded-xl bg-white hover:bg-brand-sand px-3.5 py-2.5 text-xs font-bold text-brand-ink transition border border-brand-border/60 shadow-xs active:scale-95"
+            className="flex items-center gap-1 rounded-xl bg-white hover:bg-brand-sand px-3.5 py-2.5 text-xs font-bold text-brand-ink transition border border-brand-border/60 shadow-xs active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
           >
             <IconChevronLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Día anterior</span>
@@ -248,11 +305,16 @@ export function ConciliacionScreen({
             <p className="text-[11px] text-brand-muted mt-0.5">
               Fecha: {fechaSeleccionada}
             </p>
+            {contrato && (
+              <p className="text-[10px] text-brand-muted mt-0.5">
+                Vigencia del contrato: {contrato.vigencia_desde} al {contrato.vigencia_hasta ?? "la actualidad"} ({contrato.headcount} cupos)
+              </p>
+            )}
           </div>
 
           <button
             type="button"
-            disabled={esHoy}
+            disabled={!puedeAvanzar || actualizandoDia}
             onClick={() => setFechaSeleccionada(cambiarDia(fechaSeleccionada, 1))}
             className="flex items-center gap-1 rounded-xl bg-white hover:bg-brand-sand px-3.5 py-2.5 text-xs font-bold text-brand-ink transition border border-brand-border/60 shadow-xs active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
           >
@@ -261,20 +323,33 @@ export function ConciliacionScreen({
           </button>
         </div>
 
+        {/* Advertencia si la fecha actual está fuera de la vigencia del contrato */}
+        {estaFueraDeVigencia && contrato && (
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-3.5 text-xs font-semibold text-amber-900 flex items-start gap-2.5">
+            <span className="text-base shrink-0">⚠️</span>
+            <div>
+              <p className="font-bold">Fecha fuera de la vigencia de este contrato</p>
+              <p className="text-[11px] text-amber-800 mt-0.5">
+                Este contrato estuvo activo desde el {contrato.vigencia_desde} hasta el {contrato.vigencia_hasta ?? "la actualidad"}. No se pueden registrar ni calcular consumos fuera de ese período.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Acciones principales de actualización */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <button
             type="button"
             onClick={handleActualizarDia}
-            disabled={actualizandoDia}
-            className="min-h-[46px] flex items-center justify-center gap-2 rounded-2xl bg-brand-ink hover:bg-black px-5 py-2.5 text-xs font-bold text-white shadow-sm transition active:scale-95 disabled:opacity-50"
+            disabled={actualizandoDia || estaFueraDeVigencia}
+            className="min-h-[46px] flex items-center justify-center gap-2 rounded-2xl bg-brand-ink hover:bg-black px-5 py-2.5 text-xs font-bold text-white shadow-sm transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
           >
             <IconRefresh className={`h-4 w-4 ${actualizandoDia ? "animate-spin text-brand-sand" : ""}`} />
             <span>{actualizandoDia ? "Calculando raciones…" : "Actualizar raciones de este día"}</span>
           </button>
 
           <div className="flex items-center gap-2 text-xs">
-            {!esHoy && (
+            {!esHoy && !estaFueraDeVigencia && (
               <button
                 type="button"
                 onClick={() => setFechaSeleccionada(hoy)}
@@ -291,7 +366,7 @@ export function ConciliacionScreen({
               className="rounded-xl border border-brand-border bg-brand-sand-light hover:bg-brand-sand px-3 py-2 font-bold text-brand-terracotta transition disabled:opacity-50"
             >
               <IconCalendar className="h-3.5 w-3.5 inline mr-1" />
-              <span>{procesandoPeriodo ? "Procesando mes…" : "Actualizar mes completo"}</span>
+              <span>{procesandoPeriodo ? "Procesando período…" : "Actualizar mes completo"}</span>
             </button>
           </div>
         </div>
@@ -475,8 +550,8 @@ export function ConciliacionScreen({
             <button
               type="button"
               onClick={handleActualizarDia}
-              disabled={actualizandoDia}
-              className="rounded-2xl bg-brand-terracotta px-5 py-3 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition"
+              disabled={actualizandoDia || estaFueraDeVigencia}
+              className="rounded-2xl bg-brand-terracotta px-5 py-3 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition disabled:opacity-50 disabled:pointer-events-none"
             >
               {actualizandoDia ? "Calculando…" : "Calcular raciones de esta fecha"}
             </button>

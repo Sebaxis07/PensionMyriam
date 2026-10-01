@@ -56,7 +56,9 @@ export async function recalcularConciliacion(contratoEmpresaId: string, fecha: s
     p_fecha: fecha
   });
   if (error) {
-    throw new Error("No se pudo recalcular. Revisa tu conexión e intenta de nuevo.");
+    console.error("Error al recalcular conciliacion:", error);
+    const mensaje = error.message || error.details || "No se pudo recalcular las raciones.";
+    throw new Error(mensaje);
   }
 }
 
@@ -69,7 +71,9 @@ export async function recalcularConciliacion(contratoEmpresaId: string, fecha: s
 export async function generarCamaNoche(fecha: string): Promise<number> {
   const { data, error } = await supabase.rpc("generar_cama_noche", { p_fecha: fecha });
   if (error) {
-    throw new Error("No se pudo generar cama-noche. Revisa tu conexión e intenta de nuevo.");
+    console.error("Error al generar cama-noche:", error);
+    const mensaje = error.message || error.details || "No se pudo generar cama-noche.";
+    throw new Error(mensaje);
   }
   return data as number;
 }
@@ -88,7 +92,9 @@ export async function conciliarPeriodo(
     p_hasta: hasta
   });
   if (error) {
-    throw new Error("No se pudo conciliar el período. Revisa tu conexión e intenta de nuevo.");
+    console.error("Error al conciliar período:", error);
+    const mensaje = error.message || error.details || "No se pudo conciliar el período.";
+    throw new Error(mensaje);
   }
   return Number(data ?? 0);
 }

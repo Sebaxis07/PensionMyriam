@@ -15,7 +15,7 @@ import {
 import { formatearMonedaCLP } from "../../lib/pdf/pdfMakeConfig";
 
 interface EmpresasScreenProps {
-  onSeleccionarEmpresa?: (empresaId: string) => void;
+  onSeleccionarEmpresa?: (empresaId: string, contratoId?: string) => void;
   onNuevoContrato?: (empresaId: string) => void;
 }
 
@@ -386,7 +386,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
 
                 <button
                   type="button"
-                  onClick={() => onSeleccionarEmpresa?.(emp.id)}
+                  onClick={() => onSeleccionarEmpresa?.(emp.id, emp.contrato_id ?? undefined)}
                   className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep px-4 py-2 text-xs font-bold text-white transition shadow-sm active:scale-95"
                 >
                   <span>Ver Nómina y Consumos</span>

@@ -36,8 +36,9 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
     [empresaIdSeleccionada ?? ""]
   );
 
-  function handleSeleccionarEmpresa(empresaId: string) {
+  function handleSeleccionarEmpresa(empresaId: string, contratoId?: string) {
     setEmpresaIdSeleccionada(empresaId);
+    setContratoIdSeleccionado(contratoId ?? null);
     setVista("detalle_contrato");
   }
 
@@ -73,10 +74,11 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
       );
     }
 
-    // Si no se ha elegido un contrato específico, tomar el más reciente
+    const hoyIso = new Date().toISOString().slice(0, 10);
+    // Si no se ha elegido un contrato específico, preferir el vigente a hoy; de lo contrario el más reciente
     const contratoActivo = contratoIdSeleccionado
       ? (contratos?.find((c) => c.id === contratoIdSeleccionado) ?? contratos?.[0])
-      : contratos?.[0];
+      : (contratos?.find((c) => c.vigencia_desde <= hoyIso && (!c.vigencia_hasta || c.vigencia_hasta >= hoyIso)) ?? contratos?.[0]);
 
     const razonSocialEmpresa = empresasInfo?.[0]?.razon_social;
 
@@ -110,11 +112,15 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
                 onChange={(e) => setContratoIdSeleccionado(e.target.value)}
                 className="rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs font-bold text-brand-ink"
               >
-                {contratos.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    Desde {c.vigencia_desde} ({c.headcount} personas)
-                  </option>
-                ))}
+                {contratos.map((c) => {
+                  const esVigente = c.vigencia_desde <= hoyIso && (!c.vigencia_hasta || c.vigencia_hasta >= hoyIso);
+                  const estadoTag = esVigente ? "🟢 Vigente" : (c.vigencia_hasta && c.vigencia_hasta < hoyIso ? "⚪ Finalizado" : "🟡 Futuro");
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {estadoTag} · {c.vigencia_desde}{c.vigencia_hasta ? ` al ${c.vigencia_hasta}` : ""} ({c.headcount} pers.)
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}
