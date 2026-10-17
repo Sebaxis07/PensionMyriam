@@ -21,6 +21,8 @@ describe("armarMensajeWhatsAppReserva", () => {
     expect(mensaje).toContain("BancoEstado");
     expect(mensaje).toContain("CuentaRUT");
     expect(mensaje).toContain("No exigimos abono previo");
+    expect(mensaje).toContain("Privacidad (Ley 21.719)");
+    expect(mensaje).toContain("ejercicio de sus derechos");
   });
 
   it("utiliza valores por defecto si no se especifican noches o tarifa", () => {

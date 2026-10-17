@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@powersync/react";
 import { powersync } from "../lib/powersync";
 import { nuevoUuidIdempotente } from "../lib/idempotencia";
@@ -9,7 +9,7 @@ import { AseoHoy } from "./AseoHoy";
 import { Reservar } from "./Reservar";
 import { QUERY_PIEZAS, type PiezaRow } from "../lib/queries";
 import { useUsuarioActual } from "../lib/useUsuarioActual";
-import { IconBed, IconBriefcase, IconBroom, IconCalendar, IconChartBar, IconCheck, IconCheckCircle, IconHome, IconPlus, IconShoppingCart, IconUtensils } from "../components/Icons";
+import { IconBed, IconBriefcase, IconBroom, IconCalendar, IconChartBar, IconCheck, IconCheckCircle, IconHome, IconPlus, IconShoppingCart, IconUtensils, IconUser } from "../components/Icons";
 import { Header, type TabType } from "../components/Header";
 import { ModuloEmpresas } from "./sprint2/ModuloEmpresas";
 import { ModuloConsumos } from "./sprint2/ModuloConsumos";
@@ -17,6 +17,10 @@ import { RackHotelero } from "./RackHotelero";
 import { DashboardAdmin } from "./sprint4/DashboardAdmin";
 import { ModuloCostos } from "./sprint4/ModuloCostos";
 import { SyncStatusModal } from "../components/SyncStatusModal";
+import { useTour } from "../features/tour/useTour";
+import { TourMenuModal } from "../features/tour/TourMenuModal";
+import { TourWelcomeModal } from "../features/tour/TourWelcomeModal";
+import { PerfilConfigModal, type TabActivoPerfil } from "../features/perfil/PerfilConfigModal";
 import logo from "../assets/logo.webp";
 
 export function Piezas({ onLogout }: { onLogout?: () => void }) {
@@ -28,6 +32,42 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
   const [preseleccionReserva, setPreseleccionReserva] = useState<string | null>(null);
   const [fechaPreseleccionadaReserva, setFechaPreseleccionadaReserva] = useState<string | undefined>(undefined);
   const [mostrarSyncModal, setMostrarSyncModal] = useState(false);
+  const [mostrarMenuGuia, setMostrarMenuGuia] = useState(false);
+  const [mostrarBienvenidaTour, setMostrarBienvenidaTour] = useState(false);
+  const [mostrarPerfilModal, setMostrarPerfilModal] = useState(false);
+  const [tabPerfilInicial, setTabPerfilInicial] = useState<TabActivoPerfil>("perfil");
+
+  const { haVistoTour, marcarTourVisto, resetearTourVisto, iniciarTourGeneral, iniciarTourAdmin } = useTour();
+
+  // Si es la primera visita, invitar amablemente al recorrido de 1 minuto
+  useEffect(() => {
+    if (!haVistoTour()) {
+      const timer = setTimeout(() => {
+        setMostrarBienvenidaTour(true);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [haVistoTour]);
+
+  const handleIniciarTourGeneral = () => {
+    if (tab !== "inicio" || modo !== "operativo") {
+      setTab("inicio");
+      setModo("operativo");
+      setTimeout(() => iniciarTourGeneral(), 250);
+    } else {
+      iniciarTourGeneral();
+    }
+  };
+
+  const handleIniciarTourAdmin = () => {
+    if (tab !== "inicio" || modo !== "admin") {
+      setTab("inicio");
+      setModo("admin");
+      setTimeout(() => iniciarTourAdmin(), 250);
+    } else {
+      iniciarTourAdmin();
+    }
+  };
 
   const stats = useMemo(() => {
     const disponibles = piezas?.filter((p) => p.estado === "disponible").length ?? 0;
@@ -36,10 +76,10 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
     return { disponibles, checkinPronto, ocupadas };
   }, [piezas]);
 
-  const pendientesAseo = piezas?.filter((p) => p.estado === "ocupada" && p.aseo_hoy_count === 0).length ?? 0;
+  const pendientesAseo = piezas?.filter((p) => (p.estado === "ocupada" && p.aseo_hoy_count === 0) || p.estado === "en_aseo").length ?? 0;
 
   const piezasPendientesAseo = useMemo(() => {
-    return piezas?.filter((p) => p.estado === "ocupada" && p.aseo_hoy_count === 0) ?? [];
+    return piezas?.filter((p) => (p.estado === "ocupada" && p.aseo_hoy_count === 0) || p.estado === "en_aseo") ?? [];
   }, [piezas]);
 
   const porcentajeOcupacion = useMemo(() => {
@@ -49,10 +89,22 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
 
   async function handleMarcarAseoRapido(habitacionId: string) {
     if (!usuario) return;
-    await powersync.execute(
-      "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'diario', ?, ?, ?)",
-      [crypto.randomUUID(), habitacionId, usuario.id, new Date().toISOString(), nuevoUuidIdempotente()]
-    );
+    const p = piezas?.find((x) => x.id === habitacionId);
+    if (p?.estado === "en_aseo") {
+      await powersync.execute(
+        "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'post_checkout', ?, ?, ?)",
+        [crypto.randomUUID(), habitacionId, usuario.id, new Date().toISOString(), nuevoUuidIdempotente()]
+      );
+      await powersync.execute(
+        "update habitacion set estado = 'disponible' where id = ? and estado = 'en_aseo'",
+        [habitacionId]
+      );
+    } else {
+      await powersync.execute(
+        "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'diario', ?, ?, ?)",
+        [crypto.randomUUID(), habitacionId, usuario.id, new Date().toISOString(), nuevoUuidIdempotente()]
+      );
+    }
   }
 
   if (!usuario) {
@@ -73,7 +125,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
       <aside className="hidden md:flex md:w-64 md:flex-col md:justify-between border-r border-brand-border/70 bg-brand-card p-5 shrink-0 shadow-sm">
         <div>
           {/* Marca / Identidad */}
-          <div className="flex items-center gap-3 pb-6 border-b border-brand-border/60">
+          <div id="tour-logo-identidad-desktop" className="flex items-center gap-3 pb-6 border-b border-brand-border/60">
             <img src={logo} alt="Logo" className="h-11 w-11 object-contain" />
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-terracotta">
@@ -89,6 +141,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
           {/* Menú de Navegación Vertical */}
           <nav className="mt-6 flex flex-col gap-2">
             <SidebarButton
+              id="tour-nav-habitaciones"
               activo={tab === "inicio" && modo === "operativo"}
               icon={<IconHome className="h-5 w-5" />}
               label="Habitaciones"
@@ -99,6 +152,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
             />
             {usuario.rol === "administradora" && (
               <SidebarButton
+                id="tour-nav-admin"
                 activo={tab === "inicio" && modo === "admin"}
                 icon={<IconChartBar className="h-5 w-5" />}
                 label="Administración"
@@ -109,12 +163,14 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
               />
             )}
             <SidebarButton
+              id="tour-nav-rack"
               activo={tab === "rack"}
               icon={<IconCalendar className="h-5 w-5" />}
               label="Calendario"
               onClick={() => setTab("rack")}
             />
             <SidebarButton
+              id="tour-nav-aseo"
               activo={tab === "aseo"}
               icon={<IconBroom className="h-5 w-5" />}
               label="Aseo de hoy"
@@ -122,6 +178,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
               onClick={() => setTab("aseo")}
             />
             <SidebarButton
+              id="tour-nav-consumos"
               activo={tab === "consumo"}
               icon={<IconUtensils className="h-5 w-5" />}
               label="Consumos"
@@ -129,6 +186,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
             />
             {usuario.rol === "administradora" && (
               <SidebarButton
+                id="tour-nav-empresas"
                 activo={tab === "empresas"}
                 icon={<IconBriefcase className="h-5 w-5" />}
                 label="Empresas"
@@ -137,6 +195,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
             )}
             {usuario.rol === "administradora" && (
               <SidebarButton
+                id="tour-nav-costos"
                 activo={tab === "costos"}
                 icon={<IconShoppingCart className="h-5 w-5" />}
                 label="Compras y Costos"
@@ -144,6 +203,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
               />
             )}
             <SidebarButton
+              id="tour-nav-reservar"
               activo={tab === "reservar"}
               icon={<IconPlus className="h-5 w-5" />}
               label="Nueva reserva"
@@ -152,9 +212,24 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
           </nav>
         </div>
 
-        {/* Pie de Sidebar con Sincronización */}
+        {/* Pie de Sidebar con Sincronización y Perfil */}
         <div className="border-t border-brand-border/60 pt-4 space-y-3">
-          <div className="flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setTabPerfilInicial("perfil");
+              setMostrarPerfilModal(true);
+            }}
+            className="w-full flex items-center justify-between rounded-xl border border-brand-border/70 bg-brand-sand-light/60 px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand hover:border-brand-terracotta/40 transition active:scale-95 shadow-2xs text-left"
+          >
+            <div className="flex items-center gap-2">
+              <IconUser className="h-4 w-4 text-brand-terracotta" />
+              <span>Mi Perfil y Ajustes</span>
+            </div>
+            <span className="text-[10px] text-brand-muted">⚙️</span>
+          </button>
+
+          <div id="tour-sync-status-desktop" className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
               Estado de red
             </span>
@@ -178,6 +253,11 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
           onCambiarModo={setModo}
           onLogout={onLogout}
           onAbrirSyncModal={() => setMostrarSyncModal(true)}
+          onAbrirGuia={() => setMostrarMenuGuia(true)}
+          onAbrirPerfil={() => {
+            setTabPerfilInicial("perfil");
+            setMostrarPerfilModal(true);
+          }}
         />
 
         {/* Área scrolleable de contenido */}
@@ -191,6 +271,11 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                   onIrAConciliacion={() => setTab("empresas")}
                   onIrAEmpresas={() => setTab("empresas")}
                   onIrACalendario={() => setTab("rack")}
+                  onIrAConsumos={() => setTab("consumo")}
+                  onAbrirGestionCuentas={() => {
+                    setTabPerfilInicial("cuentas");
+                    setMostrarPerfilModal(true);
+                  }}
                 />
               ) : (
                 <div className="space-y-6">
@@ -296,18 +381,27 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                                   <span className="ml-1.5 font-normal text-brand-muted text-[11px]">
                                     ({p.capacidad} camas)
                                   </span>
+                                  {p.estado === "en_aseo" && (
+                                    <span className="ml-1.5 rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-black text-rose-700 uppercase">
+                                      Salida
+                                    </span>
+                                  )}
                                 </p>
                                 <p className="text-[11px] text-brand-muted truncate">
-                                  {p.huesped_actual ? `Huésped: ${p.huesped_actual}` : "Ocupada"}
+                                  {p.huesped_actual ? `Huésped: ${p.huesped_actual}` : p.estado === "en_aseo" ? "Salida reciente · Recambio pendiente" : "Ocupada"}
                                 </p>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => handleMarcarAseoRapido(p.id)}
-                                className="shrink-0 flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700 transition active:scale-95 shadow-xs"
+                                className={`shrink-0 flex items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] font-bold text-white transition active:scale-95 shadow-xs ${
+                                  p.estado === "en_aseo"
+                                    ? "bg-rose-700 hover:bg-rose-800"
+                                    : "bg-emerald-600 hover:bg-emerald-700"
+                                }`}
                               >
                                 <IconCheck className="h-3.5 w-3.5" />
-                                <span>Listo</span>
+                                <span>{p.estado === "en_aseo" ? "Liberar" : "Listo"}</span>
                               </button>
                             </div>
                           ))
@@ -436,18 +530,21 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
         <nav className="sticky bottom-0 z-10 flex md:hidden border-t border-brand-border/80 bg-brand-card/95 pb-safe pt-1 shadow-lg backdrop-blur-md">
           <div className="flex w-full items-center justify-around px-1">
             <NavButton
+              id="tour-nav-habitaciones-mobile"
               activo={tab === "inicio"}
               icon={<IconHome className="h-5 w-5" />}
               label="Inicio"
               onClick={() => setTab("inicio")}
             />
             <NavButton
+              id="tour-nav-rack-mobile"
               activo={tab === "rack"}
               icon={<IconCalendar className="h-5 w-5" />}
               label="Rack"
               onClick={() => setTab("rack")}
             />
             <NavButton
+              id="tour-nav-aseo-mobile"
               activo={tab === "aseo"}
               icon={<IconBroom className="h-5 w-5" />}
               label="Aseo"
@@ -455,6 +552,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
               onClick={() => setTab("aseo")}
             />
             <NavButton
+              id="tour-nav-consumos-mobile"
               activo={tab === "consumo"}
               icon={<IconUtensils className="h-5 w-5" />}
               label="Consumos"
@@ -462,6 +560,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
             />
             {usuario.rol === "administradora" && (
               <NavButton
+                id="tour-nav-empresas-mobile"
                 activo={tab === "empresas"}
                 icon={<IconBriefcase className="h-5 w-5" />}
                 label="Empresas"
@@ -470,6 +569,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
             )}
             {usuario.rol === "administradora" && (
               <NavButton
+                id="tour-nav-costos-mobile"
                 activo={tab === "costos"}
                 icon={<IconShoppingCart className="h-5 w-5" />}
                 label="Costos"
@@ -477,6 +577,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
               />
             )}
             <NavButton
+              id="tour-nav-reservar-mobile"
               activo={tab === "reservar"}
               icon={<IconPlus className="h-5 w-5" />}
               label="Reservar"
@@ -504,17 +605,60 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
       {mostrarSyncModal && (
         <SyncStatusModal onCerrar={() => setMostrarSyncModal(false)} />
       )}
+
+      {/* Menú Interactivo de Ayuda y Guía */}
+      {mostrarMenuGuia && (
+        <TourMenuModal
+          esAdmin={usuario.rol === "administradora"}
+          onCerrar={() => setMostrarMenuGuia(false)}
+          onIniciarGeneral={handleIniciarTourGeneral}
+          onIniciarAdmin={handleIniciarTourAdmin}
+        />
+      )}
+
+      {/* Invitación amigable en Primera Visita */}
+      {mostrarBienvenidaTour && (
+        <TourWelcomeModal
+          onIniciar={() => {
+            setMostrarBienvenidaTour(false);
+            marcarTourVisto();
+            handleIniciarTourGeneral();
+          }}
+          onDescartar={() => {
+            setMostrarBienvenidaTour(false);
+            marcarTourVisto();
+          }}
+        />
+      )}
+
+      {/* Modal Mi Perfil y Configuración */}
+      {mostrarPerfilModal && (
+        <PerfilConfigModal
+          usuario={usuario}
+          onCerrar={() => setMostrarPerfilModal(false)}
+          onLogout={onLogout ?? (() => {})}
+          onReiniciarTour={() => {
+            setMostrarPerfilModal(false);
+            resetearTourVisto();
+            handleIniciarTourGeneral();
+          }}
+          onAbrirSyncModal={() => setMostrarSyncModal(true)}
+          tabInicial={tabPerfilInicial}
+        />
+      )}
     </div>
   );
 }
 
 function SidebarButton({
+  id,
   activo,
   icon,
   label,
   badge,
   onClick
 }: {
+  id?: string;
   activo: boolean;
   icon: React.ReactNode;
   label: string;
@@ -523,6 +667,7 @@ function SidebarButton({
 }) {
   return (
     <button
+      id={id}
       onClick={onClick}
       className={`group flex items-center justify-between rounded-xl px-3.5 py-3 text-sm font-semibold transition-all ${
         activo
@@ -581,12 +726,14 @@ function StatTile({
 }
 
 function NavButton({
+  id,
   activo,
   icon,
   label,
   badge,
   onClick
 }: {
+  id?: string;
   activo: boolean;
   icon: React.ReactNode;
   label: string;
@@ -595,6 +742,7 @@ function NavButton({
 }) {
   return (
     <button
+      id={id}
       onClick={onClick}
       className={`relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1 transition-all ${
         activo

@@ -27,6 +27,8 @@ describe("construirDocDefinicionVoucher", () => {
     expect(contentStr).toContain("$45.000");
     expect(contentStr).toContain("BancoEstado");
     expect(contentStr).toContain("CuentaRUT");
+    expect(contentStr).toContain("PROTECCIÓN DE DATOS PERSONALES (LEY N° 21.719)");
+    expect(contentStr).toContain("exclusivamente para la gestión operativa");
   });
 
   it("calcula mínimo 1 noche si se omite", () => {

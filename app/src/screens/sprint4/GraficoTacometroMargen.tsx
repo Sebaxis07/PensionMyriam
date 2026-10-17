@@ -1,3 +1,5 @@
+import { BotonExplicacion } from "../../components/BotonExplicacion";
+
 interface GraficoTacometroMargenProps {
   margenPorcentaje: number;
   estadoSemaforo: "verde" | "amarillo" | "rojo";
@@ -94,9 +96,17 @@ export function GraficoTacometroMargen({
       {/* Cabecera limpia */}
       <div className="w-full text-center">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
-            Semáforo de Ganancia
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+              Semáforo de Ganancia
+            </span>
+            <BotonExplicacion
+              titulo="Velocímetro de Ganancia"
+              queEs="Funciona exactamente como el velocímetro de una camioneta: la aguja te muestra qué tan rápido y saludable está ganando dinero la pensión este mes."
+              comoSeUsa="Si la aguja apunta a la zona verde, tus cobros cubren de sobra tus compras. Si la aguja cae hacia la zona roja, significa que las compras de mercadería están muy caras en comparación a lo que estás cobrando por persona."
+              ejemplo="Zona Verde = negocio rentable y protegido. Zona Amarilla = compras caras, vigilar gastos. Zona Roja = peligro de trabajar a pérdida."
+            />
+          </div>
           <span className="text-[11px] font-bold text-brand-muted bg-brand-sand-light px-2.5 py-0.5 rounded-full border border-brand-border/60">
             Medidor Mensual
           </span>

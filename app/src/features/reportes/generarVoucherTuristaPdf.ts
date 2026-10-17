@@ -108,7 +108,35 @@ export function construirDocDefinicionVoucher(datos: DatosVoucherTurista): TDocu
         layout: "noBorders"
       },
 
-      { text: "", margin: [0, 25, 0, 0] },
+      { text: "", margin: [0, 12, 0, 0] },
+
+      // Aviso de Privacidad y Protección de Datos Personales (Ley 21.719)
+      {
+        style: "cajaPrivacidad",
+        table: {
+          widths: ["*"],
+          body: [
+            [
+              {
+                fillColor: "#F3F4F6",
+                stack: [
+                  {
+                    text: "PROTECCIÓN DE DATOS PERSONALES (LEY N° 21.719)",
+                    style: "tituloPrivacidad"
+                  },
+                  {
+                    text: "Sus datos personales son tratados con estricta confidencialidad por Pensión Señora Miriam exclusivamente para la gestión operativa de su reserva y obligaciones tributarias de hospedaje. Se conservan durante el plazo legal aplicable. Para ejercer sus derechos de acceso, rectificación, supresión o portabilidad (plazo legal de respuesta: 30 días corridos), contáctenos en Caleta Paposo o al correo oficial de la pensión.",
+                    style: "textoPrivacidad"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        layout: "noBorders"
+      },
+
+      { text: "", margin: [0, 16, 0, 0] },
 
       // Despedida
       {
@@ -129,10 +157,13 @@ export function construirDocDefinicionVoucher(datos: DatosVoucherTurista): TDocu
       td: { fontSize: 10, color: "#111827", alignment: "right", margin: [0, 4, 0, 4] },
       thTotal: { bold: true, fontSize: 12, color: "#92400E", margin: [0, 6, 0, 6] },
       tdTotal: { bold: true, fontSize: 13, color: "#92400E", alignment: "right", margin: [0, 6, 0, 6] },
-      cajaBanco: { margin: [0, 10, 0, 10] },
+      cajaBanco: { margin: [0, 10, 0, 5] },
       tituloBanco: { fontSize: 11, bold: true, color: "#92400E", margin: [0, 0, 0, 6] },
       textoBanco: { fontSize: 9.5, color: "#1F2937", lineHeight: 1.4 },
       notaBanco: { fontSize: 8.5, italics: true, color: "#4B5563", margin: [0, 6, 0, 0] },
+      cajaPrivacidad: { margin: [0, 5, 0, 5] },
+      tituloPrivacidad: { fontSize: 8, bold: true, color: "#4B5563", margin: [0, 0, 0, 2] },
+      textoPrivacidad: { fontSize: 7.5, color: "#6B7280", lineHeight: 1.35 },
       despedida: { fontSize: 10.5, italics: true, color: "#4B5563" }
     }
   };

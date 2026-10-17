@@ -5,6 +5,7 @@ import {
   IconClipboardCheck,
   IconUtensils
 } from "../../components/Icons";
+import { BotonExplicacion } from "../../components/BotonExplicacion";
 
 interface GraficoComparativaRacionesProps {
   racionesServidas: number;
@@ -32,9 +33,17 @@ export function GraficoComparativaRaciones({
     <div className="flex flex-col justify-between rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card">
       <div>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
-            Comparativa de Raciones
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+              Comparativa de Raciones
+            </span>
+            <BotonExplicacion
+              titulo="Comparativa de Raciones"
+              queEs="Compara dos cosas clave: la cantidad de platos de comida pactados en el contrato con la minera (lo que se espera cobrar) frente a cuántos platos realmente comieron los trabajadores en el comedor."
+              comoSeUsa="Si comieron más platos de los contratados, se cobran como adicionales. Si comieron menos, igual se cobra el mínimo garantizado por el contrato. Te asegura que ningún plato servido quede sin cobrar."
+              ejemplo="Si la empresa contrató 50 almuerzos pero bajaron 55 trabajadores a comer, tienes 5 almuerzos extras para facturar."
+            />
+          </div>
           <span className="text-[11px] font-bold text-brand-muted bg-brand-sand-light px-2.5 py-0.5 rounded-full border border-brand-border/60">
             Control de Nómina
           </span>

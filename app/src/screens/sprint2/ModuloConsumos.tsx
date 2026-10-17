@@ -59,38 +59,70 @@ export function ModuloConsumos({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-      {/* Barra de Empresa Seleccionada y Buscador */}
-      <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-4 shadow-card">
+      {/* Selector de Empresa Contratista */}
+      <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-4 sm:p-5 shadow-card space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-terracotta/15 text-brand-terracotta">
-              <IconBriefcase className="h-5 w-5" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-terracotta/15 text-brand-terracotta border border-brand-terracotta/20">
+              <IconBriefcase className="h-6 w-6" />
             </div>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
-                Empresa activa
-              </span>
-              <h2 className="font-display text-lg font-bold text-brand-ink leading-tight">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-terracotta bg-brand-sand/60 px-2 py-0.5 rounded-full border border-brand-border/60">
+                  Empresa Contratista
+                </span>
+                {contratos.length > 1 && (
+                  <span className="text-[10px] font-semibold text-brand-muted">
+                    ({contratos.length} empresas vigentes)
+                  </span>
+                )}
+              </div>
+              <h2 className="font-display text-lg sm:text-xl font-bold text-brand-ink leading-tight mt-0.5">
                 {contratoActivo?.razon_social}
               </h2>
-              <p className="text-[11px] text-brand-muted">
-                Dotación contratada: <strong>{contratoActivo?.headcount} trabajadores</strong>
+              <p className="text-xs text-brand-muted">
+                Dotación contratada: <strong className="text-brand-ink">{contratoActivo?.headcount} trabajadores</strong> en nómina
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setMostrarSelector(!mostrarSelector)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-brand-sand/40 px-3.5 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition-colors"
-          >
-            <IconSearch className="h-3.5 w-3.5 text-brand-muted" />
-            <span>{mostrarSelector ? "Ocultar lista" : "Cambiar / Buscar empresa"}</span>
-          </button>
+          {contratos.length > 1 && (
+            <button
+              onClick={() => setMostrarSelector(!mostrarSelector)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-brand-sand/40 px-3.5 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition-colors self-start sm:self-center"
+            >
+              <IconSearch className="h-3.5 w-3.5 text-brand-muted" />
+              <span>{mostrarSelector ? "Cerrar lista" : "Cambiar de empresa"}</span>
+            </button>
+          )}
         </div>
 
-        {/* Panel desplegable con buscador de empresas */}
+        {/* Píldoras rápidas si hay 2 o 3 empresas para cambio inmediato */}
+        {contratos.length > 1 && contratos.length <= 4 && !mostrarSelector && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-brand-border/40">
+            <span className="text-[11px] font-bold text-brand-muted mr-1">Cambio rápido:</span>
+            {contratos.map((c) => {
+              const esActivo = c.id === contratoActivo?.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setContratoIdSeleccionado(c.id)}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                    esActivo
+                      ? "bg-brand-terracotta text-white shadow-xs"
+                      : "bg-brand-sand/40 text-brand-ink hover:bg-brand-sand border border-brand-border/60"
+                  }`}
+                >
+                  {c.razon_social} ({c.headcount} trab.)
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Panel desplegable con buscador de empresas (para más de 4 o al pulsar buscar) */}
         {mostrarSelector && (
-          <div className="mt-4 border-t border-brand-border/60 pt-3 animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
+          <div className="mt-3 border-t border-brand-border/60 pt-3 animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
             <div className="relative">
               <IconSearch className="absolute left-3.5 top-3 h-4 w-4 text-brand-muted" />
               <input
@@ -162,6 +194,8 @@ export function ModuloConsumos({
           usuarioId={usuarioId}
           contratoEmpresaId={contratoActivo.id}
           usuarioRol={usuarioRol}
+          empresaNombre={contratoActivo.razon_social}
+          headcount={contratoActivo.headcount}
         />
       )}
     </div>

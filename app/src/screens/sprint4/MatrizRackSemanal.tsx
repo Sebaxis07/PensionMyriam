@@ -10,6 +10,7 @@ import {
   IconBroom,
   IconWrench
 } from "../../components/Icons";
+import { BotonExplicacion } from "../../components/BotonExplicacion";
 
 interface MatrizRackSemanalProps {
   diasSemana: DiaSemanaInfo[];
@@ -59,9 +60,17 @@ export function MatrizRackSemanal({
     <div className="flex flex-col justify-between rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card">
       <div>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
-            Ocupación Semanal
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+              Ocupación Semanal
+            </span>
+            <BotonExplicacion
+              titulo="Matriz Semanal de Habitaciones"
+              queEs="Es un mapa visual que te muestra el estado de las 8 piezas para los próximos 7 días de la semana."
+              comoSeUsa="Cada cuadrito de color es una pieza en un día (amarillo = empresa, naranja = turista, verde = libre, rojo = aseo). Te ayuda a planificar la semana y saber qué días tendrás camas libres sin riesgo de prometer piezas ya ocupadas."
+              ejemplo="Un cuadrito verde en el día viernes significa que esa pieza está 100% disponible para recibir a un turista de fin de semana."
+            />
+          </div>
           <span className="text-[11px] font-bold text-brand-muted bg-brand-sand-light px-2.5 py-0.5 rounded-full border border-brand-border/60">
             Vista 7 Días
           </span>

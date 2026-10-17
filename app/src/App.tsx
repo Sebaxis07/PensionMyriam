@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PowerSyncContext } from "@powersync/react";
 import { powersync, connectPowerSync } from "./lib/powersync";
 import { supabase } from "./lib/supabase";
 import { Login } from "./screens/Login";
 import { Piezas } from "./screens/Piezas";
+import { NotFound } from "./screens/NotFound";
 
 export function App() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
@@ -28,7 +30,17 @@ export function App() {
 
   return (
     <PowerSyncContext.Provider value={powersync}>
-      {loggedIn ? <Piezas onLogout={handleLogout} /> : <Login onLoggedIn={() => setLoggedIn(true)} />}
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              loggedIn ? <Piezas onLogout={handleLogout} /> : <Login onLoggedIn={() => setLoggedIn(true)} />
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
     </PowerSyncContext.Provider>
   );
 }
