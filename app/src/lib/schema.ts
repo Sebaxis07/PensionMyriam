@@ -180,6 +180,22 @@ const compra_insumo = new Table({
   created_at: column.text
 });
 
+// Tabla SOLO LOCAL (no sincroniza, PowerSync nunca la sube ni la baja):
+// evidencia recuperable de operaciones que el servidor rechazó de forma
+// permanente al sincronizar (HU-28/HU-42). Antes de esto, un rechazo
+// permanente solo dejaba un console.warn y la fila desaparecía sin
+// rastro para la usuaria — ver connector.ts.
+const operacion_rechazada = new Table(
+  {
+    tabla: column.text,
+    operacion: column.text,
+    motivo: column.text,
+    datos_json: column.text,
+    fecha_hora: column.text
+  },
+  { localOnly: true }
+);
+
 export const AppSchema = new Schema({
   usuario,
   habitacion,
@@ -197,7 +213,8 @@ export const AppSchema = new Schema({
   conciliacion_diaria,
   justificacion_descuadre,
   insumo,
-  compra_insumo
+  compra_insumo,
+  operacion_rechazada
 });
 
 export type Database = (typeof AppSchema)["types"];
