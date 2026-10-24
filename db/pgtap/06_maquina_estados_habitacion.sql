@@ -3,7 +3,7 @@
 -- válidas e inválidas — no toca RLS (eso ya está en 02_rls_insumo_compra
 -- para el patrón general de roles; acá ambos roles pueden operar todo).
 begin;
-select plan(11);
+select plan(12);
 
 insert into auth.users (id) values ('00000000-0000-0000-0000-0000000000e1');
 insert into public.usuario (id, auth_uid, rol, nombre) values
@@ -108,6 +108,28 @@ select is(
   (select estado::text from public.habitacion where id = '30000000-0000-0000-0000-0000000000e1'),
   'disponible',
   'El aseo post_checkout debe dejar la habitación Disponible'
+);
+
+-- 7) HU-10: check-in bloqueado si la habitación está En Mantención —
+--    caso faltante en la auditoría anterior (el único caso probado
+--    hasta ahora era "ya Ocupada", no "En Mantención" específicamente).
+--    Habitación y cama propias para no interferir con los pasos de
+--    arriba (que dejaron la 92 en estado Disponible).
+insert into public.habitacion (id, numero, capacidad, estado, motivo_mantencion) values
+  ('30000000-0000-0000-0000-0000000000e2', 93, 1, 'en_mantencion', 'Fuga de gas');
+insert into public.cama (id, habitacion_id, numero) values
+  ('40000000-0000-0000-0000-0000000000e3', '30000000-0000-0000-0000-0000000000e2', 1);
+insert into public.reserva (id, tipo_cliente, cama_id, huesped_nombre, fecha_inicio, creado_por, uuid_idempotente) values
+  ('50000000-0000-0000-0000-0000000000e3', 'turista', '40000000-0000-0000-0000-0000000000e3',
+   'Huésped Tres', current_date, '10000000-0000-0000-0000-0000000000e1', gen_random_uuid());
+
+select throws_ok(
+  $$ insert into public.checkin (reserva_id, realizado_por, uuid_idempotente)
+     values ('50000000-0000-0000-0000-0000000000e3',
+             '10000000-0000-0000-0000-0000000000e1', gen_random_uuid()) $$,
+  'P0001',
+  null,
+  'Check-in bloqueado si la habitación está En Mantención (HU-10)'
 );
 
 select * from finish();
