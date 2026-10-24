@@ -8,6 +8,14 @@ export interface ConfigPension {
   titularNombre: string;
   rutTitular: string;
   correoConfirmacion: string;
+  // HU-03/HU-39: tarifa base por noche para turistas, editable por la
+  // Administradora (el modal de edición es responsabilidad de HU-39,
+  // Sprint 5 — ver tarea documentada para Codex). Antes de este campo,
+  // Reservar.tsx y el voucher PDF usaban el literal 15000 directo,
+  // contradiciendo el propio criterio de HU-03 ("tarifa base vigente,
+  // configurable en HU-39"). El valor por defecto preserva el mismo
+  // comportamiento que tenía la app hasta ahora.
+  tarifaBaseNoche: number;
 }
 
 export const CONFIG_PENSION_DEFAULT: ConfigPension = {
@@ -17,7 +25,8 @@ export const CONFIG_PENSION_DEFAULT: ConfigPension = {
   tipoCuenta: "CuentaRUT",
   titularNombre: "María (Pensión Señora Miriam)",
   rutTitular: "12.345.678-9",
-  correoConfirmacion: "pension.paposo@gmail.com"
+  correoConfirmacion: "pension.paposo@gmail.com",
+  tarifaBaseNoche: 15000
 };
 
 const STORAGE_KEY_CONFIG_PENSION = "pension_myriam_config_v1";

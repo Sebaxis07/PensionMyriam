@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@powersync/react";
 import { powersync } from "../lib/powersync";
 import { nuevoUuidIdempotente } from "../lib/idempotencia";
+import { calcularPrioridadAseo, estaEnVentanaIdeal, type TipoClienteAseo } from "../features/aseo/prioridadAseo";
 import {
   IconBroom,
   IconCheck,
@@ -21,6 +22,7 @@ interface HabitacionAseoRow {
   estado: "disponible" | "ocupada" | "en_aseo" | "en_mantencion" | string;
   motivo_mantencion: string | null;
   huesped_actual: string | null;
+  tipo_cliente_actual: TipoClienteAseo;
   checkin_fecha: string | null;
   ultimo_huesped: string | null;
   checkout_fecha: string | null;
@@ -40,7 +42,7 @@ interface RegistroAseoHistorial {
 const QUERY_HABITACIONES_ASEO = `
 with active_checkin as (
   select * from (
-    select c.habitacion_id, ci.id as checkin_id, r.huesped_nombre,
+    select c.habitacion_id, ci.id as checkin_id, r.huesped_nombre, r.tipo_cliente as tipo_cliente_actual,
            ci.fecha_hora as checkin_fecha,
            row_number() over (partition by c.habitacion_id order by ci.fecha_hora desc) as rn
     from checkin ci
@@ -73,6 +75,7 @@ select
   h.estado,
   h.motivo_mantencion,
   ac.huesped_nombre as huesped_actual,
+  ac.tipo_cliente_actual,
   ac.checkin_fecha,
   uc.huesped_nombre as ultimo_huesped,
   uc.checkout_fecha,
@@ -131,10 +134,21 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
     [habitaciones]
   );
 
-  const piezasDiariasPendientes = useMemo(
-    () => habitaciones.filter((h) => h.estado === "ocupada" && h.aseo_hoy_count === 0),
-    [habitaciones]
-  );
+  // HU-08: priorizar el horario en que el huésped está fuera de la
+  // pieza (contratista en faena 06:00-19:00, turista temprano en la
+  // mañana) — antes se mostraban todas las pendientes en el mismo
+  // orden sin importar si el huésped probablemente seguía adentro.
+  const horaActual = new Date().getHours();
+  const piezasDiariasPendientes = useMemo(() => {
+    return habitaciones
+      .filter((h) => h.estado === "ocupada" && h.aseo_hoy_count === 0)
+      .slice()
+      .sort(
+        (a, b) =>
+          calcularPrioridadAseo(b.tipo_cliente_actual, horaActual) -
+          calcularPrioridadAseo(a.tipo_cliente_actual, horaActual)
+      );
+  }, [habitaciones, horaActual]);
 
   const piezasLimpiasHoy = useMemo(
     () => habitaciones.filter((h) => h.aseo_hoy_count > 0 && h.estado !== "en_aseo"),
@@ -706,7 +720,9 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                       </div>
                       <p className="text-[11px] text-brand-muted pl-5">
                         {esDiarioPendiente
-                          ? "⚠️ Aseo diario obligatorio de hoy pendiente"
+                          ? estaEnVentanaIdeal(hab.tipo_cliente_actual, horaActual)
+                            ? "⚠️ Aseo diario pendiente — huésped probablemente fuera ahora, buen momento"
+                            : "⚠️ Aseo diario obligatorio de hoy pendiente"
                           : `✓ Aseo registrado hoy (${formatearHora(hab.ultimo_aseo_fecha)})`}
                       </p>
                     </>

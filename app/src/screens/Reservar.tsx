@@ -18,6 +18,8 @@ import {
 } from "../features/reportes/generarVoucherTuristaPdf";
 import { abrirEnlaceWhatsApp } from "../features/reservas/compartirWhatsApp";
 import { formatearMonedaCLP } from "../lib/pdf/pdfMakeConfig";
+import { useConfigPension } from "../features/perfil/useConfigPension";
+import { formatearMensajeConflicto } from "../features/reservas/conflictoReserva";
 
 interface HabitacionItem {
   id: string;
@@ -195,7 +197,9 @@ export function Reservar({
     }
   }, [desde, hasta]);
 
-  const tarifaNoche = 15000;
+  // HU-03: tarifa base vigente, configurable en HU-39 — ya no un literal.
+  const { config: configPension } = useConfigPension();
+  const tarifaNoche = configPension.tarifaBaseNoche;
   const totalEstimado = noches * tarifaNoche;
 
   // Cantidad de habitaciones libres
@@ -288,7 +292,31 @@ export function Reservar({
       });
     } catch (err) {
       console.error(err);
-      setError("No se pudo completar la reserva. Es posible que la cama se haya ocupado recientemente. Revisa e intenta de nuevo.");
+      // HU-01: el criterio exige indicar CON QUÉ reserva choca, no solo
+      // que chocó. La verificación previa (estadoHabitaciones) ya evita
+      // esto en el caso normal; este catch solo se alcanza ante una
+      // condición de carrera real (otro dispositivo reservó la misma
+      // cama/fecha en el instante entre que se mostró la grilla y se
+      // confirmó), que el EXCLUDE de la base detecta siempre. Se
+      // vuelve a consultar para poder nombrar a quién choca.
+      let detalleConflicto = "";
+      try {
+        const conflictos = await powersync.getAll<{ huesped_nombre: string | null; fecha_inicio: string; fecha_fin: string | null }>(
+          `select huesped_nombre, fecha_inicio, fecha_fin from reserva
+           where cama_id = ? and estado in ('confirmada', 'en_curso')
+             and date(fecha_inicio) <= date(?)
+             and (fecha_fin is null or date(fecha_fin) >= date(?))
+           order by fecha_inicio asc limit 1`,
+          [camaElegida.id, fechaFinEfectiva, desde]
+        );
+        detalleConflicto = formatearMensajeConflicto(conflictos[0]);
+      } catch {
+        // Si ni siquiera se puede releer el conflicto, se deja el
+        // mensaje genérico de abajo — no debe impedir informar el error.
+      }
+      setError(
+        `No se pudo completar la reserva: la cama se ocupó recientemente.${detalleConflicto} Elige otra habitación o fecha e intenta de nuevo.`
+      );
     } finally {
       setGuardando(false);
     }
@@ -360,12 +388,16 @@ export function Reservar({
           <div className="flex items-center justify-between border-t border-brand-border/60 pt-3">
             <div>
               <span className="text-xs text-brand-muted">Tarifa estándar: </span>
-              <span className="text-xs font-semibold text-brand-ink">$15.000 / noche</span>
+              <span className="text-xs font-semibold text-brand-ink">
+                {formatearMonedaCLP(reservaConfirmada.tarifaNoche ?? tarifaNoche)} / noche
+              </span>
             </div>
             <div className="text-right">
               <span className="text-xs text-brand-muted block">Total Estimado</span>
               <span className="font-display text-lg font-black text-brand-terracotta">
-                {formatearMonedaCLP((reservaConfirmada.nochesEstimadas ?? 1) * 15000)}
+                {formatearMonedaCLP(
+                  (reservaConfirmada.nochesEstimadas ?? 1) * (reservaConfirmada.tarifaNoche ?? tarifaNoche)
+                )}
               </span>
             </div>
           </div>
