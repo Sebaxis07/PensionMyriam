@@ -39,29 +39,54 @@ export function RoomSheet({
   async function checkin() {
     if (!pieza.reserva_id) return;
     setGuardando(true);
-    await powersync.execute(
-      "insert into checkin (id, reserva_id, realizado_por, fecha_hora, uuid_idempotente) values (?, ?, ?, ?, ?)",
-      [crypto.randomUUID(), pieza.reserva_id, usuarioId, new Date().toISOString(), nuevoUuidIdempotente()]
-    );
+    // El cambio de color/estado de la pieza (Disponible -> Ocupada) lo
+    // hace un trigger en Postgres (app.checkin_ocupa_habitacion) — eso
+    // es la verdad del servidor, pero solo corre cuando esta operación
+    // sincroniza. Replicarlo acá en la escritura local (misma
+    // transacción de PowerSync) es lo que hace que la pantalla se
+    // actualice al instante también sin conexión (HU-27); cuando
+    // sincroniza, el trigger confirma exactamente el mismo valor.
+    await powersync.writeTransaction(async (tx) => {
+      await tx.execute(
+        "insert into checkin (id, reserva_id, realizado_por, fecha_hora, uuid_idempotente) values (?, ?, ?, ?, ?)",
+        [crypto.randomUUID(), pieza.reserva_id, usuarioId, new Date().toISOString(), nuevoUuidIdempotente()]
+      );
+      await tx.execute("update habitacion set estado = 'ocupada' where id = ?", [pieza.id]);
+    });
     onClose();
   }
 
   async function salio() {
     if (!pieza.checkin_activo_id) return;
     setGuardando(true);
-    await powersync.execute(
-      "insert into checkout (id, checkin_id, realizado_por, fecha_hora, uuid_idempotente) values (?, ?, ?, ?, ?)",
-      [pieza.checkin_activo_id, pieza.checkin_activo_id, usuarioId, new Date().toISOString(), nuevoUuidIdempotente()]
-    );
+    // Mismo motivo que en checkin(): app.checkout_dispara_aseo en
+    // Postgres deja la pieza "en_aseo" al sincronizar; se adelanta acá
+    // para que se vea al instante sin conexión.
+    await powersync.writeTransaction(async (tx) => {
+      await tx.execute(
+        "insert into checkout (id, checkin_id, realizado_por, fecha_hora, uuid_idempotente) values (?, ?, ?, ?, ?)",
+        [pieza.checkin_activo_id, pieza.checkin_activo_id, usuarioId, new Date().toISOString(), nuevoUuidIdempotente()]
+      );
+      await tx.execute("update habitacion set estado = 'en_aseo' where id = ?", [pieza.id]);
+    });
     onClose();
   }
 
   async function aseoListo() {
     setGuardando(true);
-    await powersync.execute(
-      "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'post_checkout', ?, ?, ?)",
-      [crypto.randomUUID(), pieza.id, usuarioId, new Date().toISOString(), nuevoUuidIdempotente()]
-    );
+    // Mismo motivo: app.aseo_completado_libera_habitacion (solo para
+    // tipo = post_checkout, igual que acá) libera la pieza al
+    // sincronizar; se adelanta para verse al instante sin conexión.
+    await powersync.writeTransaction(async (tx) => {
+      await tx.execute(
+        "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'post_checkout', ?, ?, ?)",
+        [crypto.randomUUID(), pieza.id, usuarioId, new Date().toISOString(), nuevoUuidIdempotente()]
+      );
+      await tx.execute(
+        "update habitacion set estado = 'disponible' where id = ? and estado = 'en_aseo'",
+        [pieza.id]
+      );
+    });
     onClose();
   }
 
