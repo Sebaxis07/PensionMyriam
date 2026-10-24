@@ -10,6 +10,45 @@ const PK_POR_TABLA: Record<string, string> = {
   checkout: "checkin_id"
 };
 
+export type ClasificacionError =
+  | "transitorio"
+  | "duplicado_idempotente"
+  | "rechazo_permanente";
+
+/**
+ * HU-28/HU-42: no todo error permanente (4xx/23xxx/42xxx/PGRST) significa
+ * lo mismo. Un reintento de la MISMA operación (corte a mitad de envío)
+ * choca contra el unique de `uuid_idempotente` con código 23505 — eso es
+ * éxito disfrazado de error, no hay que avisar ni reintentar. Cualquier
+ * OTRO error permanente (otra 23505 de negocio, 23P01 de solape, 23503,
+ * 23514, 42xxx, PGRST, 4xx) es un rechazo real que la usuaria debe poder
+ * ver después, no algo para descartar en silencio.
+ * Función pura (sin I/O) para poder probarla sin mockear PowerSync.
+ */
+export function clasificarErrorSync(opError: any): ClasificacionError {
+  const status = Number(opError?.status ?? opError?.statusCode);
+  const code = String(opError?.code ?? "");
+  const mensaje = String(opError?.message ?? "");
+
+  const esErrorPermanente =
+    (status >= 400 && status < 500) ||
+    code.startsWith("23") || // 23503 (FK), 23505 (unique), 23P01 (exclusion), 23514 (check)
+    code.startsWith("42") || // error de esquema o sintaxis
+    code.startsWith("PGRST"); // error de validación de PostgREST
+
+  if (!esErrorPermanente) return "transitorio";
+
+  // Postgres nombra el constraint autogenerado "<tabla>_uuid_idempotente_key"
+  // (ver db/migrations/0001_init.sql) y SIEMPRE lo incluye en el mensaje
+  // de duplicate key — es la forma confiable de distinguir "ya se aplicó,
+  // esto es un reintento" de cualquier otro unique/exclusion de negocio.
+  if (code === "23505" && mensaje.includes("uuid_idempotente")) {
+    return "duplicado_idempotente";
+  }
+
+  return "rechazo_permanente";
+}
+
 /**
  * Conector de subida: PowerSync mantiene la cola local (offline-first,
  * RNF-02); este conector es lo único que sabe cómo empujarla al
@@ -53,25 +92,50 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
               break;
           }
         } catch (opError: any) {
-          // Si es un error irrecuperable de Postgres (código 23xxx de constraint,
-          // 42xxx de esquema, PGRSTxxx de PostgREST o HTTP 4xx), no bloquear la cola:
-          const status = Number(opError?.status || opError?.statusCode);
-          const code = String(opError?.code ?? "");
-          const esErrorPermanente =
-            (status >= 400 && status < 500) ||
-            code.startsWith("23") || // 23503 (FK), 23505 (Unique), 23P01 (Exclusion), 23514 (Check)
-            code.startsWith("42") || // Error de esquema o sintaxis
-            code.startsWith("PGRST"); // Error de validación de PostgREST
+          const clasificacion = clasificarErrorSync(opError);
 
-          if (esErrorPermanente) {
-            console.warn(
-              `[PowerSync] Descartando operación no recuperable en ${op.table} (${op.op}):`,
-              opError?.message || opError
-            );
-          } else {
-            // Error transitorio de red o 5xx del servidor: re-lanzar para reintentar
+          if (clasificacion === "transitorio") {
+            // Error de red o 5xx del servidor: re-lanzar para que PowerSync
+            // reintente la transacción completa más tarde (RNF-06).
             throw opError;
           }
+
+          if (clasificacion === "duplicado_idempotente") {
+            // Esta operación ya se aplicó en un envío anterior (corte a
+            // mitad de sincronización); no es un rechazo, es el caso
+            // exitoso de la idempotencia. No se avisa a la usuaria.
+            continue;
+          }
+
+          // Rechazo permanente genuino (HU-42): no queda solo en consola.
+          // Se guarda en la tabla local operacion_rechazada para que la
+          // Administradora pueda revisarlo después — el dato no
+          // desaparece sin dejar aviso, aunque la UI para mostrarlo
+          // todavía no existe (ver NOTA PARA CODEX en el informe).
+          try {
+            await database.execute(
+              `insert into operacion_rechazada (id, tabla, operacion, motivo, datos_json, fecha_hora)
+               values (?, ?, ?, ?, ?, ?)`,
+              [
+                crypto.randomUUID(),
+                op.table,
+                op.op,
+                String(opError?.message ?? opError),
+                JSON.stringify(op.opData ?? {}),
+                new Date().toISOString()
+              ]
+            );
+          } catch (errorAlGuardarRechazo) {
+            console.error(
+              "[PowerSync] No se pudo guardar evidencia del rechazo en operacion_rechazada:",
+              errorAlGuardarRechazo
+            );
+          }
+
+          console.warn(
+            `[PowerSync] Rechazo permanente en ${op.table} (${op.op}), guardado en operacion_rechazada:`,
+            opError?.message || opError
+          );
         }
       }
       await transaction.complete();
