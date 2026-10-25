@@ -73,6 +73,29 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
 
     try {
       for (const op of transaction.crud) {
+        // HU-22: insumo.costo_promedio/cantidad_total SOLO debe
+        // recalcularlos el trigger app.recalcular_costo_promedio() al
+        // insertar en compra_insumo (0001_init.sql) — esa es la ÚNICA
+        // fuente de verdad del Promedio Móvil Ponderado. El cliente sí
+        // escribe localmente ese mismo cálculo en insumo (espejo
+        // optimista, para ver el costo actualizado al instante sin
+        // conexión — ver registrarCompraInsumo.ts), pero ese PATCH nunca
+        // debe llegar al servidor: el rol "authenticated" SÍ tiene
+        // permiso de UPDATE en insumo (Supabase otorga privilegios
+        // amplios por defecto y deja la restricción real a RLS, que para
+        // la Administradora permite escribir), así que si este PATCH se
+        // sincronizara, el trigger del INSERT en compra_insumo volvería
+        // a sumar la MISMA compra sobre un insumo que el PATCH ya habría
+        // actualizado — contando esa compra DOS VECES en el promedio
+        // ponderado (confirmado en db/pgtap/10_pmp_insumo.sql). Se omite
+        // el envío: el insert en compra_insumo (sí permitido y correcto)
+        // ya dispara el único recálculo válido en el servidor; al
+        // sincronizar, PowerSync baja ese valor autoritativo y reemplaza
+        // el espejo local.
+        if (op.table === "insumo" && op.op === UpdateType.PATCH) {
+          continue;
+        }
+
         const table = supabase.from(op.table);
         const pk = PK_POR_TABLA[op.table] ?? "id";
         try {

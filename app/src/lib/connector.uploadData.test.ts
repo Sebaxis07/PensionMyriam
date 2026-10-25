@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { throwOnError, from } = vi.hoisted(() => {
+const { throwOnError, from, updateFn } = vi.hoisted(() => {
   const throwOnError = vi.fn();
   const upsert = vi.fn(() => ({ throwOnError }));
-  const from = vi.fn(() => ({ upsert }));
-  return { upsert, throwOnError, from };
+  const eqFn = vi.fn(() => ({ throwOnError }));
+  const updateFn = vi.fn(() => ({ eq: eqFn }));
+  const from = vi.fn(() => ({ upsert, update: updateFn }));
+  return { upsert, throwOnError, from, updateFn, eqFn };
 });
 vi.mock("./supabase", () => ({ supabase: { from } }));
 vi.mock("./env", () => ({ POWERSYNC_URL: "http://test" }));
@@ -23,6 +25,8 @@ import { UpdateType } from "@powersync/web";
 describe("SupabaseConnector.uploadData — reversión local en rechazo 23P01 (HU-42)", () => {
   beforeEach(() => {
     throwOnError.mockReset();
+    from.mockClear();
+    updateFn.mockClear();
   });
 
   function crearDatabaseFake(crud: any[]) {
@@ -110,6 +114,89 @@ describe("SupabaseConnector.uploadData — reversión local en rechazo 23P01 (HU
 
     expect(execute).not.toHaveBeenCalled();
     expect(txExecute).not.toHaveBeenCalled();
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * HU-22: insumo.costo_promedio/cantidad_total los recalcula EXCLUSIVAMENTE
+ * el trigger de Postgres al insertar en compra_insumo (0001_init.sql); el
+ * rol "authenticated" solo tiene GRANT select+insert en insumo, nunca
+ * update. El PATCH local a insumo (espejo optimista en
+ * registrarCompraInsumo.ts) nunca debe llegar a la red: si se enviara,
+ * siempre sería rechazado (contaminando operacion_rechazada en cada
+ * compra) y, si alguna vez se permitiera, el trigger duplicaría la compra
+ * en el promedio ponderado.
+ */
+describe("SupabaseConnector.uploadData — insumo: el PATCH local nunca se sincroniza (HU-22)", () => {
+  beforeEach(() => {
+    throwOnError.mockReset();
+    from.mockClear();
+    updateFn.mockClear();
+  });
+
+  function crearDatabaseFake(crud: any[]) {
+    const txExecute = vi.fn().mockResolvedValue(undefined);
+    const execute = vi.fn().mockResolvedValue(undefined);
+    const complete = vi.fn().mockResolvedValue(undefined);
+    const writeTransaction = vi.fn(async (cb: (tx: { execute: typeof txExecute }) => Promise<void>) => {
+      await cb({ execute: txExecute });
+    });
+    return {
+      database: {
+        getNextCrudTransaction: vi.fn().mockResolvedValue({ crud, complete }),
+        execute,
+        writeTransaction
+      },
+      complete
+    };
+  }
+
+  it("un PATCH a insumo se omite por completo: ni se llama a supabase.from('insumo')", async () => {
+    const crud = [
+      {
+        table: "insumo",
+        op: UpdateType.PATCH,
+        id: "insumo-1",
+        opData: { cantidad_total: 20, costo_promedio: 1234.5 }
+      }
+    ];
+    const { database, complete } = crearDatabaseFake(crud);
+
+    const connector = new SupabaseConnector();
+    await connector.uploadData(database as any);
+
+    expect(from).not.toHaveBeenCalledWith("insumo");
+    expect(updateFn).not.toHaveBeenCalled();
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
+
+  it("un INSERT nuevo en insumo (catálogo, PUT) SÍ se sincroniza normalmente — solo el PATCH se omite", async () => {
+    throwOnError.mockResolvedValueOnce(undefined);
+    const crud = [
+      { table: "insumo", op: UpdateType.PUT, id: "insumo-nuevo", opData: { nombre: "Arroz" } }
+    ];
+    const { database } = crearDatabaseFake(crud);
+
+    const connector = new SupabaseConnector();
+    await connector.uploadData(database as any);
+
+    expect(from).toHaveBeenCalledWith("insumo");
+  });
+
+  it("la compra en sí (compra_insumo, PUT) se sincroniza normalmente en la misma transacción", async () => {
+    throwOnError.mockResolvedValue(undefined);
+    const crud = [
+      { table: "insumo", op: UpdateType.PATCH, id: "insumo-1", opData: { cantidad_total: 20 } },
+      { table: "compra_insumo", op: UpdateType.PUT, id: "compra-1", opData: { insumo_id: "insumo-1", cantidad: 10 } }
+    ];
+    const { database, complete } = crearDatabaseFake(crud);
+
+    const connector = new SupabaseConnector();
+    await connector.uploadData(database as any);
+
+    expect(from).not.toHaveBeenCalledWith("insumo");
+    expect(from).toHaveBeenCalledWith("compra_insumo");
     expect(complete).toHaveBeenCalledTimes(1);
   });
 });
