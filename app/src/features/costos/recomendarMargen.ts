@@ -7,6 +7,14 @@ export interface ContextoRecomendacion {
   contratosBajoMinimo?: Array<{ razonSocial: string; tarifa: number }>;
 }
 
+/**
+ * Umbrales 30%/15%: referencia de trabajo del equipo (CLAUDE.md los marca
+ * explícitamente como "ej."), calibrada contra la única cifra que la
+ * Administradora confirmó en las reuniones — ganancia líquida de
+ * $3-4M/mes para 30 personas, ~50% de margen neto (anotaciones de la
+ * reunión 2) — nunca un porcentaje de alerta exacto. Pendiente de
+ * validar con ella; no son una decisión de negocio cerrada.
+ */
 export function obtenerEstadoSemaforo(margenPorcentaje: number): EstadoSemaforoMargen {
   if (margenPorcentaje >= 30) return "verde";
   if (margenPorcentaje >= 15) return "amarillo";
