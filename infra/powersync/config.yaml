@@ -51,18 +51,51 @@ sync_rules:
           - select * from aseo
           # Sprint 2 (EP-03): todo lo operativo de empresas/consumo que
           # NO es sensible. tarifa_convenida se sincroniza aparte, solo
-          # a administradora (ver bucket empresa_tarifas más abajo) —
-          # PowerSync bypassa RLS de Postgres (rol de replicación con
-          # BYPASSRLS), así que ocultar una columna acá es lo único que
-          # de verdad evita que llegue al celular de la Encargada.
+          # a administradora (bucket empresa_tarifas, abajo) — PowerSync
+          # replica vía su propio rol de replicación (BYPASSRLS), así
+          # que RLS de Postgres NUNCA filtra lo que llega al celular;
+          # el único control real de qué columna recibe cada rol es la
+          # lista de columnas de este archivo. Por eso tarifa_convenida
+          # se excluye explícitamente acá (columnas nombradas, no
+          # "select *") — este comentario describía esta separación
+          # desde antes, pero el bucket nunca se había implementado:
+          # "select * from contrato_empresa" seguía sincronizando
+          # tarifa_convenida a cualquier rol. Corregido (auditoría de
+          # seguridad): ver también la vista contrato_empresa_rest y el
+          # GRANT de 0015_seguridad_tarifa.sql para la vía de
+          # PostgREST/consultas directas, que esto NO cubre por sí solo.
           - select * from empresa
-          - select * from contrato_empresa
+          - select id, empresa_id, vigencia_desde, vigencia_hasta, headcount, creado_por, created_at from contrato_empresa
           - select * from trabajador
           - select * from consumo
           - select * from conciliacion_diaria
           - select * from justificacion_descuadre
           - select * from producto_extra
           - select * from tipo_consumo_config
-          # Sprint 4 (EP-04): Costos de insumos y compras
-          - select * from insumo
-          - select * from compra_insumo
+          # Sprint 4 (EP-04): insumo/compra_insumo ya estaban
+          # correctamente restringidos solo a Administradora por RLS en
+          # Postgres (decisión E), pero PowerSync los replica a TODOS
+          # los dispositivos igual (bypassa RLS) — mismo defecto que
+          # tarifa_convenida, nunca se había verificado hasta ahora. Se
+          # mueven a un bucket parametrizado por rol (costos_insumos).
+
+      # Único dato financiero de contrato_empresa — solo llega al
+      # dispositivo cuyo JWT resuelve a rol "administradora" en la
+      # tabla usuario (lookup vía request.user_id(), el "sub" del JWT).
+      # Bucket "global" (sin parámetro por fila): para una Encargada,
+      # user_role nunca es 'administradora', así que esta Data Query no
+      # le entrega ninguna fila — ni siquiera el id, nunca llega al
+      # SQLite local de su teléfono.
+      empresa_tarifas:
+        parameters: SELECT rol as user_role FROM usuario WHERE usuario.auth_uid = request.user_id()
+        data:
+          - SELECT id, tarifa_convenida FROM contrato_empresa WHERE bucket.user_role = 'administradora'
+
+      # insumo/compra_insumo (Sprint 4, HU-22/23): costos de mercadería
+      # y PMP — "la Encargada no ve costos ni márgenes" (CLAUDE.md,
+      # decisión E). Mismo patrón que empresa_tarifas.
+      costos_insumos:
+        parameters: SELECT rol as user_role FROM usuario WHERE usuario.auth_uid = request.user_id()
+        data:
+          - SELECT * FROM insumo WHERE bucket.user_role = 'administradora'
+          - SELECT * FROM compra_insumo WHERE bucket.user_role = 'administradora'
