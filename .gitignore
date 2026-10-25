@@ -9,9 +9,14 @@ dist/
 .env
 infra/.env
 
+# Override de puertos solo para desarrollo local (choque con otro stack
+# del host en 5432) — nunca forma parte del despliegue real.
+infra/docker-compose.override.yml
+
 # Playwright
 app/test-results/
 app/playwright-report/
+test-results/
 
 # Editor / OS
 .DS_Store
