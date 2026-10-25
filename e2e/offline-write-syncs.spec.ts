@@ -193,6 +193,7 @@ test("HU-28: un corte justo después de que Postgres recibe la operación (antes
   await expect(page.getByText("Rosa Soto").first()).toBeVisible({ timeout: 20_000 }); // check-in activo pieza #8
 
   let intentosInterceptados = 0;
+  let primerFetchCompletado = false;
   let uuidIdempotenteEnviado: string | null = null;
 
   // Intercepta la subida real a PostgREST para la pieza #8. La primera
@@ -204,6 +205,15 @@ test("HU-28: un corte justo después de que Postgres recibe la operación (antes
   // confirme su recepción". PowerSync, al ver la petición fallida,
   // reintenta más tarde con la MISMA fila local (mismo id/uuid) — ese
   // segundo intento sí se deja pasar normal.
+  //
+  // Defecto de esta prueba corregido (auditoría Sprint 3): el assert
+  // de "Postgres ya comiteó" solo esperaba a que intentosInterceptados
+  // se incrementara — eso ocurre ANTES del `await route.fetch()`, no
+  // después. Era una carrera: el test podía consultar Postgres antes
+  // de que el commit real hubiera terminado, fallando de forma
+  // intermitente sin que la app tuviera ningún defecto. Se agrega un
+  // flag separado que solo se marca DESPUÉS de que route.fetch()
+  // efectivamente resuelve.
   await page.route("**/rest/v1/checkout**", async (route: Route) => {
     if (route.request().method() !== "POST") {
       await route.continue();
@@ -217,6 +227,7 @@ test("HU-28: un corte justo después de que Postgres recibe la operación (antes
       // Deja que la petición llegue de verdad al servidor (Postgres
       // recibe y comitea el checkout) ...
       await route.fetch();
+      primerFetchCompletado = true;
       // ... pero el navegador nunca ve esa respuesta: se la corta acá,
       // como un corte de señal real a mitad de la confirmación.
       await route.abort("connectionreset");
@@ -231,10 +242,9 @@ test("HU-28: un corte justo después de que Postgres recibe la operación (antes
   // primera subida real al servidor se vaya a cortar a continuación.
   await expect(page.getByRole("button", { name: /^#8 En aseo/ })).toBeVisible({ timeout: 2_000 });
 
-  // Esperar a que ocurra el primer intento (el que se corta) antes de
-  // seguir — si no, el assert de abajo podría correr antes de que
-  // PowerSync alcance a intentar subir la cola.
-  await expect(() => expect(intentosInterceptados).toBeGreaterThanOrEqual(1)).toPass({
+  // Esperar a que el PRIMER fetch real a Postgres haya terminado (no
+  // solo a que el handler haya arrancado) antes de consultar la base.
+  await expect(() => expect(primerFetchCompletado).toBe(true)).toPass({
     timeout: 15_000
   });
 

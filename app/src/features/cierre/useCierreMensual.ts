@@ -1,5 +1,6 @@
 import { useQuery } from "@powersync/react";
 import { useMemo } from "react";
+import { fechaHoySantiago, sumarDiasYMD } from "../../lib/fechaNegocio";
 
 export interface DiaPendienteConciliacion {
   fecha: string;
@@ -162,11 +163,10 @@ export function useCierreMensual(
 
     const listaDiasEfectivos: string[] = [];
     if (fechaInicioEfectiva <= fechaFinEfectiva) {
-      const actual = new Date(fechaInicioEfectiva + "T00:00:00");
-      const fin = new Date(fechaFinEfectiva + "T00:00:00");
-      while (actual <= fin) {
-        listaDiasEfectivos.push(actual.toISOString().slice(0, 10));
-        actual.setDate(actual.getDate() + 1);
+      let actualStr = fechaInicioEfectiva;
+      while (actualStr <= fechaFinEfectiva) {
+        listaDiasEfectivos.push(actualStr);
+        actualStr = sumarDiasYMD(actualStr, 1);
       }
     }
 
@@ -182,7 +182,7 @@ export function useCierreMensual(
 
     const diasPendientes: DiaPendienteConciliacion[] = [];
     let diasConciliadosContador = 0;
-    const hoyStr = new Date().toISOString().slice(0, 10);
+    const hoyStr = fechaHoySantiago();
     const diasEvaluables = listaDiasEfectivos.filter((f) => f <= hoyStr);
 
     for (const f of diasEvaluables) {

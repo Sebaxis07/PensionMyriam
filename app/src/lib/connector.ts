@@ -110,12 +110,13 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
           // Rechazo permanente genuino (HU-42): no queda solo en consola.
           // Se guarda en la tabla local operacion_rechazada para que la
           // Administradora pueda revisarlo después — el dato no
-          // desaparece sin dejar aviso, aunque la UI para mostrarlo
-          // todavía no existe (ver NOTA PARA CODEX en el informe).
+          // desaparece sin dejar aviso. La interfaz es mínima (ver
+          // useOperacionesRechazadas.ts); la especificación visual
+          // completa queda pendiente para Codex (ver informe).
           try {
             await database.execute(
-              `insert into operacion_rechazada (id, tabla, operacion, motivo, datos_json, fecha_hora)
-               values (?, ?, ?, ?, ?, ?)`,
+              `insert into operacion_rechazada (id, tabla, operacion, motivo, datos_json, fecha_hora, resuelta)
+               values (?, ?, ?, ?, ?, ?, 0)`,
               [
                 crypto.randomUUID(),
                 op.table,
@@ -130,6 +131,35 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
               "[PowerSync] No se pudo guardar evidencia del rechazo en operacion_rechazada:",
               errorAlGuardarRechazo
             );
+          }
+
+          // "El dato local se revierte" (HU-42): el único caso ya
+          // validado de rechazo permanente no-duplicado es el EXCLUDE de
+          // reserva (23P01, cama ocupada por otro — mismo conflicto que
+          // asignarTrabajador ya intenta evitar antes de escribir, pero
+          // puede igual ocurrir entre dos dispositivos que escribieron
+          // sin verse). Revertir acá solo ese caso conocido y verificado
+          // (ver db/pgtap/05_exclude_reserva_cama.sql), en vez de un
+          // rollback genérico por tabla que adivinaría relaciones no
+          // validadas para otras tablas.
+          if (op.table === "reserva" && String(opError?.code ?? "") === "23P01") {
+            const trabajadorId = String(op.opData?.trabajador_id ?? "");
+            const camaRechazada = String(op.opData?.cama_id ?? "");
+            try {
+              await database.writeTransaction(async (tx) => {
+                await tx.execute("delete from reserva where id = ?", [op.id]);
+                if (trabajadorId) {
+                  await tx.execute(
+                    "update trabajador set cama_id = null where id = ? and cama_id = ?",
+                    [trabajadorId, camaRechazada]
+                  );
+                }
+              });
+            } catch {
+              // Si la reversión falla, el rechazo ya quedó registrado
+              // arriba — no se pierde evidencia, solo no se limpió el
+              // estado local optimista de inmediato.
+            }
           }
 
           console.warn(

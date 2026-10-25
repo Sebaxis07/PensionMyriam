@@ -19,11 +19,28 @@ export function SyncStatusBadge({
     powersync.currentStatus?.dataFlowStatus?.uploading ? 1 : 0
   );
 
+  // HU-29: "uploading" solo es verdadero mientras PowerSync está subiendo
+  // en este instante — hay ventanas (reconexión recién lograda, pausas
+  // entre reintentos) donde la cola en ps_crud sigue teniendo filas sin
+  // que "uploading" esté activo, y el indicador mostraba "Sincronizado"
+  // de forma engañosa. Se consulta la cola real, igual que ya hace
+  // SyncStatusModal, en vez de depender solo de ese flag transitorio.
   useEffect(() => {
+    async function actualizarPendientes() {
+      try {
+        const crud = await powersync.getAll<{ n: number }>("select count(*) as n from ps_crud");
+        setPendingCount(crud[0]?.n ?? 0);
+      } catch {
+        setPendingCount(powersync.currentStatus?.dataFlowStatus?.uploading ? 1 : 0);
+      }
+    }
+
+    actualizarPendientes();
+
     const unsubscribe = powersync.registerListener({
       statusChanged: (status) => {
         setConnected(status.connected);
-        setPendingCount(status.dataFlowStatus.uploading ? 1 : 0);
+        actualizarPendientes();
       }
     });
     return () => unsubscribe();

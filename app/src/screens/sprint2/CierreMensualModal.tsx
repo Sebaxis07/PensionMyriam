@@ -5,6 +5,7 @@ import { descargarPreFacturaPdf } from "../../features/reportes/generarPreFactur
 import { descargarPlanillaExcel } from "../../features/reportes/generarPlanillaExcel";
 import { formatearMonedaCLP } from "../../lib/pdf/pdfMakeConfig";
 import { powersync } from "../../lib/powersync";
+import { fechaHoySantiago } from "../../lib/fechaNegocio";
 import {
   IconCheck,
   IconClipboardCheck,
@@ -54,7 +55,7 @@ export function CierreMensualModal({
     try {
       const mesPadded = String(mes).padStart(2, "0");
       const primerDia = `${anio}-${mesPadded}-01`;
-      const hoyStr = new Date().toISOString().slice(0, 10);
+      const hoyStr = fechaHoySantiago();
       const ultimoDia = `${anio}-${mesPadded}-${new Date(anio, mes, 0).getDate()}`;
       const fin = hoyStr < ultimoDia ? hoyStr : ultimoDia;
       await conciliarPeriodo(contratoEmpresaId, primerDia, fin);

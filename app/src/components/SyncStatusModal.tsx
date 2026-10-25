@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { powersync, connectPowerSync } from "../lib/powersync";
 import { useQuery } from "@powersync/react";
+import { useOperacionesRechazadas, resolverOperacionRechazada } from "../features/sync/operacionesRechazadas";
 import {
   IconClose,
   IconRefresh,
@@ -14,10 +15,23 @@ interface UsuarioRow {
 }
 
 interface SyncStatusModalProps {
+  usuarioId: string;
   onCerrar: () => void;
 }
 
-export function SyncStatusModal({ onCerrar }: SyncStatusModalProps) {
+export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
+  const rechazos = useOperacionesRechazadas();
+  const [resolviendoId, setResolviendoId] = useState<string | null>(null);
+
+  async function handleResolver(id: string) {
+    setResolviendoId(id);
+    try {
+      await resolverOperacionRechazada(id, usuarioId);
+    } finally {
+      setResolviendoId(null);
+    }
+  }
+
   const [conectado, setConectado] = useState(powersync.currentStatus?.connected ?? false);
   const [tienePendientes, setTienePendientes] = useState(
     Boolean(powersync.currentStatus?.dataFlowStatus?.uploading)
@@ -208,6 +222,35 @@ export function SyncStatusModal({ onCerrar }: SyncStatusModalProps) {
             })}
           </div>
         </div>
+
+        {/* HU-42 — interfaz mínima para probar el flujo completo. Nota
+            para Codex: esta sección es intencionalmente básica (sin
+            iconografía ni jerarquía visual propia); ver especificación
+            funcional completa en el informe de auditoría. */}
+        {rechazos.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+              Operaciones rechazadas por el servidor ({rechazos.length})
+            </h4>
+            <div className="rounded-2xl border border-amber-400/60 bg-amber-50 p-3 space-y-2">
+              {rechazos.map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-2 text-xs border-b border-amber-300/50 pb-2 last:border-0 last:pb-0">
+                  <div>
+                    <span className="font-bold text-amber-900 block">{r.tabla} · {r.operacion}</span>
+                    <span className="text-amber-800">{r.motivo}</span>
+                  </div>
+                  <button
+                    onClick={() => handleResolver(r.id)}
+                    disabled={resolviendoId === r.id}
+                    className="shrink-0 rounded-lg border border-amber-600/40 bg-white px-2.5 py-1.5 text-[11px] font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                  >
+                    Marcar resuelto
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Botón de Comprobación */}
         <div className="flex justify-between items-center pt-2">

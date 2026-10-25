@@ -1,7 +1,8 @@
 import { useQuery } from "@powersync/react";
 import { useMemo } from "react";
 import { useMargenProyectado } from "../../features/costos/useMargenProyectado";
-import { QUERY_PIEZAS, type PiezaRow } from "../../lib/queries";
+import { QUERY_PIEZAS, parametrosQueryPiezas, type PiezaRow } from "../../lib/queries";
+import { fechaHoySantiago, mesHoySantiago, sumarDiasYMD } from "../../lib/fechaNegocio";
 
 export interface DiaSemanaInfo {
   fechaIso: string;
@@ -46,7 +47,7 @@ export function useDashboardAdminMetricas() {
   const metricasMargen = useMargenProyectado();
 
   // 2. EP-01 / EP-02: Habitaciones y ocupación actual
-  const { data: piezas } = useQuery<PiezaRow>(QUERY_PIEZAS);
+  const { data: piezas } = useQuery<PiezaRow>(QUERY_PIEZAS, parametrosQueryPiezas());
 
   // 3. Reservas para la matriz semanal de 7 días
   const { data: reservasSemana } = useQuery<ReservaSemanaRow>(
@@ -55,8 +56,9 @@ export function useDashboardAdminMetricas() {
      from reserva r
      join cama c on c.id = r.cama_id
      where r.estado in ('confirmada')
-       and (r.fecha_fin is null or date(r.fecha_fin) >= date('now'))
-       and date(r.fecha_inicio) <= date('now', '+7 days')`
+       and (r.fecha_fin is null or date(r.fecha_fin) >= date(?))
+       and date(r.fecha_inicio) <= date(?)`,
+    [fechaHoySantiago(), sumarDiasYMD(fechaHoySantiago(), 7)]
   );
 
   // 4. KPI-01 / EP-03: Conciliación B2B y raciones del mes
@@ -65,8 +67,9 @@ export function useDashboardAdminMetricas() {
             cd.estado, jd.id as justificacion_id
      from conciliacion_diaria cd
      left join justificacion_descuadre jd on jd.conciliacion_diaria_id = cd.id
-     where strftime('%Y-%m', cd.fecha) = strftime('%Y-%m', 'now')
-     order by cd.fecha desc`
+     where strftime('%Y-%m', cd.fecha) = ?
+     order by cd.fecha desc`,
+    [mesHoySantiago()]
   );
 
   // Generar los próximos 7 días

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useEmpresas } from "../../features/empresas/useEmpresas";
 import { crearContratoEmpresa, ContratoSolapadoError } from "../../features/reservaEmpresa/crearContratoEmpresa";
 import { IconCalendar, IconCheck, IconChevronLeft, IconUser, IconUsers } from "../../components/Icons";
+import { fechaHoySantiago } from "../../lib/fechaNegocio";
 
 interface ContratoScreenProps {
   usuarioId: string;
@@ -18,7 +19,7 @@ export function ContratoScreen({
 }: ContratoScreenProps) {
   const empresas = useEmpresas();
   const [empresaId, setEmpresaId] = useState(empresaIdInicial);
-  const [vigenciaDesde, setVigenciaDesde] = useState(new Date().toISOString().slice(0, 10));
+  const [vigenciaDesde, setVigenciaDesde] = useState(fechaHoySantiago());
   const [vigenciaHasta, setVigenciaHasta] = useState("");
   const [headcount, setHeadcount] = useState(10);
   const [tarifaConvenida, setTarifaConvenida] = useState(25000);

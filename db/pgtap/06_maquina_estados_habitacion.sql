@@ -2,6 +2,17 @@
 -- como la disparan los triggers de 0001_init.sql. Cubre transiciones
 -- válidas e inválidas — no toca RLS (eso ya está en 02_rls_insumo_compra
 -- para el patrón general de roles; acá ambos roles pueden operar todo).
+--
+-- Defecto corregido (auditoría Sprint 3): este archivo usaba
+-- current_date para fecha_inicio, que depende del TimeZone de la
+-- SESIÓN de Postgres (UTC en este proyecto) — mientras que
+-- app.checkout_dispara_aseo() fija fecha_fin con
+-- app.fecha_santiago(now()) (0005_empresas_consumo.sql). Entre las
+-- 00:00 y las 03:00 UTC (21:00-00:00 hora de Chile), current_date ya
+-- es un día después que app.fecha_santiago(now()), así que
+-- fecha_fin < fecha_inicio y el check-out viola "fechas_coherentes".
+-- Se usa el mismo helper que el trigger para que el test sea correcto
+-- a cualquier hora del día, no solo fuera de esa ventana.
 begin;
 select plan(12);
 
@@ -20,9 +31,9 @@ insert into public.cama (id, habitacion_id, numero) values
 
 insert into public.reserva (id, tipo_cliente, cama_id, huesped_nombre, fecha_inicio, creado_por, uuid_idempotente) values
   ('50000000-0000-0000-0000-0000000000e1', 'turista', '40000000-0000-0000-0000-0000000000e1',
-   'Huésped Uno', current_date, '10000000-0000-0000-0000-0000000000e1', gen_random_uuid()),
+   'Huésped Uno', app.fecha_santiago(now()), '10000000-0000-0000-0000-0000000000e1', gen_random_uuid()),
   ('50000000-0000-0000-0000-0000000000e2', 'turista', '40000000-0000-0000-0000-0000000000e2',
-   'Huésped Dos', current_date, '10000000-0000-0000-0000-0000000000e1', gen_random_uuid());
+   'Huésped Dos', app.fecha_santiago(now()), '10000000-0000-0000-0000-0000000000e1', gen_random_uuid());
 
 -- 1) Check-in de la primera reserva: la pieza está Disponible, debe
 --    aceptarse y dejar la habitación Ocupada.
@@ -121,7 +132,7 @@ insert into public.cama (id, habitacion_id, numero) values
   ('40000000-0000-0000-0000-0000000000e3', '30000000-0000-0000-0000-0000000000e2', 1);
 insert into public.reserva (id, tipo_cliente, cama_id, huesped_nombre, fecha_inicio, creado_por, uuid_idempotente) values
   ('50000000-0000-0000-0000-0000000000e3', 'turista', '40000000-0000-0000-0000-0000000000e3',
-   'Huésped Tres', current_date, '10000000-0000-0000-0000-0000000000e1', gen_random_uuid());
+   'Huésped Tres', app.fecha_santiago(now()), '10000000-0000-0000-0000-0000000000e1', gen_random_uuid());
 
 select throws_ok(
   $$ insert into public.checkin (reserva_id, realizado_por, uuid_idempotente)

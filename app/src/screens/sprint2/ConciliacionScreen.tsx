@@ -12,6 +12,7 @@ import {
   MOTIVOS_DESCUADRE,
   type MotivoDescuadre
 } from "../../features/conciliacion/justificarDescuadre";
+import { fechaHoySantiago, sumarDiasYMD } from "../../lib/fechaNegocio";
 import {
   IconCalendar,
   IconCheckCircle,
@@ -40,24 +41,6 @@ const METADATA_SERVICIOS: Record<
   cena: { label: "Cena", icon: "🍽️", desc: "Servicio nocturno" }
 };
 
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function cambiarDia(fechaIso: string, delta: number): string {
-  try {
-    const [y, m, d] = fechaIso.split("-").map(Number);
-    const date = new Date(y, m - 1, d);
-    date.setDate(date.getDate() + delta);
-    const ny = date.getFullYear();
-    const nm = String(date.getMonth() + 1).padStart(2, "0");
-    const nd = String(date.getDate()).padStart(2, "0");
-    return `${ny}-${nm}-${nd}`;
-  } catch {
-    return fechaIso;
-  }
-}
-
 function formatearFechaLegible(fechaIso: string): string {
   try {
     const [y, m, d] = fechaIso.split("-").map(Number);
@@ -83,7 +66,7 @@ export function ConciliacionScreen({
   contratoEmpresaId: string;
   onAbrirCierre?: () => void;
 }) {
-  const hoy = hoyISO();
+  const hoy = fechaHoySantiago();
   const diasRaw = useConciliacion(contratoEmpresaId);
 
   // Consultar vigencia del contrato
@@ -284,7 +267,7 @@ export function ConciliacionScreen({
           <button
             type="button"
             disabled={!puedeRetroceder || actualizandoDia}
-            onClick={() => setFechaSeleccionada(cambiarDia(fechaSeleccionada, -1))}
+            onClick={() => setFechaSeleccionada(sumarDiasYMD(fechaSeleccionada, -1))}
             className="flex items-center gap-1 rounded-xl bg-white hover:bg-brand-sand px-3.5 py-2.5 text-xs font-bold text-brand-ink transition border border-brand-border/60 shadow-xs active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
           >
             <IconChevronLeft className="h-4 w-4" />
@@ -315,7 +298,7 @@ export function ConciliacionScreen({
           <button
             type="button"
             disabled={!puedeAvanzar || actualizandoDia}
-            onClick={() => setFechaSeleccionada(cambiarDia(fechaSeleccionada, 1))}
+            onClick={() => setFechaSeleccionada(sumarDiasYMD(fechaSeleccionada, 1))}
             className="flex items-center gap-1 rounded-xl bg-white hover:bg-brand-sand px-3.5 py-2.5 text-xs font-bold text-brand-ink transition border border-brand-border/60 shadow-xs active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
           >
             <span className="hidden sm:inline">Día siguiente</span>

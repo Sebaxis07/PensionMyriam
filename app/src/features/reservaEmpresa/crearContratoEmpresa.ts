@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { powersync } from "../../lib/powersync";
+import { sumarDiasYMD } from "../../lib/fechaNegocio";
 
 // HU-02: headcount y tarifa quedan versionados por vigencia (nunca se
 // sobrescribe un contrato existente — un cambio de headcount/tarifa
@@ -38,11 +39,9 @@ export async function crearContratoEmpresa(usuarioId: string, input: ContratoEmp
     [datos.empresaId]
   );
 
-  // Calcular la fecha del día anterior a vigenciaDesde (formato YYYY-MM-DD en UTC)
-  const partes = datos.vigenciaDesde.split("-").map(Number);
-  const fechaDesde = new Date(Date.UTC(partes[0], partes[1] - 1, partes[2]));
-  fechaDesde.setUTCDate(fechaDesde.getUTCDate() - 1);
-  const ayerStr = fechaDesde.toISOString().slice(0, 10);
+  // Día anterior a vigenciaDesde — aritmética de calendario pura (no
+  // representa "ahora", así que no hay zona horaria que resolver).
+  const ayerStr = sumarDiasYMD(datos.vigenciaDesde, -1);
 
   for (const c of existentes) {
     const cFin = c.vigencia_hasta || "9999-12-31";
