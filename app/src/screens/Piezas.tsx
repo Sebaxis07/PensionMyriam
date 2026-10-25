@@ -603,7 +603,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
 
       {/* Modal Centro de Sincronización y Cola de Operaciones */}
       {mostrarSyncModal && (
-        <SyncStatusModal onCerrar={() => setMostrarSyncModal(false)} />
+        <SyncStatusModal usuarioId={usuario.id} onCerrar={() => setMostrarSyncModal(false)} />
       )}
 
       {/* Menú Interactivo de Ayuda y Guía */}

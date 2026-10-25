@@ -191,7 +191,14 @@ const operacion_rechazada = new Table(
     operacion: column.text,
     motivo: column.text,
     datos_json: column.text,
-    fecha_hora: column.text
+    fecha_hora: column.text,
+    // HU-42: "la Administradora revisa el resumen y puede resolverlo" —
+    // marca manual de que ya se hizo cargo del rechazo (ej. reasignó la
+    // cama). No borra la fila: el rechazo sigue siendo evidencia
+    // auditable, solo deja de pedir atención.
+    resuelta: column.integer,
+    resuelta_por: column.text,
+    resuelta_en: column.text
   },
   { localOnly: true }
 );
