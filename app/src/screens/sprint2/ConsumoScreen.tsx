@@ -9,6 +9,11 @@ import { consumoRapido } from "../../features/consumo/consumoRapido";
 import { registrarConsumo, type TipoConsumo } from "../../features/consumo/registrarConsumo";
 import { corregirConsumo } from "../../features/consumo/corregirConsumo";
 import { useProductosExtra } from "../../features/consumo/useProductosExtra";
+import {
+  armarResumenDiaTexto,
+  copiarResumenDiaTexto,
+  abrirResumenDiaWhatsApp
+} from "../../features/consumo/resumenDiaTexto";
 import { CatalogoExtrasModal } from "../../components/CatalogoExtrasModal";
 import { BotonExplicacion } from "../../components/BotonExplicacion";
 import {
@@ -287,13 +292,44 @@ export function ConsumoScreen({
           </div>
 
           {esAdmin && (
-            <button
-              onClick={() => setMostrarModalCatalogo(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition self-start sm:self-auto shadow-2xs"
-            >
-              <IconPlus className="h-3.5 w-3.5 text-brand-terracotta" />
-              <span>Lista de Colaciones ({productosExtra.length})</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <button
+                onClick={() => setMostrarModalCatalogo(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition shadow-2xs"
+              >
+                <IconPlus className="h-3.5 w-3.5 text-brand-terracotta" />
+                <span>Lista de Colaciones ({productosExtra.length})</span>
+              </button>
+
+              {/* HU-21: solo arma el texto y lo copia/abre en wa.me — nunca
+                  afirma un envío automático. Especificación visual
+                  completa pendiente para Codex (ver informe). */}
+              <button
+                onClick={async () => {
+                  const texto = armarResumenDiaTexto(empresaNombre ?? "esta empresa", resumenDia, headcount);
+                  const copiado = await copiarResumenDiaTexto(texto);
+                  setToastExito(
+                    copiado
+                      ? "✓ Resumen del día copiado — pégalo donde quieras enviarlo"
+                      : "No se pudo copiar automáticamente; usa el botón de WhatsApp"
+                  );
+                  setTimeout(() => setToastExito(null), 3500);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition shadow-2xs"
+              >
+                <span>📋</span>
+                <span>Copiar resumen del día</span>
+              </button>
+              <button
+                onClick={() =>
+                  abrirResumenDiaWhatsApp(armarResumenDiaTexto(empresaNombre ?? "esta empresa", resumenDia, headcount))
+                }
+                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition shadow-2xs"
+              >
+                <span>💬</span>
+                <span>Enviar por WhatsApp</span>
+              </button>
+            </div>
           )}
         </div>
 
