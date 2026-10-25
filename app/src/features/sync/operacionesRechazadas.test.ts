@@ -1,10 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { execute } = vi.hoisted(() => ({ execute: vi.fn().mockResolvedValue(undefined) }));
+const { execute, useQuery } = vi.hoisted(() => ({
+  execute: vi.fn().mockResolvedValue(undefined),
+  useQuery: vi.fn((_sql: string, _params?: unknown[]) => ({ data: [] }))
+}));
 vi.mock("../../lib/powersync", () => ({ powersync: { execute } }));
-vi.mock("@powersync/react", () => ({ useQuery: vi.fn(() => ({ data: [] })) }));
+vi.mock("@powersync/react", () => ({ useQuery }));
 
-import { resolverOperacionRechazada } from "./operacionesRechazadas";
+import { resolverOperacionRechazada, useOperacionesRechazadas } from "./operacionesRechazadas";
+
+describe("useOperacionesRechazadas (HU-42: visible para la Administradora)", () => {
+  beforeEach(() => {
+    useQuery.mockClear();
+  });
+
+  it("por defecto solo pide las PENDIENTES (resuelta is null or 0), no el historial completo", () => {
+    useOperacionesRechazadas();
+    const [sql] = useQuery.mock.calls[0];
+    expect(sql).toMatch(/resuelta is null or resuelta = 0/i);
+    expect(sql).toMatch(/order by fecha_hora desc/i);
+  });
+
+  it("con soloPendientes=false devuelve también las ya resueltas (historial/auditoría)", () => {
+    useOperacionesRechazadas(false);
+    const [sql] = useQuery.mock.calls[0];
+    expect(sql).not.toMatch(/where resuelta/i);
+    expect(sql).toMatch(/select \* from operacion_rechazada order by fecha_hora desc/i);
+  });
+});
 
 describe("resolverOperacionRechazada (HU-42)", () => {
   beforeEach(() => {
