@@ -15,7 +15,8 @@ import {
   camasLibresParaContrato,
   asignarTrabajador,
   desasignarTrabajador,
-  eliminarTrabajador
+  eliminarTrabajador,
+  CamaOcupadaError
 } from "./asignarTrabajador";
 
 describe("crearTrabajadores (HU-02/HU-12: nómina de la empresa)", () => {
@@ -56,6 +57,8 @@ describe("asignarTrabajador (HU-02/HU-06: asigna cama en la misma transacción)"
   beforeEach(() => {
     execute.mockClear();
     writeTransaction.mockClear();
+    getAll.mockReset();
+    getAll.mockResolvedValue([]);
   });
 
   it("inserta la reserva tipo_cliente='empresa' y actualiza trabajador.cama_id en UNA sola transacción", async () => {
@@ -83,6 +86,33 @@ describe("asignarTrabajador (HU-02/HU-06: asigna cama en la misma transacción)"
       })
     ).rejects.toThrow();
     expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("rechaza asignar una cama ya ocupada por OTRO trabajador en fechas que se cruzan, sin escribir nada", async () => {
+    getAll.mockResolvedValueOnce([{ id: "reserva-existente" }]);
+    await expect(
+      asignarTrabajador("usuario-1", {
+        trabajadorId: crypto.randomUUID(),
+        camaId: crypto.randomUUID(),
+        contratoEmpresaId: crypto.randomUUID(),
+        fechaInicio: "2026-11-01"
+      })
+    ).rejects.toThrow(CamaOcupadaError);
+    expect(writeTransaction).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("permite reasignar la MISMA cama al MISMO trabajador (reintento idempotente, no es un choque)", async () => {
+    const trabajadorId = crypto.randomUUID();
+    await asignarTrabajador("usuario-1", {
+      trabajadorId,
+      camaId: crypto.randomUUID(),
+      contratoEmpresaId: crypto.randomUUID(),
+      fechaInicio: "2026-11-01"
+    });
+    const [, params] = getAll.mock.calls[0];
+    expect(params[1]).toBe(trabajadorId);
+    expect(writeTransaction).toHaveBeenCalledTimes(1);
   });
 });
 

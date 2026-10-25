@@ -54,6 +54,12 @@ export class SinCamasDisponiblesError extends Error {
   }
 }
 
+export class CamaOcupadaError extends Error {
+  constructor() {
+    super("Esa cama ya está asignada a otro trabajador en fechas que se cruzan. Elige otra cama.");
+  }
+}
+
 const AsignacionSchema = z.object({
   trabajadorId: z.string().uuid(),
   camaId: z.string().uuid(),
@@ -69,9 +75,32 @@ export type AsignacionInput = z.infer<typeof AsignacionSchema>;
  * EXCLUDE de reserva que HU-01) y actualiza trabajador.cama_id en la
  * misma transacción local. Ninguna de las dos escrituras depende de un
  * trigger de servidor, así que no hace falta reflejo optimista extra.
+ *
+ * El EXCLUDE de Postgres (0003_sync_sprint1.sql) es la verdad final
+ * contra otro dispositivo, pero solo se aplica al sincronizar — un
+ * rechazo ahí queda en `operacion_rechazada` sin aviso en pantalla
+ * (HU-42 aún no construye esa UI). Por eso se repite acá, en el propio
+ * dispositivo y antes de escribir, el mismo chequeo defensivo que ya
+ * usa `crearContratoEmpresa`: evita que dos trabajadores queden
+ * silenciosamente asignados a la misma cama hasta que la app
+ * recupere señal.
  */
 export async function asignarTrabajador(usuarioId: string, input: AsignacionInput): Promise<void> {
   const datos = AsignacionSchema.parse(input);
+  const hastaOInfinito = datos.fechaFin || "9999-12-31";
+  const choques = await powersync.getAll<{ id: string }>(
+    `select id from reserva
+     where cama_id = ?
+       and estado = 'confirmada'
+       and trabajador_id <> ?
+       and date(fecha_inicio) <= date(?)
+       and (fecha_fin is null or date(fecha_fin) >= date(?))`,
+    [datos.camaId, datos.trabajadorId, hastaOInfinito, datos.fechaInicio]
+  );
+  if (choques.length > 0) {
+    throw new CamaOcupadaError();
+  }
+
   await powersync.writeTransaction(async (tx) => {
     await tx.execute(
       `insert into reserva
