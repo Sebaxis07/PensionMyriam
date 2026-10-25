@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { throwOnError, from, updateFn } = vi.hoisted(() => {
+const { throwOnError, from, updateFn, upsert } = vi.hoisted(() => {
   const throwOnError = vi.fn();
   const upsert = vi.fn(() => ({ throwOnError }));
   const eqFn = vi.fn(() => ({ throwOnError }));
@@ -27,6 +27,7 @@ describe("SupabaseConnector.uploadData — reversión local en rechazo 23P01 (HU
     throwOnError.mockReset();
     from.mockClear();
     updateFn.mockClear();
+    upsert.mockClear();
   });
 
   function crearDatabaseFake(crud: any[]) {
@@ -133,6 +134,7 @@ describe("SupabaseConnector.uploadData — insumo: el PATCH local nunca se sincr
     throwOnError.mockReset();
     from.mockClear();
     updateFn.mockClear();
+    upsert.mockClear();
   });
 
   function crearDatabaseFake(crud: any[]) {
@@ -182,6 +184,33 @@ describe("SupabaseConnector.uploadData — insumo: el PATCH local nunca se sincr
     await connector.uploadData(database as any);
 
     expect(from).toHaveBeenCalledWith("insumo");
+  });
+
+  it("insumo NUEVO (PUT) junto con su compra en la MISMA transacción: se sincroniza con cantidad_total/costo_promedio en CERO, no con el valor ya calculado por el cliente", async () => {
+    throwOnError.mockResolvedValue(undefined);
+    const crud = [
+      {
+        table: "insumo",
+        op: UpdateType.PUT,
+        id: "insumo-nuevo",
+        opData: { nombre: "Pollo entero", cantidad_total: 10, costo_promedio: 2000 }
+      },
+      {
+        table: "compra_insumo",
+        op: UpdateType.PUT,
+        id: "compra-1",
+        opData: { insumo_id: "insumo-nuevo", cantidad: 10, monto_total: 20000 }
+      }
+    ];
+    const { database } = crearDatabaseFake(crud);
+
+    const connector = new SupabaseConnector();
+    await connector.uploadData(database as any);
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ nombre: "Pollo entero", cantidad_total: 0, costo_promedio: 0 }),
+      expect.anything()
+    );
   });
 
   it("la compra en sí (compra_insumo, PUT) se sincroniza normalmente en la misma transacción", async () => {
