@@ -17,6 +17,7 @@ import {
   IconUser,
   IconUsers
 } from "../../components/Icons";
+import { fechaHoySantiago } from "../../lib/fechaNegocio";
 
 interface NominaScreenProps {
   usuarioId: string;
@@ -54,7 +55,7 @@ export function NominaScreen({
 
   // Consultar camas libres
   useEffect(() => {
-    camasLibresParaContrato(new Date().toISOString().slice(0, 10), null)
+    camasLibresParaContrato(fechaHoySantiago(), null)
       .then(setCamasLibres)
       .catch(() => setCamasLibres([]));
   }, [nomina.length, conCama.length]);
@@ -132,7 +133,7 @@ export function NominaScreen({
         trabajadorId: trabajadorSeleccionado.id,
         camaId,
         contratoEmpresaId,
-        fechaInicio: new Date().toISOString().slice(0, 10)
+        fechaInicio: fechaHoySantiago()
       });
       setMensajeExito(`¡Listo! ${trabajadorSeleccionado.nombre} quedó en la Pieza #${habitacionNumero}.`);
       setTrabajadorSeleccionado(null);

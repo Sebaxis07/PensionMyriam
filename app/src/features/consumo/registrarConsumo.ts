@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { powersync } from "../../lib/powersync";
+import { rangoHoySantiagoUTC } from "../../lib/fechaNegocio";
 
 // 5 tipos del ledger (0008_ledger_tipos.sql). cama_noche normalmente la
 // genera pg_cron sola (generar_cama_noche, ver
@@ -50,11 +51,14 @@ export class ConsumoDuplicadoError extends Error {
 export async function registrarConsumo(usuarioId: string, input: ConsumoInput): Promise<string> {
   const datos = ConsumoSchema.parse(input);
 
+  // "Hoy" en zona America/Santiago, no el date('now') de SQLite (UTC) —
+  // ver app/src/lib/fechaNegocio.ts y el informe de auditoría Sprint 3.
+  const { desde, hasta } = rangoHoySantiagoUTC();
   const yaRegistrado = await powersync.getAll<{ n: number }>(
     `select count(*) as n from consumo
      where trabajador_id = ? and tipo_consumo = ? and consumo_corregido_id is null
-       and date(fecha_hora) = date('now')`,
-    [datos.trabajadorId, datos.tipoConsumo]
+       and fecha_hora >= ? and fecha_hora < ?`,
+    [datos.trabajadorId, datos.tipoConsumo, desde, hasta]
   );
   if ((yaRegistrado[0]?.n ?? 0) > 0) {
     throw new ConsumoDuplicadoError();

@@ -6,6 +6,7 @@ import { ConciliacionScreen } from "./ConciliacionScreen";
 import { useQuery } from "@powersync/react";
 import { IconClipboardCheck, IconFileText, IconUsers } from "../../components/Icons";
 import { CierreMensualModal } from "./CierreMensualModal";
+import { fechaHoySantiago } from "../../lib/fechaNegocio";
 
 type VistaEmpresa = "lista" | "nuevo_contrato" | "detalle_contrato";
 type SubTabContrato = "nomina" | "conciliacion" | "cierre";
@@ -74,7 +75,7 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
       );
     }
 
-    const hoyIso = new Date().toISOString().slice(0, 10);
+    const hoyIso = fechaHoySantiago();
     // Si no se ha elegido un contrato específico, preferir el vigente a hoy; de lo contrario el más reciente
     const contratoActivo = contratoIdSeleccionado
       ? (contratos?.find((c) => c.id === contratoIdSeleccionado) ?? contratos?.[0])

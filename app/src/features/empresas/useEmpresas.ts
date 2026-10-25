@@ -1,4 +1,5 @@
 import { useQuery } from "@powersync/react";
+import { fechaHoySantiago } from "../../lib/fechaNegocio";
 
 export type EmpresaRow = {
   id: string;
@@ -40,8 +41,8 @@ left join (
            partition by ce.empresa_id
            order by
              case
-               when ce.vigencia_desde <= date('now') and (ce.vigencia_hasta is null or ce.vigencia_hasta >= date('now')) then 1
-               when ce.vigencia_desde > date('now') then 2
+               when ce.vigencia_desde <= date(?) and (ce.vigencia_hasta is null or ce.vigencia_hasta >= date(?)) then 1
+               when ce.vigencia_desde > date(?) then 2
                else 3
              end,
              ce.vigencia_desde desc
@@ -53,6 +54,7 @@ order by e.razon_social asc
 
 /** Lista de empresas contratistas con resumen de su contrato y dotación más reciente. */
 export function useEmpresas(): EmpresaRow[] {
-  const { data } = useQuery<EmpresaRow>(QUERY_EMPRESAS_DETALLADAS);
+  const hoy = fechaHoySantiago();
+  const { data } = useQuery<EmpresaRow>(QUERY_EMPRESAS_DETALLADAS, [hoy, hoy, hoy]);
   return data ?? [];
 }

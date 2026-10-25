@@ -13,6 +13,7 @@ import {
   IconUsers
 } from "../../components/Icons";
 import { formatearMonedaCLP } from "../../lib/pdf/pdfMakeConfig";
+import { fechaHoySantiago } from "../../lib/fechaNegocio";
 
 interface EmpresasScreenProps {
   onSeleccionarEmpresa?: (empresaId: string, contratoId?: string) => void;
@@ -20,10 +21,6 @@ interface EmpresasScreenProps {
 }
 
 type FiltroContrato = "todas" | "activas" | "sin_contrato";
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatearFechaCorta(fechaIso: string | null | undefined): string {
   if (!fechaIso) return "Indefinida";
@@ -56,7 +53,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
-  const hoy = hoyISO();
+  const hoy = fechaHoySantiago();
 
   // Métricas agregadas
   const stats = useMemo(() => {

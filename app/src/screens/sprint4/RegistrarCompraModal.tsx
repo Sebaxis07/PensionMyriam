@@ -13,6 +13,7 @@ import {
   IconSparkles,
   IconTag
 } from "../../components/Icons";
+import { fechaHoySantiago } from "../../lib/fechaNegocio";
 
 interface RegistrarCompraModalProps {
   usuarioId: string;
@@ -84,7 +85,7 @@ export function RegistrarCompraModal({
   const [cantidad, setCantidad] = useState<number | "">("");
   const [unidadMedida, setUnidadMedida] = useState("kg");
   const [rendimiento, setRendimiento] = useState<number | "">("");
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [fecha, setFecha] = useState(fechaHoySantiago());
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);

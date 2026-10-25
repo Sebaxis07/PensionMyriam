@@ -7,6 +7,7 @@ import {
   IconChevronRight,
   IconUser
 } from "../components/Icons";
+import { fechaHoySantiago, sumarDiasYMD } from "../lib/fechaNegocio";
 
 const NOMBRES_MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -42,9 +43,10 @@ export function RackHotelero({
   onSeleccionarParaReservar,
   onVolver
 }: RackHoteleroProps) {
-  const hoy = new Date();
-  const [anio, setAnio] = useState(hoy.getFullYear());
-  const [mes, setMes] = useState(hoy.getMonth() + 1); // 1-12
+  const hoyStr = fechaHoySantiago();
+  const [anioHoy, mesHoy] = hoyStr.split("-").map(Number);
+  const [anio, setAnio] = useState(anioHoy);
+  const [mes, setMes] = useState(mesHoy); // 1-12
   const [celdaDetalle, setCeldaDetalle] = useState<{
     piezaNumero: number;
     fecha: string;
@@ -100,8 +102,8 @@ export function RackHotelero({
   }
 
   function irAHoy() {
-    setAnio(hoy.getFullYear());
-    setMes(hoy.getMonth() + 1);
+    setAnio(anioHoy);
+    setMes(mesHoy);
     setCeldaDetalle(null);
   }
 
@@ -117,7 +119,7 @@ export function RackHotelero({
         fechaStr: fStr,
         diaSemana: DIAS_SEMANA_ABREV[dt.getDay()],
         esFinDeSemana: dt.getDay() === 0 || dt.getDay() === 6,
-        esHoy: fStr === hoy.toISOString().slice(0, 10)
+        esHoy: fStr === hoyStr
       });
     }
     return arr;
@@ -135,12 +137,13 @@ export function RackHotelero({
       const fIni = r.fecha_inicio > primerDiaMes ? r.fecha_inicio : primerDiaMes;
       const fFin = r.fecha_fin && r.fecha_fin < ultimoDiaMes ? r.fecha_fin : ultimoDiaMes;
 
-      const act = new Date(fIni + "T00:00:00");
-      const fin = new Date(fFin + "T00:00:00");
-
-      while (act <= fin) {
-        mapPieza.set(act.toISOString().slice(0, 10), r);
-        act.setDate(act.getDate() + 1);
+      // Aritmética de calendario pura (sumarDiasYMD), no new Date(string)
+      // sin "Z" — ese parsing depende de la zona horaria del propio
+      // dispositivo que ejecuta el código, justo lo que se quiere evitar.
+      let actStr = fIni;
+      while (actStr <= fFin) {
+        mapPieza.set(actStr, r);
+        actStr = sumarDiasYMD(actStr, 1);
       }
     });
 

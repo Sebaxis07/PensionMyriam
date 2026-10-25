@@ -7,7 +7,7 @@ import { RoomCard } from "../components/RoomCard";
 import { RoomSheet } from "../components/RoomSheet";
 import { AseoHoy } from "./AseoHoy";
 import { Reservar } from "./Reservar";
-import { QUERY_PIEZAS, type PiezaRow } from "../lib/queries";
+import { QUERY_PIEZAS, parametrosQueryPiezas, type PiezaRow } from "../lib/queries";
 import { useUsuarioActual } from "../lib/useUsuarioActual";
 import { IconBed, IconBriefcase, IconBroom, IconCalendar, IconChartBar, IconCheck, IconCheckCircle, IconHome, IconPlus, IconShoppingCart, IconUtensils, IconUser } from "../components/Icons";
 import { Header, type TabType } from "../components/Header";
@@ -25,7 +25,7 @@ import logo from "../assets/logo.webp";
 
 export function Piezas({ onLogout }: { onLogout?: () => void }) {
   const usuario = useUsuarioActual();
-  const { data: piezas } = useQuery<PiezaRow>(QUERY_PIEZAS);
+  const { data: piezas } = useQuery<PiezaRow>(QUERY_PIEZAS, parametrosQueryPiezas());
   const [tab, setTab] = useState<TabType>("inicio");
   const [modo, setModo] = useState<"operativo" | "admin">("operativo");
   const [piezaAbierta, setPiezaAbierta] = useState<PiezaRow | null>(null);

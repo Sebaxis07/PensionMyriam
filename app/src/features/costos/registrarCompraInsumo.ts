@@ -1,6 +1,7 @@
 import { powersync } from "../../lib/powersync";
 import { nuevoUuidIdempotente } from "../../lib/idempotencia";
 import { CategoriaCompra } from "./types";
+import { fechaHoySantiago } from "../../lib/fechaNegocio";
 
 export interface RegistrarCompraParams {
   insumoId?: string | null;
@@ -27,7 +28,7 @@ export async function registrarCompraInsumo(params: RegistrarCompraParams): Prom
     montoTotal,
     cantidad,
     rendimientoEstimado = null,
-    fecha = new Date().toISOString().slice(0, 10),
+    fecha = fechaHoySantiago(),
     registradoPor
   } = params;
 

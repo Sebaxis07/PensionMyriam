@@ -3,6 +3,7 @@ import { useQuery } from "@powersync/react";
 import { powersync } from "../lib/powersync";
 import { nuevoUuidIdempotente } from "../lib/idempotencia";
 import { calcularPrioridadAseo, estaEnVentanaIdeal, type TipoClienteAseo } from "../features/aseo/prioridadAseo";
+import { rangoHoySantiagoUTC } from "../lib/fechaNegocio";
 import {
   IconBroom,
   IconCheck,
@@ -65,7 +66,7 @@ ultimo_checkout as (
 aseos_resumen as (
   select habitacion_id, count(*) as aseo_hoy_count, max(fecha_hora) as ultimo_aseo_fecha
   from aseo
-  where date(fecha_hora) = date('now')
+  where fecha_hora >= ? and fecha_hora < ?
   group by habitacion_id
 )
 select
@@ -99,7 +100,7 @@ select
 from aseo a
 join habitacion h on h.id = a.habitacion_id
 left join usuario u on u.id = a.responsable
-where date(a.fecha_hora) = date('now')
+where a.fecha_hora >= ? and a.fecha_hora < ?
 order by a.fecha_hora desc
 limit 30
 `;
@@ -117,8 +118,9 @@ function formatearHora(iso: string | null | undefined): string {
 type FiltroTab = "pendientes" | "recambio" | "diarios" | "limpias" | "todas";
 
 export function AseoHoy({ usuarioId }: { usuarioId: string }) {
-  const { data: habitaciones = [] } = useQuery<HabitacionAseoRow>(QUERY_HABITACIONES_ASEO);
-  const { data: historialHoy = [] } = useQuery<RegistroAseoHistorial>(QUERY_HISTORIAL_HOY);
+  const { desde: desdeHoy, hasta: hastaHoy } = rangoHoySantiagoUTC();
+  const { data: habitaciones = [] } = useQuery<HabitacionAseoRow>(QUERY_HABITACIONES_ASEO, [desdeHoy, hastaHoy]);
+  const { data: historialHoy = [] } = useQuery<RegistroAseoHistorial>(QUERY_HISTORIAL_HOY, [desdeHoy, hastaHoy]);
 
   const [filtro, setFiltro] = useState<FiltroTab>("pendientes");
   const [busqueda, setBusqueda] = useState("");

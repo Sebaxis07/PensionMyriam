@@ -2,6 +2,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useQuery } from "@powersync/react";
 import { powersync } from "../lib/powersync";
 import { nuevoUuidIdempotente } from "../lib/idempotencia";
+import { fechaHoySantiago, sumarDiasYMD } from "../lib/fechaNegocio";
 import {
   IconBed,
   IconCalendar,
@@ -45,24 +46,6 @@ interface ReservaOcupante {
   tipo_cliente: string;
 }
 
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function sumarDiasISO(fechaBase: string, dias: number): string {
-  try {
-    const [y, m, d] = fechaBase.split("-").map(Number);
-    const date = new Date(y, m - 1, d);
-    date.setDate(date.getDate() + dias);
-    const ny = date.getFullYear();
-    const nm = String(date.getMonth() + 1).padStart(2, "0");
-    const nd = String(date.getDate()).padStart(2, "0");
-    return `${ny}-${nm}-${nd}`;
-  } catch {
-    return fechaBase;
-  }
-}
-
 function formatearFechaCorta(fechaIso: string): string {
   if (!fechaIso) return "";
   try {
@@ -84,9 +67,9 @@ export function Reservar({
   fechaPreseleccionada?: string;
   onListo: () => void;
 }) {
-  const fechaInicial = fechaPreseleccionada || hoyISO();
+  const fechaInicial = fechaPreseleccionada || fechaHoySantiago();
   const [desde, setDesde] = useState(fechaInicial);
-  const [hasta, setHasta] = useState(sumarDiasISO(fechaInicial, 1));
+  const [hasta, setHasta] = useState(sumarDiasYMD(fechaInicial, 1));
   const [habitacionSeleccionadaId, setHabitacionSeleccionadaId] = useState<string | null>(
     preseleccion || null
   );
@@ -506,9 +489,9 @@ export function Reservar({
             <button
               type="button"
               onClick={() => {
-                const h = hoyISO();
+                const h = fechaHoySantiago();
                 setDesde(h);
-                setHasta(sumarDiasISO(h, 1));
+                setHasta(sumarDiasYMD(h, 1));
               }}
               className="rounded-lg border border-brand-border bg-brand-sand-light px-2.5 py-1 text-[11px] font-semibold text-brand-ink hover:border-brand-terracotta hover:bg-white transition"
             >
@@ -517,9 +500,9 @@ export function Reservar({
             <button
               type="button"
               onClick={() => {
-                const m = sumarDiasISO(hoyISO(), 1);
+                const m = sumarDiasYMD(fechaHoySantiago(), 1);
                 setDesde(m);
-                setHasta(sumarDiasISO(m, 1));
+                setHasta(sumarDiasYMD(m, 1));
               }}
               className="rounded-lg border border-brand-border bg-brand-sand-light px-2.5 py-1 text-[11px] font-semibold text-brand-ink hover:border-brand-terracotta hover:bg-white transition"
             >
@@ -528,9 +511,9 @@ export function Reservar({
             <button
               type="button"
               onClick={() => {
-                const h = hoyISO();
+                const h = fechaHoySantiago();
                 setDesde(h);
-                setHasta(sumarDiasISO(h, 2));
+                setHasta(sumarDiasYMD(h, 2));
               }}
               className="rounded-lg border border-brand-border bg-brand-sand-light px-2.5 py-1 text-[11px] font-semibold text-brand-ink hover:border-brand-terracotta hover:bg-white transition"
             >
@@ -539,9 +522,9 @@ export function Reservar({
             <button
               type="button"
               onClick={() => {
-                const h = hoyISO();
+                const h = fechaHoySantiago();
                 setDesde(h);
-                setHasta(sumarDiasISO(h, 7));
+                setHasta(sumarDiasYMD(h, 7));
               }}
               className="rounded-lg border border-brand-border bg-brand-sand-light px-2.5 py-1 text-[11px] font-semibold text-brand-ink hover:border-brand-terracotta hover:bg-white transition"
             >
@@ -563,7 +546,7 @@ export function Reservar({
                 const nuevaDesde = e.target.value;
                 setDesde(nuevaDesde);
                 if (hasta && hasta <= nuevaDesde) {
-                  setHasta(sumarDiasISO(nuevaDesde, 1));
+                  setHasta(sumarDiasYMD(nuevaDesde, 1));
                 }
               }}
               className="w-full rounded-xl border border-brand-border bg-white px-3.5 py-2.5 text-sm font-semibold text-brand-ink focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
