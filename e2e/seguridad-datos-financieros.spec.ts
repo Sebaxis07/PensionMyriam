@@ -190,10 +190,12 @@ test.describe.serial("Seguridad de datos financieros — Encargada nunca ve cost
         "update public.usuario set rol = 'encargada' where nombre = 'María (Administradora)'"
       );
 
-      // Fuerza una reconexión real: los parámetros de los buckets
-      // (usuario.rol) se resuelven en el servicio de PowerSync al
-      // conectar, no quedan "cacheados" en el cliente — pero tampoco se
-      // reevalúan solos sin una nueva conexión.
+      // Fuerza una reconexión explícita (equivalente a lo que ya prueba
+      // "Caso C-bis" más abajo con un corte de red real, pero sin
+      // depender del tiempo que tarde la reconexión automática del SDK):
+      // los parámetros de los buckets (usuario.rol) se resuelven en el
+      // servicio de PowerSync en CADA conexión nueva, no quedan
+      // "cacheados" del lado del cliente de forma permanente.
       await page.evaluate(async () => {
         await (window as any).__powersyncReconectar();
       });
@@ -210,6 +212,53 @@ test.describe.serial("Seguridad de datos financieros — Encargada nunca ve cost
     } finally {
       // Restaura el rol real ANTES de cualquier otra cosa: este usuario
       // es un fixture compartido por el resto de la suite E2E.
+      await db.query(
+        "update public.usuario set rol = 'administradora' where nombre = 'María (Administradora)'"
+      );
+      await db.end();
+    }
+  });
+
+  test("Caso C-bis: un corte de red REAL (sin ningún hook de prueba) también revoca tarifa_convenida al volver la señal", async ({
+    page,
+    context
+  }) => {
+    // Responde la pregunta operativa real de Paposo (CLAUDE.md: "la
+    // señal móvil se corta por horas o días"): ¿un dispositivo que YA
+    // tenía tarifa_convenida en su réplica queda expuesto hasta que la
+    // Administradora cierre sesión a mano, o el ciclo normal de
+    // corte/reconexión de señal — sin ninguna acción especial — ya
+    // revoca el dato por sí solo? Esto NO usa __powersyncReconectar.
+    await omitirTourDeBienvenida(page);
+    await login(page, "admin@pension-myriam.local");
+
+    await expect(async () => {
+      const contratos = await leerReplicaLocal(page, "select * from contrato_empresa");
+      expect(contratos.some((c) => c.tarifa_convenida != null)).toBe(true);
+    }).toPass({ timeout: 20_000 });
+
+    const db = new Client({ connectionString: DB_URL });
+    await db.connect();
+    try {
+      await db.query(
+        "update public.usuario set rol = 'encargada' where nombre = 'María (Administradora)'"
+      );
+
+      // El mismo corte de red que simula el resto de la suite offline
+      // (context.setOffline) — el SDK de PowerSync reconecta solo
+      // cuando vuelve la señal, sin que la app tenga que hacer nada.
+      await context.setOffline(true);
+      await page.waitForTimeout(1000);
+      await context.setOffline(false);
+
+      await expect(async () => {
+        const contratos = await leerReplicaLocal(page, "select * from contrato_empresa");
+        expect(contratos.length).toBeGreaterThan(0);
+        for (const fila of contratos) {
+          expect(fila.tarifa_convenida).toBeNull();
+        }
+      }).toPass({ timeout: 15_000 });
+    } finally {
       await db.query(
         "update public.usuario set rol = 'administradora' where nombre = 'María (Administradora)'"
       );
