@@ -61,6 +61,18 @@ echo "=== Reiniciando piezas, camas, reservas, check-in/out y aseo ==="
 psql_admin <<'SQL'
 begin;
 
+-- Fechas de negocio en zona Santiago, no en la del servidor/contenedor
+-- (que por defecto es UTC) — igual que exige CLAUDE.md para la app en
+-- producción. Sin esto, current_date/now() evaluaban en UTC: entre
+-- las 21:00 y 23:59 hora Chile, UTC ya marca el día siguiente, y la
+-- reserva de Carla Fuentes quedaba fechada "para mañana" en vez de
+-- "hoy" (HU-27 fallaba de forma real, no por un bug de la app).
+-- SET LOCAL solo cambia cómo se LEE current_date/now() dentro de esta
+-- transacción — los timestamptz ya guardados siguen siendo el mismo
+-- instante absoluto UTC; usa el nombre de la zona (no un offset fijo)
+-- para que funcione igual en horario de verano y de invierno.
+set local timezone to 'America/Santiago';
+
 -- El orden respeta las FK. No se toca usuario/auth.users.
 delete from public.aseo;
 delete from public.checkout;

@@ -27,6 +27,11 @@ echo "=== Empresa, contrato, nomina y consumos de demo ==="
 psql_admin <<'SQL'
 begin;
 
+-- Fechas de negocio en zona Santiago, no UTC (ver seed-demo.sh para el
+-- detalle del bug que esto corrige: current_date/now() del servidor
+-- ya marcan el día siguiente entre las 21:00 y 23:59 hora Chile).
+set local timezone to 'America/Santiago';
+
 do $$
 declare
   v_admin uuid := (select id from public.usuario where nombre = 'María (Administradora)');
