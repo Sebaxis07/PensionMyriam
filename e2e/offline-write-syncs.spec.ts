@@ -77,10 +77,15 @@ test("HU-27: check-in, registro de consumo y cambio de estado funcionan sin cone
   expect(tiempoCheckinMs).toBeLessThan(1000);
 
   // ---------------------------------------------------------------
-  // Flujo 2: Registro de consumo sin conexión (Pedro Almonte, almuerzo).
+  // Flujo 2: Registro de consumo sin conexión (Pedro Almonte,
+  // desayuno — NO almuerzo: consumo-masivo-offline.spec.ts (HU-14)
+  // registra el almuerzo de toda la nómina, Pedro Almonte incluido,
+  // así que si esta suite corre completa en el mismo seed, "Almuerzo"
+  // ya no tendría un botón "Servir" pendiente para él. Desayuno es un
+  // tipo que ningún otro E2E de la suite toca.
   // ---------------------------------------------------------------
   await page.locator("#tour-nav-consumos").click();
-  await page.getByRole("button", { name: /Almuerzo/ }).click();
+  await page.getByRole("button", { name: /Desayuno/ }).click();
   // "Todos" en vez del filtro por defecto ("pendientes"): así la
   // tarjeta sigue visible después de marcarla y se puede medir el
   // cambio de estado en pantalla, en vez de que desaparezca del filtro.
