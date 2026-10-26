@@ -60,6 +60,16 @@ test.describe.serial("HU-18/19/20: cierre mensual y sus reportes (pre-factura y 
     // arranca bloqueado. Si este mismo test ya corrió hoy antes (se
     // volvió a ejecutar sin reiniciar el stack), hoy puede llegar ya
     // resuelto: igual de válido, solo se salta el tramo de justificar.
+    //
+    // La pestaña recién montada pasa por un instante de carga
+    // (cierre.isLoading) antes de mostrar uno de los dos estados — un
+    // isVisible() sin espera puede leer "false" en ese instante y
+    // saltarse por error todo el tramo de conciliar/justificar. Se
+    // espera a que termine de cargar (aparece alguno de los dos
+    // textos) antes de decidir cuál es.
+    await expect(page.getByText(/Cierre mensual bloqueado|Mes 100% Conciliado/)).toBeVisible({
+      timeout: 15_000
+    });
     const arrancaBloqueado = await page.getByText("Cierre mensual bloqueado").isVisible().catch(() => false);
 
     if (arrancaBloqueado) {
@@ -73,17 +83,33 @@ test.describe.serial("HU-18/19/20: cierre mensual y sus reportes (pre-factura y 
       // de negocio de CLAUDE.md: "la diferencia se justifica
       // formalmente con el nombre del supervisor, pero el valor pactado
       // se mantiene completo"), no "forzando" el cierre.
-      // Dar tiempo a que useCierreMensual (query reactiva) reciba el
-      // recálculo antes de decidir si todavía queda algo por justificar.
-      await page.waitForTimeout(2000);
+      //
+      // "Conciliar días del mes" es un RPC a Postgres (conciliar_periodo
+      // — verificado directo contra psql: deja cama_noche "conciliado"
+      // de inmediato), pero useCierreMensual lee la réplica LOCAL de
+      // PowerSync, no Postgres directo — el cambio recién es visible
+      // acá después de que PowerSync lo replique de vuelta al
+      // dispositivo. Por eso se espera con reintento (no un timeout
+      // fijo) a que "Noche de cama" deje de aparecer como pendiente,
+      // en vez de asumir que el RPC + la réplica ya terminaron.
+      await expect(async () => {
+        const bloqueado = await page.getByText("Cierre mensual bloqueado").isVisible().catch(() => false);
+        if (bloqueado) {
+          expect(await page.getByText(/Falta:.*Noche de cama/).count()).toBe(0);
+        }
+      }).toPass({ timeout: 20_000 });
     }
 
     if (await page.getByText("Cierre mensual bloqueado").isVisible().catch(() => false)) {
       await page.getByRole("button", { name: "Justificar Diferencias →" }).click();
       await expect(page.getByText("Servicios del Día")).toBeVisible({ timeout: 10_000 });
+      // Las 4 tarjetas de servicio (useConciliacion, otra query
+      // reactiva) pueden tardar un instante más en poblarse que el
+      // encabezado de la pantalla.
+      await page.waitForTimeout(1000);
 
       const botonJustificar = page.getByRole("button", { name: /Justificar Diferencia \(/ }).first();
-      let intentosRestantes = 6;
+      let intentosRestantes = 8;
       while (intentosRestantes-- > 0 && (await botonJustificar.isVisible().catch(() => false))) {
         await botonJustificar.click();
         await page.getByPlaceholder("Ej: Don Carlos Valenzuela").fill("Supervisor de Faena R. Núñez");
