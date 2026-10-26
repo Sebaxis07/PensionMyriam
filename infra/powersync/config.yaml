@@ -50,22 +50,21 @@ sync_rules:
           - select checkin_id as id, checkin_id, realizado_por, fecha_hora, uuid_idempotente from checkout
           - select * from aseo
           # Sprint 2 (EP-03): todo lo operativo de empresas/consumo que
-          # NO es sensible. tarifa_convenida se sincroniza aparte, solo
-          # a administradora (bucket empresa_tarifas, abajo) — PowerSync
-          # replica vía su propio rol de replicación (BYPASSRLS), así
-          # que RLS de Postgres NUNCA filtra lo que llega al celular;
-          # el único control real de qué columna recibe cada rol es la
-          # lista de columnas de este archivo. Por eso tarifa_convenida
-          # se excluye explícitamente acá (columnas nombradas, no
-          # "select *") — este comentario describía esta separación
-          # desde antes, pero el bucket nunca se había implementado:
-          # "select * from contrato_empresa" seguía sincronizando
-          # tarifa_convenida a cualquier rol. Corregido (auditoría de
-          # seguridad): ver también la vista contrato_empresa_rest y el
-          # GRANT de 0015_seguridad_tarifa.sql para la vía de
-          # PostgREST/consultas directas, que esto NO cubre por sí solo.
+          # NO es sensible. contrato_empresa se sacó COMPLETO de este
+          # bucket — ver bucket "contrato_empresa_por_rol" más abajo:
+          # tenerlo acá A LA VEZ con una versión parcial en otro bucket
+          # (como estaba antes, con columnas explícitas excluyendo
+          # tarifa_convenida) causaba que la MISMA fila (mismo id)
+          # llegara desde dos buckets con dos formas de columnas
+          # distintas — PowerSync no fusiona esas dos entregas, aplica
+          # la última como reemplazo COMPLETO de la fila, dejando en
+          # null cualquier columna que esa entrega no incluyera. Se
+          # detectó así: la Administradora veía tarifa_convenida
+          # correcta pero empresa_id/vigencia_desde/headcount en null
+          # (la tarjeta de empresa mostraba "Sin contrato" pese a tener
+          # uno). Única fuente de verdad por fila = un solo bucket por
+          # rol, nunca dos buckets tocando la misma tabla a la vez.
           - select * from empresa
-          - select id, empresa_id, vigencia_desde, vigencia_hasta, headcount, creado_por, created_at from contrato_empresa
           - select * from trabajador
           - select * from consumo
           - select * from conciliacion_diaria
@@ -79,17 +78,25 @@ sync_rules:
           # tarifa_convenida, nunca se había verificado hasta ahora. Se
           # mueven a un bucket parametrizado por rol (costos_insumos).
 
-      # Único dato financiero de contrato_empresa — solo llega al
-      # dispositivo cuyo JWT resuelve a rol "administradora" en la
-      # tabla usuario (lookup vía request.user_id(), el "sub" del JWT).
-      # Bucket "global" (sin parámetro por fila): para una Encargada,
-      # user_role nunca es 'administradora', así que esta Data Query no
-      # le entrega ninguna fila — ni siquiera el id, nunca llega al
-      # SQLite local de su teléfono.
-      empresa_tarifas:
+      # contrato_empresa completo, UNA sola fuente por rol (nunca dos
+      # buckets a la vez para la misma tabla — ver el comentario en
+      # "operacion" arriba sobre por qué eso rompe la fila entera, no
+      # solo la columna sensible). Cada dispositivo recibe exactamente
+      # uno de estos dos buckets según su rol real en la tabla usuario
+      # (lookup vía request.user_id(), el "sub" del JWT) — la Encargada
+      # nunca recibe tarifa_convenida, ni siquiera como columna
+      # presente en null; a la Administradora SÍ le llega el valor
+      # real. PowerSync bypassa RLS de Postgres al replicar (rol propio
+      # BYPASSRLS): esta es la única barrera real contra ese bypass.
+      contrato_empresa_encargada:
+        parameters: SELECT 1 as puede_ver FROM usuario WHERE usuario.auth_uid = request.user_id() AND usuario.rol = 'encargada'
+        data:
+          - SELECT id, empresa_id, vigencia_desde, vigencia_hasta, headcount, creado_por, created_at FROM contrato_empresa WHERE bucket.puede_ver = 1
+
+      contrato_empresa_administradora:
         parameters: SELECT 1 as puede_ver FROM usuario WHERE usuario.auth_uid = request.user_id() AND usuario.rol = 'administradora'
         data:
-          - SELECT id, tarifa_convenida FROM contrato_empresa WHERE bucket.puede_ver = 1
+          - SELECT id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida, creado_por, created_at FROM contrato_empresa WHERE bucket.puede_ver = 1
 
       # insumo/compra_insumo (Sprint 4, HU-22/23): costos de mercadería
       # y PMP — "la Encargada no ve costos ni márgenes" (CLAUDE.md,
