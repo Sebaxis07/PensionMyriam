@@ -36,10 +36,17 @@ sync_rules:
       # llegan con Sprint 2 (EP-03), Sprint 1 no los usa.
       operacion:
         data:
-          # Solo lectura de la propia fila: la app la usa para resolver
-          # su usuario.id (no auth_uid) al escribir realizado_por /
-          # responsable / creado_por sin depender de la red.
-          - select * from usuario
+          # `usuario` SALIÓ de este bucket global (Sprint 5, HU-36): ver
+          # los buckets usuario_propio_encargada / usuario_directorio_
+          # administradora más abajo. El comentario que estaba acá decía
+          # "solo lectura de la propia fila", pero el select no filtraba
+          # nada: replicaba la tabla COMPLETA (nombre, rol y, desde
+          # 0017, el correo de todas las cuentas) al celular de la
+          # Encargada. PowerSync bypassa la RLS de Postgres al replicar,
+          # así que la policy usuario_select ("su propia fila, o todas
+          # si es administradora") no intervenía en absoluto. HU-36 pide
+          # justamente lo contrario: que la gestión de cuentas no esté
+          # al alcance de la Encargada.
           - select * from habitacion
           - select * from cama
           - select * from reserva
@@ -71,6 +78,13 @@ sync_rules:
           - select * from justificacion_descuadre
           - select * from producto_extra
           - select * from tipo_consumo_config
+          # Sprint 5 (HU-39): parámetros del negocio (contacto, tarifa
+          # base, datos de transferencia). Los leen los dos celulares
+          # porque el voucher PDF y el mensaje de WhatsApp se arman desde
+          # la réplica local, también sin señal. No contiene costos ni
+          # márgenes; editarla sigue siendo exclusivo de la
+          # Administradora (policy config_negocio_update).
+          - select * from config_negocio
           # Sprint 4 (EP-04): insumo/compra_insumo ya estaban
           # correctamente restringidos solo a Administradora por RLS en
           # Postgres (decisión E), pero PowerSync los replica a TODOS
@@ -97,6 +111,37 @@ sync_rules:
         parameters: SELECT 1 as puede_ver FROM usuario WHERE usuario.auth_uid = request.user_id() AND usuario.rol = 'administradora'
         data:
           - SELECT id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida, creado_por, created_at FROM contrato_empresa WHERE bucket.puede_ver = 1
+
+      # usuario (Sprint 5, HU-36). Dos buckets MUTUAMENTE EXCLUYENTES
+      # por rol — nunca los dos a la vez para la misma tabla, por la
+      # razón explicada en el comentario de "operacion" sobre
+      # contrato_empresa (dos entregas de la misma fila se reemplazan
+      # entre sí en vez de fusionarse).
+      #
+      # La Encargada recibe EXACTAMENTE su propia fila, que es todo lo
+      # que la app necesita de esta tabla para funcionar offline:
+      # resolver su `usuario.id` y completar realizado_por / responsable
+      # / creado_por al escribir. No recibe el directorio de cuentas.
+      usuario_propio_encargada:
+        parameters: SELECT usuario.auth_uid as propio FROM usuario WHERE usuario.auth_uid = request.user_id() AND usuario.rol = 'encargada'
+        data:
+          - SELECT * FROM usuario WHERE usuario.auth_uid = bucket.propio
+
+      # La Administradora sí recibe el directorio completo: es el dato
+      # que muestra la pestaña Cuentas (HU-36: nombre, correo, rol y
+      # fecha de registro) y tiene que poder consultarlo sin señal.
+      usuario_directorio_administradora:
+        parameters: SELECT 1 as puede_ver FROM usuario WHERE usuario.auth_uid = request.user_id() AND usuario.rol = 'administradora'
+        data:
+          - SELECT * FROM usuario WHERE bucket.puede_ver = 1
+
+      # cierre_facturacion (Sprint 5, HU-33): lleva total_facturado, que
+      # es dato financiero — mismo criterio que tarifa_convenida y los
+      # costos de insumos (decisión E de CLAUDE.md). Solo Administradora.
+      cierre_facturacion_administradora:
+        parameters: SELECT 1 as puede_ver FROM usuario WHERE usuario.auth_uid = request.user_id() AND usuario.rol = 'administradora'
+        data:
+          - SELECT * FROM cierre_facturacion WHERE bucket.puede_ver = 1
 
       # insumo/compra_insumo (Sprint 4, HU-22/23): costos de mercadería
       # y PMP — "la Encargada no ve costos ni márgenes" (CLAUDE.md,

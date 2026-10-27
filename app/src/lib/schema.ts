@@ -7,12 +7,19 @@ import { Schema, Table, column } from "@powersync/web";
 // siguen 1:1 a db/migrations/0001_init.sql; los uuid/fecha/timestamp de
 // Postgres se replican como texto (PowerSync/SQLite no tiene esos tipos
 // nativos).
-// Solo para resolver el propio usuario.id a partir de auth_uid (ver
-// useUsuarioActual) — no se lista ni edita a otras personas con esto.
+// En el celular de la Encargada llega EXACTAMENTE su propia fila (para
+// resolver su usuario.id al escribir realizado_por/responsable); en el de
+// la Administradora llega el directorio completo, que es lo que muestra
+// la pestaña Cuentas de HU-36. Eso lo deciden dos buckets excluyentes por
+// rol en infra/powersync/config.yaml — hasta el Sprint 5 un `select *`
+// global replicaba la tabla entera a los dos celulares.
 const usuario = new Table({
   auth_uid: column.text,
   rol: column.text,
   nombre: column.text,
+  // HU-36 pide mostrar el correo; vive acá (y no solo en auth.users)
+  // porque auth.users no se replica — ver 0017_seguridad_cuentas.sql.
+  email: column.text,
   created_at: column.text
 });
 
@@ -180,6 +187,42 @@ const compra_insumo = new Table({
   created_at: column.text
 });
 
+// Sprint 5 (HU-39): parámetros del negocio que la Administradora edita
+// (contacto, tarifa base por noche, datos de transferencia) más el plazo
+// de gracia de anonimización de HU-33. Fila única, id = 'singleton'.
+// Replicada a los DOS celulares porque el voucher PDF y el mensaje de
+// WhatsApp se arman desde la réplica local, también sin señal; editarla
+// sigue siendo exclusivo de la Administradora (RLS config_negocio_update).
+const config_negocio = new Table({
+  nombre_pension: column.text,
+  whatsapp_contacto: column.text,
+  correo_contacto_arco: column.text,
+  banco_nombre: column.text,
+  tipo_cuenta: column.text,
+  titular_nombre: column.text,
+  rut_titular: column.text,
+  tarifa_base_noche: column.real,
+  dias_gracia_anonimizacion: column.integer,
+  actualizado_por: column.text,
+  updated_at: column.text
+});
+
+// Sprint 5 (HU-33): el cierre de facturación de un período. Es el hecho
+// que arranca el plazo de retención de datos personales (la purga de
+// pg_cron cuenta los días desde `cerrado_at`). Lleva total_facturado, así
+// que solo se replica al celular de la Administradora (bucket
+// cierre_facturacion_administradora) — en el de la Encargada esta tabla
+// queda simplemente vacía.
+const cierre_facturacion = new Table({
+  contrato_empresa_id: column.text,
+  periodo_anio: column.integer,
+  periodo_mes: column.integer,
+  total_facturado: column.real,
+  cerrado_por: column.text,
+  cerrado_at: column.text,
+  uuid_idempotente: column.text
+});
+
 // Tabla SOLO LOCAL (no sincroniza, PowerSync nunca la sube ni la baja):
 // evidencia recuperable de operaciones que el servidor rechazó de forma
 // permanente al sincronizar (HU-28/HU-42). Antes de esto, un rechazo
@@ -221,6 +264,8 @@ export const AppSchema = new Schema({
   justificacion_descuadre,
   insumo,
   compra_insumo,
+  config_negocio,
+  cierre_facturacion,
   operacion_rechazada
 });
 
