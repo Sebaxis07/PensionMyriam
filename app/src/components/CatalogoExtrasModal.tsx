@@ -1,3 +1,5 @@
+import { describirErrorUi } from "./MensajeInterfaz";
+import { Dialogo } from "./Dialogo";
 import { useState, type FormEvent } from "react";
 import { useProductosExtra, type ProductoExtraRow } from "../features/consumo/useProductosExtra";
 import { crearProductoExtra } from "../features/consumo/crearProductoExtra";
@@ -54,26 +56,26 @@ export function CatalogoExtrasModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
+    <Dialogo titulo="Catálogo de colaciones" onCerrar={onCerrar} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
       <div className="relative w-full max-w-lg rounded-3xl border border-brand-border/80 bg-brand-card p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
         {/* Cabecera del modal */}
         <div className="flex items-start justify-between border-b border-brand-border/60 pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-terracotta/15 text-brand-terracotta">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-terracotta-deep/15 text-brand-terracotta-deep">
               <IconUtensils className="h-5 w-5" />
             </div>
             <div>
               <h3 className="font-display text-xl font-bold text-brand-ink">
                 Catálogo de Colaciones y Extras
               </h3>
-              <p className="text-xs text-brand-muted">
+              <p className="text-sm text-brand-ink/80">
                 Precios unitarios para colaciones de terreno y platos especiales
               </p>
             </div>
           </div>
           <button
             onClick={onCerrar}
-            className="rounded-full p-1.5 text-brand-muted hover:bg-brand-sand/50 hover:text-brand-ink transition"
+            aria-label="Cerrar diálogo" className="rounded-full p-1.5 text-brand-ink/80 hover:bg-brand-sand/50 hover:text-brand-ink transition"
           >
             ✕
           </button>
@@ -81,16 +83,16 @@ export function CatalogoExtrasModal({
 
         {/* Lista de productos actuales */}
         <div className="space-y-2">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+          <h4 className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
             Lista de precios vigente ({productos.length})
           </h4>
 
           {productos.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-brand-border/80 bg-brand-sand/20 p-5 text-center">
-              <p className="text-xs font-semibold text-brand-ink">
+              <p className="text-sm font-semibold text-brand-ink">
                 No hay productos ni colaciones cargadas
               </p>
-              <p className="text-[11px] text-brand-muted mt-0.5">
+              <p className="text-xs text-brand-ink/80 mt-0.5">
                 Agrega abajo el primer producto para habilitar el registro de colaciones.
               </p>
             </div>
@@ -103,9 +105,9 @@ export function CatalogoExtrasModal({
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-base">🥪</span>
-                    <span className="text-xs font-bold text-brand-ink">{prod.nombre}</span>
+                    <span className="text-sm font-bold text-brand-ink">{prod.nombre}</span>
                   </div>
-                  <span className="font-display text-xs font-black text-brand-terracotta-deep">
+                  <span className="font-display text-sm font-black text-brand-terracotta-deep">
                     ${prod.precio_unitario.toLocaleString("es-CL")}
                   </span>
                 </div>
@@ -116,41 +118,41 @@ export function CatalogoExtrasModal({
 
         {/* Formulario para agregar un nuevo producto */}
         <form onSubmit={handleCrear} className="rounded-2xl border border-brand-border/80 bg-brand-sand/30 p-4 space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-brand-ink">
+          <h4 className="text-sm font-bold uppercase tracking-wider text-brand-ink">
             Agregar nuevo producto
           </h4>
 
           {error && (
-            <div className="rounded-xl border border-red-500/30 bg-red-50 p-2.5 text-xs text-red-700">
-              {error}
+            <div className="rounded-xl border border-red-500/30 bg-red-50 p-2.5 text-sm text-red-700">
+              {describirErrorUi(error)}
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-bold text-brand-muted mb-1">
+              <label htmlFor="catalogoextrasmodal-nombre-1" className="block text-xs font-bold text-brand-ink/80 mb-1">
                 Nombre del plato o colación
               </label>
-              <input
+              <input id="catalogoextrasmodal-nombre-1"
                 type="text"
                 placeholder="Ej: Colación de terreno"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
+                className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm text-brand-ink focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-brand-muted mb-1">
+              <label htmlFor="catalogoextrasmodal-preciounitario-1" className="block text-xs font-bold text-brand-ink/80 mb-1">
                 Precio unitario ($ CLP)
               </label>
-              <input
+              <input id="catalogoextrasmodal-preciounitario-1"
                 type="number"
                 min="0"
                 step="100"
                 placeholder="Ej: 3500"
                 value={precioUnitario}
                 onChange={(e) => setPrecioUnitario(e.target.value)}
-                className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
+                className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm text-brand-ink focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
               />
             </div>
           </div>
@@ -158,7 +160,7 @@ export function CatalogoExtrasModal({
           <button
             type="submit"
             disabled={guardando}
-            className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand-terracotta px-4 py-2 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep active:scale-95 transition disabled:opacity-50"
+            className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand-terracotta-deep px-4 py-2 text-sm font-bold text-white shadow-brand hover:bg-brand-terracotta-deep active:scale-95 transition disabled:opacity-50"
           >
             <IconPlus className="h-4 w-4" />
             <span>{guardando ? "Guardando…" : "Guardar en catálogo"}</span>
@@ -170,12 +172,12 @@ export function CatalogoExtrasModal({
           <button
             type="button"
             onClick={onCerrar}
-            className="rounded-xl border border-brand-border bg-brand-sand/40 px-5 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition"
+            className="rounded-xl border border-brand-border bg-brand-sand/40 px-5 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand transition"
           >
             Listo / Cerrar
           </button>
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }
