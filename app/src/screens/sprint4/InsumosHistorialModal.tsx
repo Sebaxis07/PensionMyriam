@@ -1,3 +1,4 @@
+import { Dialogo } from "../../components/Dialogo";
 import { useState } from "react";
 import { useInsumos, useComprasRecientes } from "../../features/costos/useInsumos";
 import {
@@ -34,7 +35,7 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
   const insumos = useInsumos();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+    <Dialogo titulo="Historial de compras e insumos" onCerrar={onCerrar} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm animate-fadeIn overflow-y-auto">
       <div className="relative w-full max-w-2xl rounded-3xl border border-brand-border/80 bg-brand-card p-6 shadow-2xl my-6 max-h-[90vh] flex flex-col">
         {/* Cabecera */}
         <div className="flex items-start justify-between gap-3 border-b border-brand-border/60 pb-4 shrink-0">
@@ -42,14 +43,14 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
             <h3 className="font-display text-xl font-black text-brand-ink leading-tight">
               Historial de Mercadería y Costos
             </h3>
-            <p className="text-xs text-brand-muted">
+            <p className="text-sm text-brand-ink/80">
               Revisa las compras registradas y el costo promedio móvil de cada insumo.
             </p>
           </div>
           <button
             type="button"
             onClick={onCerrar}
-            className="rounded-xl p-2 text-brand-muted hover:bg-brand-sand-light hover:text-brand-ink"
+            aria-label="Cerrar diálogo" className="rounded-xl p-2 text-brand-ink/80 hover:bg-brand-sand-deep hover:text-brand-ink"
           >
             <IconClose className="h-5 w-5" />
           </button>
@@ -59,10 +60,10 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
         <div className="flex border-b border-brand-border/60 bg-brand-sand/30 p-1 rounded-2xl my-4 shrink-0">
           <button
             onClick={() => setTab("compras")}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
               tab === "compras"
-                ? "bg-white text-brand-terracotta shadow-xs"
-                : "text-brand-muted hover:text-brand-ink"
+                ? "bg-white text-brand-terracotta-deep shadow-sm"
+                : "text-brand-ink/80 hover:text-brand-ink"
             }`}
           >
             <IconShoppingCart className="h-4 w-4" />
@@ -70,10 +71,10 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
           </button>
           <button
             onClick={() => setTab("insumos")}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
               tab === "insumos"
-                ? "bg-white text-brand-terracotta shadow-xs"
-                : "text-brand-muted hover:text-brand-ink"
+                ? "bg-white text-brand-terracotta-deep shadow-sm"
+                : "text-brand-ink/80 hover:text-brand-ink"
             }`}
           >
             <IconClipboardCheck className="h-4 w-4" />
@@ -86,7 +87,7 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
           {tab === "compras" && (
             <>
               {compras.length === 0 ? (
-                <div className="p-8 text-center text-xs text-brand-muted rounded-2xl border border-dashed border-brand-border">
+                <div className="p-8 text-center text-sm text-brand-ink/80 rounded-2xl border border-dashed border-brand-border">
                   No hay compras registradas aún en el sistema.
                 </div>
               ) : (
@@ -98,21 +99,21 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
                   return (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-brand-border/60 bg-white p-3.5 shadow-xs"
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-brand-border/60 bg-white p-3.5 shadow-sm"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-sand-light border border-brand-border/60">
-                          {cat.renderIcon("h-5 w-5 text-brand-terracotta")}
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-sand-deep border border-brand-border/60">
+                          {cat.renderIcon("h-5 w-5 text-brand-terracotta-deep")}
                         </div>
                         <div>
                           <p className="font-display font-bold text-sm text-brand-ink">
                             {c.insumo_nombre || "Insumo"}
                           </p>
-                          <p className="text-[11px] text-brand-muted">
+                          <p className="text-xs text-brand-ink/80">
                             {cat.label} · Fecha: {c.fecha}
                           </p>
                           {c.rendimiento_estimado && (
-                            <p className="text-[10px] text-emerald-800 font-medium">
+                            <p className="text-xs text-emerald-800 font-medium">
                               Rendimiento estimado: {c.rendimiento_estimado} raciones
                             </p>
                           )}
@@ -123,7 +124,7 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
                         <p className="font-display text-base font-black text-brand-ink">
                           ${c.monto_total.toLocaleString("es-CL")}
                         </p>
-                        <p className="text-[10px] text-brand-muted">
+                        <p className="text-xs text-brand-ink/80">
                           {c.cantidad} unidades/kg
                         </p>
                       </div>
@@ -137,7 +138,7 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
           {tab === "insumos" && (
             <>
               {insumos.length === 0 ? (
-                <div className="p-8 text-center text-xs text-brand-muted rounded-2xl border border-dashed border-brand-border">
+                <div className="p-8 text-center text-sm text-brand-ink/80 rounded-2xl border border-dashed border-brand-border">
                   No hay insumos registrados en el catálogo.
                 </div>
               ) : (
@@ -149,29 +150,29 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
                   return (
                     <div
                       key={i.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-brand-border/60 bg-white p-3.5 shadow-xs"
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-brand-border/60 bg-white p-3.5 shadow-sm"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-sand-light border border-brand-border/60">
-                          {cat.renderIcon("h-5 w-5 text-brand-terracotta")}
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-sand-deep border border-brand-border/60">
+                          {cat.renderIcon("h-5 w-5 text-brand-terracotta-deep")}
                         </div>
                         <div>
                           <p className="font-display font-bold text-sm text-brand-ink">
                             {i.nombre}
                           </p>
-                          <p className="text-[11px] text-brand-muted">
-                            {cat.label} · Stock/Comprado: {i.cantidad_total} {i.unidad_medida}
+                          <p className="text-xs text-brand-ink/80">
+                            {cat.label} · Cantidad comprada: {i.cantidad_total} {i.unidad_medida}
                           </p>
                         </div>
                       </div>
 
                       <div className="text-right">
-                        <p className="text-[10px] uppercase font-bold text-brand-muted">
-                          Costo PMP
+                        <p className="text-xs uppercase font-bold text-brand-ink/80">
+                          Costo promedio
                         </p>
                         <p className="font-display text-base font-black text-brand-ink">
                           ${Math.round(i.costo_promedio).toLocaleString("es-CL")}
-                          <span className="text-xs font-normal text-brand-muted ml-0.5">
+                          <span className="text-sm font-normal text-brand-ink/80 ml-0.5">
                             /{i.unidad_medida}
                           </span>
                         </p>
@@ -184,6 +185,6 @@ export function InsumosHistorialModal({ onCerrar }: InsumosHistorialModalProps) 
           )}
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }

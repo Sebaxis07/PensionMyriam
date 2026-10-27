@@ -1,3 +1,4 @@
+import { Dialogo } from "../../components/Dialogo";
 import {
   IconActivity,
   IconBed,
@@ -73,10 +74,7 @@ export function ModalPlanAccionKpi({
   if (!abierto || !tipoKpi) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/60 p-4 backdrop-blur-xs animate-fadeIn"
-      onClick={onCerrar}
-    >
+    <Dialogo titulo="Detalle del indicador y acciones" onCerrar={onCerrar} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/60 p-4 backdrop-blur-sm animate-fadeIn">
       <div
         className="w-full max-w-xl rounded-3xl border border-brand-border/80 bg-brand-card p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto animate-scaleUp text-left"
         onClick={(e) => e.stopPropagation()}
@@ -89,16 +87,16 @@ export function ModalPlanAccionKpi({
             {/* Cabecera */}
             <div className="flex items-start justify-between gap-3 border-b border-brand-border/60 pb-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-900 border border-amber-300 shadow-sm">
                   <IconShoppingCart className="h-6 w-6 text-amber-900" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                    <span className="text-xs font-bold uppercase tracking-wider text-brand-ink/80">
                       Plan de Acción · Finanzas
                     </span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border ${
+                      className={`rounded-full px-2 py-0.5 text-xs font-black uppercase tracking-wider border ${
                         metricasMargen.estadoSemaforo === "verde"
                           ? "bg-emerald-100 text-emerald-900 border-emerald-300"
                           : metricasMargen.estadoSemaforo === "amarillo"
@@ -117,7 +115,7 @@ export function ModalPlanAccionKpi({
               <button
                 type="button"
                 onClick={onCerrar}
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-brand-border/60 bg-white text-brand-muted hover:text-brand-ink text-xs font-bold"
+                aria-label="Cerrar diálogo" className="flex h-8 w-8 items-center justify-center rounded-xl border border-brand-border/60 bg-white text-brand-ink/80 hover:text-brand-ink text-sm font-bold"
               >
                 ✕
               </button>
@@ -125,7 +123,7 @@ export function ModalPlanAccionKpi({
 
             {/* Diagnóstico en tiempo real */}
             <div
-              className={`rounded-2xl border p-4 text-xs leading-relaxed space-y-2 ${
+              className={`rounded-2xl border p-4 text-sm leading-relaxed space-y-2 ${
                 metricasMargen.estadoSemaforo === "verde"
                   ? "bg-emerald-50/80 border-emerald-300 text-emerald-950"
                   : metricasMargen.estadoSemaforo === "amarillo"
@@ -145,9 +143,9 @@ export function ModalPlanAccionKpi({
               <p>
                 Este mes has cobrado <strong>${metricasMargen.ingresosTotales.toLocaleString("es-CL")}</strong> y
                 registrado compras por <strong>${metricasMargen.costosTotales.toLocaleString("es-CL")}</strong>.
-                Te queda una ganancia limpia proyectada del <strong>{metricasMargen.margenPorcentaje}%</strong>.
+                El margen estimado con los registros disponibles es de <strong>{metricasMargen.margenPorcentaje}%</strong>.
               </p>
-              <p className="text-[11px] opacity-90">
+              <p className="text-xs opacity-90">
                 Mantener a cada trabajador en la pensión te está costando <strong>${metricasMargen.costoDiarioTrabajador.toLocaleString("es-CL")} diarios</strong>.
                 Para no perder plata, la tarifa sugerida mínima para nuevos contratos es <strong>${metricasMargen.tarifaMinimaSugerida.toLocaleString("es-CL")}/noche</strong>.
               </p>
@@ -155,29 +153,29 @@ export function ModalPlanAccionKpi({
 
             {/* ¿Qué tienes que hacer hoy? */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-terracotta">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-brand-terracotta-deep">
                 ¿Qué tienes que hacer hoy? (Paso a paso)
               </h4>
-              <div className="space-y-2 text-xs text-brand-ink">
-                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+              <div className="space-y-2 text-sm text-brand-ink">
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                     1
                   </span>
                   <div>
                     <strong className="block text-brand-ink font-bold">Anota las compras de mercadería de hoy:</strong>
-                    <p className="text-brand-muted text-[11px] mt-0.5">
+                    <p className="text-brand-ink/80 text-xs mt-0.5">
                       Si compraste carne, verduras, gas o útiles de aseo, anótalos ahora para que el costo de la pensión sea 100% exacto.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                     2
                   </span>
                   <div>
                     <strong className="block text-brand-ink font-bold">Revisa los precios de tus proveedores:</strong>
-                    <p className="text-brand-muted text-[11px] mt-0.5">
+                    <p className="text-brand-ink/80 text-xs mt-0.5">
                       En el módulo de Costos puedes ver el historial de boletas para no pagar sobreprecios en insumos clave.
                     </p>
                   </div>
@@ -193,7 +191,7 @@ export function ModalPlanAccionKpi({
                   onCerrar();
                   onAbrirRegistrarCompra();
                 }}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep text-white px-4 py-3 text-xs font-bold shadow-brand transition active:scale-95 cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep text-white px-4 py-3 text-sm font-bold shadow-brand transition active:scale-95 cursor-pointer"
               >
                 <IconPlus className="h-4 w-4" />
                 <span>+ Anotar Compra de Mercadería Ahora</span>
@@ -206,10 +204,10 @@ export function ModalPlanAccionKpi({
                     onCerrar();
                     onIrACostos();
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-white hover:bg-brand-sand px-4 py-3 text-xs font-bold text-brand-ink transition active:scale-95 cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-white hover:bg-brand-sand px-4 py-3 text-sm font-bold text-brand-ink transition active:scale-95 cursor-pointer"
                 >
                   <span>Ir a Costos y Boletas</span>
-                  <IconChevronRight className="h-4 w-4 text-brand-muted" />
+                  <IconChevronRight className="h-4 w-4 text-brand-ink/80" />
                 </button>
               )}
             </div>
@@ -224,16 +222,16 @@ export function ModalPlanAccionKpi({
             {/* Cabecera */}
             <div className="flex items-start justify-between gap-3 border-b border-brand-border/60 pb-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-xs">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-sm">
                   <IconActivity className="h-6 w-6 text-emerald-800" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                    <span className="text-xs font-bold uppercase tracking-wider text-brand-ink/80">
                       Plan de Acción · Contratos B2B
                     </span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border ${
+                      className={`rounded-full px-2 py-0.5 text-xs font-black uppercase tracking-wider border ${
                         metricasConciliacion.pendientesJustificar > 0
                           ? "bg-amber-100 text-amber-900 border-amber-300"
                           : "bg-emerald-100 text-emerald-900 border-emerald-300"
@@ -250,7 +248,7 @@ export function ModalPlanAccionKpi({
               <button
                 type="button"
                 onClick={onCerrar}
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-brand-border/60 bg-white text-brand-muted hover:text-brand-ink text-xs font-bold"
+                aria-label="Cerrar diálogo" className="flex h-8 w-8 items-center justify-center rounded-xl border border-brand-border/60 bg-white text-brand-ink/80 hover:text-brand-ink text-sm font-bold"
               >
                 ✕
               </button>
@@ -258,7 +256,7 @@ export function ModalPlanAccionKpi({
 
             {/* Diagnóstico en tiempo real */}
             <div
-              className={`rounded-2xl border p-4 text-xs leading-relaxed space-y-2 ${
+              className={`rounded-2xl border p-4 text-sm leading-relaxed space-y-2 ${
                 metricasConciliacion.pendientesJustificar > 0
                   ? "bg-amber-50/80 border-amber-300 text-amber-950"
                   : "bg-emerald-50/80 border-emerald-300 text-emerald-950"
@@ -289,41 +287,41 @@ export function ModalPlanAccionKpi({
 
             {/* ¿Qué tienes que hacer hoy? */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-terracotta">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-brand-terracotta-deep">
                 ¿Qué tienes que hacer hoy? (Paso a paso)
               </h4>
-              <div className="space-y-2 text-xs text-brand-ink">
-                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+              <div className="space-y-2 text-sm text-brand-ink">
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                     1
                   </span>
                   <div>
                     <strong className="block text-brand-ink font-bold">Abre la Conciliación de Empresas:</strong>
-                    <p className="text-brand-muted text-[11px] mt-0.5">
+                    <p className="text-brand-ink/80 text-xs mt-0.5">
                       Ingresa al módulo de empresas para ver la lista de turnos con diferencias entre lo pactado y lo comido.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                     2
                   </span>
                   <div>
                     <strong className="block text-brand-ink font-bold">Selecciona el motivo operacional:</strong>
-                    <p className="text-brand-muted text-[11px] mt-0.5">
+                    <p className="text-brand-ink/80 text-xs mt-0.5">
                       Marca el motivo (ej. "Cambio de turno en faena" o "Ausencia justificada"). Recuerda que por Ley 21.719 no se registran datos médicos.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                     3
                   </span>
                   <div>
                     <strong className="block text-brand-ink font-bold">Cierra el día:</strong>
-                    <p className="text-brand-muted text-[11px] mt-0.5">
+                    <p className="text-brand-ink/80 text-xs mt-0.5">
                       Una vez justificado, la tasa sube al 100% y la prefactura queda sellada para cobro seguro.
                     </p>
                   </div>
@@ -340,7 +338,7 @@ export function ModalPlanAccionKpi({
                     onCerrar();
                     onIrAConciliacion();
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep text-white px-4 py-3 text-xs font-bold shadow-brand transition active:scale-95 cursor-pointer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep text-white px-4 py-3 text-sm font-bold shadow-brand transition active:scale-95 cursor-pointer"
                 >
                   <IconCheckCircle className="h-4 w-4" />
                   <span>Ir a Conciliar Raciones de Empresas ➔</span>
@@ -354,10 +352,10 @@ export function ModalPlanAccionKpi({
                     onCerrar();
                     onIrAConsumos();
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-white hover:bg-brand-sand px-4 py-3 text-xs font-bold text-brand-ink transition active:scale-95 cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-white hover:bg-brand-sand px-4 py-3 text-sm font-bold text-brand-ink transition active:scale-95 cursor-pointer"
                 >
                   <span>Ver Comedor de Hoy</span>
-                  <IconChevronRight className="h-4 w-4 text-brand-muted" />
+                  <IconChevronRight className="h-4 w-4 text-brand-ink/80" />
                 </button>
               )}
             </div>
@@ -372,15 +370,15 @@ export function ModalPlanAccionKpi({
             {/* Cabecera */}
             <div className="flex items-start justify-between gap-3 border-b border-brand-border/60 pb-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-900 border border-blue-300 shadow-xs">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-900 border border-blue-300 shadow-sm">
                   <IconClock className="h-6 w-6 text-blue-900" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                    <span className="text-xs font-bold uppercase tracking-wider text-brand-ink/80">
                       Plan de Acción · Cobranza y Cierre
                     </span>
-                    <span className="rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
+                    <span className="rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 text-xs font-black uppercase tracking-wider">
                       0 Días Atraso
                     </span>
                   </div>
@@ -392,63 +390,62 @@ export function ModalPlanAccionKpi({
               <button
                 type="button"
                 onClick={onCerrar}
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-brand-border/60 bg-white text-brand-muted hover:text-brand-ink text-xs font-bold"
+                aria-label="Cerrar diálogo" className="flex h-8 w-8 items-center justify-center rounded-xl border border-brand-border/60 bg-white text-brand-ink/80 hover:text-brand-ink text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
             {/* Diagnóstico en tiempo real */}
-            <div className="rounded-2xl border border-emerald-300 bg-emerald-50/80 p-4 text-xs leading-relaxed space-y-2 text-emerald-950">
+            <div className="rounded-2xl border border-emerald-300 bg-emerald-50/80 p-4 text-sm leading-relaxed space-y-2 text-emerald-950">
               <div className="flex items-center gap-2 font-bold text-sm">
-                <span>✓ Prefactura 100% calculada en tiempo real</span>
+                <span>Revisa el periodo antes de preparar sus reportes</span>
               </div>
               <p>
-                Tu facturación está completamente al día (<strong>0 días de atraso</strong>). El sistema ha sumado
-                automáticamente cada noche de cama y cada servicio de comedor registrado hasta hoy.
+                El tiempo real de preparación del cierre todavía no está medido. Comprueba los días y las justificaciones pendientes antes de preparar la prefactura.
               </p>
-              <p className="text-[11px] opacity-90">
-                Ahorras un <strong>93% de tiempo</strong> frente a revisar el cuaderno de firmas a mano a fin de mes.
+              <p className="text-xs opacity-90">
+                La medición del ahorro de tiempo está pendiente. Este panel no confirma un cierre definitivo ni un pago.
               </p>
             </div>
 
             {/* ¿Qué tienes que hacer hoy? */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-terracotta">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-brand-terracotta-deep">
                 ¿Qué tienes que hacer hoy? (Paso a paso)
               </h4>
-              <div className="space-y-2 text-xs text-brand-ink">
-                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+              <div className="space-y-2 text-sm text-brand-ink">
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                     1
                   </span>
                   <div>
                     <strong className="block text-brand-ink font-bold">Verifica el cierre de mes o quincena:</strong>
-                    <p className="text-brand-muted text-[11px] mt-0.5">
+                    <p className="text-brand-ink/80 text-xs mt-0.5">
                       Asegúrate de que los consumos del día estén marcados y no queden raciones sin justificar.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                     2
                   </span>
                   <div>
                     <strong className="block text-brand-ink font-bold">Descarga la Planilla Excel oficial:</strong>
-                    <p className="text-brand-muted text-[11px] mt-0.5">
+                    <p className="text-brand-ink/80 text-xs mt-0.5">
                       En el módulo de Empresas puedes descargar la nómina valorizada lista con el formato exacto que exige la minera.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                     3
                   </span>
                   <div>
                     <strong className="block text-brand-ink font-bold">Mándala a tu contadora:</strong>
-                    <p className="text-brand-muted text-[11px] mt-0.5">
+                    <p className="text-brand-ink/80 text-xs mt-0.5">
                       Con la planilla lista, tu contadora solo tiene que emitir la factura formal en el portal del SII.
                     </p>
                   </div>
@@ -465,7 +462,7 @@ export function ModalPlanAccionKpi({
                     onCerrar();
                     onIrAEmpresas();
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep text-white px-4 py-3 text-xs font-bold shadow-brand transition active:scale-95 cursor-pointer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep text-white px-4 py-3 text-sm font-bold shadow-brand transition active:scale-95 cursor-pointer"
                 >
                   <IconFileText className="h-4 w-4" />
                   <span>Ir a Empresas y Descargar Planilla Excel ➔</span>
@@ -483,15 +480,15 @@ export function ModalPlanAccionKpi({
             {/* Cabecera */}
             <div className="flex items-start justify-between gap-3 border-b border-brand-border/60 pb-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-brand-terracotta border border-brand-border shadow-xs">
-                  <IconBed className="h-6 w-6 text-brand-terracotta" />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-brand-terracotta-deep border border-brand-border shadow-sm">
+                  <IconBed className="h-6 w-6 text-brand-terracotta-deep" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                    <span className="text-xs font-bold uppercase tracking-wider text-brand-ink/80">
                       Plan de Acción · Hospedaje
                     </span>
-                    <span className="rounded-full bg-brand-sand-light text-brand-ink border border-brand-border/60 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
+                    <span className="rounded-full bg-brand-sand-deep text-brand-ink border border-brand-border/60 px-2 py-0.5 text-xs font-black uppercase tracking-wider">
                       {metricasOcupacion.porcentajeOcupacion}% Ocupado
                     </span>
                   </div>
@@ -503,15 +500,15 @@ export function ModalPlanAccionKpi({
               <button
                 type="button"
                 onClick={onCerrar}
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-brand-border/60 bg-white text-brand-muted hover:text-brand-ink text-xs font-bold"
+                aria-label="Cerrar diálogo" className="flex h-8 w-8 items-center justify-center rounded-xl border border-brand-border/60 bg-white text-brand-ink/80 hover:text-brand-ink text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
             {/* Diagnóstico en tiempo real */}
-            <div className="rounded-2xl border border-brand-border/70 bg-brand-sand/40 p-4 text-xs leading-relaxed space-y-2 text-brand-ink">
-              <div className="flex items-center gap-2 font-bold text-sm text-brand-terracotta">
+            <div className="rounded-2xl border border-brand-border/70 bg-brand-sand/40 p-4 text-sm leading-relaxed space-y-2 text-brand-ink">
+              <div className="flex items-center gap-2 font-bold text-sm text-brand-terracotta-deep">
                 <span>
                   {metricasOcupacion.disponibles > 0
                     ? `ℹ️ Tienes ${metricasOcupacion.disponibles} pieza(s) disponible(s) para vender hoy`
@@ -524,7 +521,7 @@ export function ModalPlanAccionKpi({
                 <strong>{metricasOcupacion.ocupadasTurista}</strong> por turistas).
               </p>
               {metricasOcupacion.enMantencion > 0 && (
-                <p className="text-amber-800 font-semibold text-[11px]">
+                <p className="text-amber-800 font-semibold text-xs">
                   Hay {metricasOcupacion.enMantencion} pieza(s) en mantención que requieren revisión técnica.
                 </p>
               )}
@@ -532,43 +529,43 @@ export function ModalPlanAccionKpi({
 
             {/* ¿Qué tienes que hacer hoy? */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-terracotta">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-brand-terracotta-deep">
                 ¿Qué tienes que hacer hoy? (Paso a paso)
               </h4>
-              <div className="space-y-2 text-xs text-brand-ink">
+              <div className="space-y-2 text-sm text-brand-ink">
                 {metricasOcupacion.disponibles > 0 ? (
-                  <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+                  <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                       1
                     </span>
                     <div>
                       <strong className="block text-brand-ink font-bold">Ofrece las piezas disponibles:</strong>
-                      <p className="text-brand-muted text-[11px] mt-0.5">
+                      <p className="text-brand-ink/80 text-xs mt-0.5">
                         Si llega un turista o vehículo de paso por Caleta Paposo, tienes {metricasOcupacion.disponibles} pieza(s) listas para recibirlo.
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+                  <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                       1
                     </span>
                     <div>
                       <strong className="block text-brand-ink font-bold">Pensión completa:</strong>
-                      <p className="text-brand-muted text-[11px] mt-0.5">
+                      <p className="text-brand-ink/80 text-xs mt-0.5">
                         Revisa en el Rack Semanal las fechas de salida para saber exactamente cuándo se liberará una pieza.
                       </p>
                     </div>
                   </div>
                 )}
 
-                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-light p-3 border border-brand-border/60">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta text-white font-bold text-[11px]">
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-sand-deep p-3 border border-brand-border/60">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-terracotta-deep text-white font-bold text-xs">
                     2
                   </span>
                   <div>
                     <strong className="block text-brand-ink font-bold">Revisa el estado de Aseo:</strong>
-                    <p className="text-brand-muted text-[11px] mt-0.5">
+                    <p className="text-brand-ink/80 text-xs mt-0.5">
                       Verifica que las habitaciones vacías hayan sido aseadas y tengan toallas y sábanas limpias listas para el próximo huésped.
                     </p>
                   </div>
@@ -585,7 +582,7 @@ export function ModalPlanAccionKpi({
                     onCerrar();
                     onIrACalendario();
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep text-white px-4 py-3 text-xs font-bold shadow-brand transition active:scale-95 cursor-pointer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep text-white px-4 py-3 text-sm font-bold shadow-brand transition active:scale-95 cursor-pointer"
                 >
                   <IconBed className="h-4 w-4" />
                   <span>Ver Rack y Calendario de Habitaciones ➔</span>
@@ -595,6 +592,6 @@ export function ModalPlanAccionKpi({
           </>
         )}
       </div>
-    </div>
+    </Dialogo>
   );
 }

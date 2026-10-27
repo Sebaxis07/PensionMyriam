@@ -10,7 +10,8 @@ import "@testing-library/jest-dom/vitest";
  * que reacciona a los cambios de estado de PowerSync, y el
  * comportamiento sin conexión / mientras sincroniza / ante reconexión.
  */
-const { getAll, registerListener, listeners, currentStatus } = vi.hoisted(() => {
+const { getAll, registerListener, listeners, currentStatus, rechazosUi } = vi.hoisted(() => {
+  const rechazosUi = { cantidad: 0, cargando: false, error: null as Error | null };
   const listeners: Array<(status: any) => void> = [];
   const currentStatus = { connected: false, dataFlowStatus: { uploading: false, uploadError: undefined as Error | undefined, downloadError: undefined as Error | undefined } };
   const getAll = vi.fn().mockResolvedValue([{ n: 0 }]);
@@ -21,7 +22,7 @@ const { getAll, registerListener, listeners, currentStatus } = vi.hoisted(() => 
       if (i >= 0) listeners.splice(i, 1);
     };
   });
-  return { getAll, registerListener, listeners, currentStatus };
+  return { getAll, registerListener, listeners, currentStatus, rechazosUi };
 });
 
 vi.mock("../lib/powersync", () => ({
@@ -33,6 +34,8 @@ vi.mock("../lib/powersync", () => ({
     registerListener
   }
 }));
+
+vi.mock("@powersync/react", () => ({ useQuery: () => ({ data: [{ n: rechazosUi.cantidad }], isLoading: rechazosUi.cargando, error: rechazosUi.error }) }));
 
 import { SyncStatusBadge } from "./SyncStatusBadge";
 
@@ -48,6 +51,9 @@ describe("SyncStatusBadge (HU-29)", () => {
   });
 
   beforeEach(() => {
+    rechazosUi.cantidad = 0;
+    rechazosUi.cargando = false;
+    rechazosUi.error = null;
     getAll.mockReset();
     getAll.mockResolvedValue([{ n: 0 }]);
     listeners.length = 0;
@@ -170,6 +176,32 @@ describe("SyncStatusBadge (HU-29)", () => {
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("No se pudo actualizar · Revisa la conexión"));
     expect(screen.queryByText("Sincronizado")).not.toBeInTheDocument();
     expect(screen.queryByText("detalle técnico privado")).not.toBeInTheDocument();
+  });
+
+  it("nunca marca sincronizado un rechazo pendiente aunque la cola esté vacía", async () => {
+    rechazosUi.cantidad = 2;
+    currentStatus.connected = true;
+    render(<SyncStatusBadge onClick={() => {}} />);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("2 registro(s) necesitan revisión"));
+    expect(screen.queryByText("Sincronizado")).not.toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveAccessibleName("Ver registros que necesitan atención");
+  });
+
+  it("espera la consulta local de rechazos antes de indicar que todo está al día", () => {
+    rechazosUi.cargando = true;
+    currentStatus.connected = true;
+    render(<SyncStatusBadge />);
+    expect(screen.getByRole("status")).toHaveTextContent("Revisando registros…");
+    expect(screen.queryByText("Sincronizado")).not.toBeInTheDocument();
+  });
+
+  it("no indica sincronizado si falla la consulta de rechazos", () => {
+    rechazosUi.error = new Error("SQL interno privado");
+    currentStatus.connected = true;
+    render(<SyncStatusBadge />);
+    expect(screen.getByRole("status")).toHaveTextContent("Necesita atención");
+    expect(screen.queryByText("Sincronizado")).not.toBeInTheDocument();
+    expect(screen.queryByText("SQL interno privado")).not.toBeInTheDocument();
   });
 
   it("es táctil: con onClick, responde a un click real del usuario", async () => {

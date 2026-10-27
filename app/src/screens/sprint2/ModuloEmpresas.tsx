@@ -69,8 +69,8 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
   if (vista === "detalle_contrato" && empresaIdSeleccionada) {
     if (isLoading) {
       return (
-        <div className="mx-auto flex w-full max-w-4xl justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-terracotta border-t-transparent" />
+        <div className="ui-operativa mx-auto flex w-full max-w-4xl justify-center py-12">
+          <div className="h-8 w-8 motion-safe:animate-spin rounded-full border-4 border-brand-terracotta border-t-transparent" />
         </div>
       );
     }
@@ -84,7 +84,7 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
     const razonSocialEmpresa = empresasInfo?.[0]?.razon_social;
 
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+      <div className="ui-operativa mx-auto flex w-full max-w-4xl flex-col gap-4">
         {/* Navegación y selector de contratos de la empresa */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-3xl border border-brand-border/70 bg-brand-card p-4 shadow-card">
           <div className="flex items-center gap-3">
@@ -94,7 +94,7 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
                 setEmpresaIdSeleccionada(null);
                 setContratoIdSeleccionado(null);
               }}
-              className="text-xs font-bold uppercase tracking-wider text-brand-terracotta hover:underline"
+              className="text-sm font-bold uppercase tracking-wider text-brand-terracotta-deep hover:underline"
             >
               ← Volver a todas las empresas
             </button>
@@ -107,11 +107,11 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
 
           {contratos && contratos.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-brand-muted">Contrato:</span>
-              <select
+              <span className="text-sm font-bold text-brand-ink/80">Contrato:</span>
+              <select aria-label="Contrato de la empresa"
                 value={contratoActivo?.id ?? ""}
                 onChange={(e) => setContratoIdSeleccionado(e.target.value)}
-                className="rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs font-bold text-brand-ink"
+                className="rounded-xl border border-brand-border bg-white px-3 py-1.5 text-sm font-bold text-brand-ink"
               >
                 {contratos.map((c) => {
                   const esVigente = c.vigencia_desde <= hoyIso && (!c.vigencia_hasta || c.vigencia_hasta >= hoyIso);
@@ -130,13 +130,13 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
         {contratoActivo ? (
           <div className="space-y-4">
             {/* Sub-pestañas: Nómina vs. Conciliación */}
-            <div className="flex border-b border-brand-border/70 bg-brand-sand/30 p-1 rounded-2xl">
+            <div className="flex flex-wrap gap-2 border-b border-brand-border/70 bg-brand-sand/30 p-1 rounded-2xl">
               <button
                 onClick={() => setSubTab("nomina")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
                   subTab === "nomina"
-                    ? "bg-brand-card text-brand-terracotta shadow-sm"
-                    : "text-brand-muted hover:text-brand-ink"
+                    ? "bg-brand-card text-brand-terracotta-deep shadow-sm"
+                    : "text-brand-ink/80 hover:text-brand-ink"
                 }`}
               >
                 <IconUsers className="h-4 w-4" />
@@ -144,25 +144,25 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
               </button>
               <button
                 onClick={() => setSubTab("conciliacion")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
                   subTab === "conciliacion"
-                    ? "bg-brand-card text-brand-terracotta shadow-sm"
-                    : "text-brand-muted hover:text-brand-ink"
+                    ? "bg-brand-card text-brand-terracotta-deep shadow-sm"
+                    : "text-brand-ink/80 hover:text-brand-ink"
                 }`}
               >
                 <IconClipboardCheck className="h-4 w-4" />
-                <span>Conciliación Diaria</span>
+                <span>Revisar diferencias</span>
               </button>
               <button
                 onClick={() => setSubTab("cierre")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
                   subTab === "cierre"
-                    ? "bg-brand-card text-brand-terracotta shadow-sm"
-                    : "text-brand-muted hover:text-brand-ink"
+                    ? "bg-brand-card text-brand-terracotta-deep shadow-sm"
+                    : "text-brand-ink/80 hover:text-brand-ink"
                 }`}
               >
                 <IconFileText className="h-4 w-4" />
-                <span>Cierre y Facturación</span>
+                <span>Cierre y reportes</span>
               </button>
             </div>
 
@@ -196,12 +196,12 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
             <h3 className="font-display text-lg font-bold text-brand-ink">
               Esta empresa no tiene contratos vigentes
             </h3>
-            <p className="mt-1 text-xs text-brand-muted mb-4">
+            <p className="mt-1 text-sm text-brand-ink/80 mb-4">
               Crea un contrato para habilitar la nómina y el control de consumos.
             </p>
             <button
               onClick={() => setVista("nuevo_contrato")}
-              className="rounded-xl bg-brand-terracotta px-5 py-2.5 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep"
+              className="rounded-xl bg-brand-terracotta-deep px-5 py-2.5 text-sm font-bold text-white shadow-brand hover:bg-brand-terracotta-deep"
             >
               + Crear primer contrato
             </button>

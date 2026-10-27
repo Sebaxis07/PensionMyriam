@@ -1,3 +1,5 @@
+import { AvisoInterfaz } from "./MensajeInterfaz";
+import { RegistroRechazado } from "./RegistroRechazado";
 import { SyncStatusBadge } from "./SyncStatusBadge";
 import { Dialogo } from "./Dialogo";
 import { useEffect, useState } from "react";
@@ -23,6 +25,7 @@ interface SyncStatusModalProps {
 
 export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
   const rechazos = useOperacionesRechazadas();
+  const [errorRevision, setErrorRevision] = useState<string | null>(null);
   const [resolviendoId, setResolviendoId] = useState<string | null>(null);
 
   async function handleResolver(id: string) {
@@ -166,7 +169,7 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
                   ? `${operacionesEnCola} pendiente(s)`
                   : tienePendientes
                   ? "Sincronizando…"
-                  : "Todo al día"}
+                  : "Sin envíos pendientes"}
               </span>
             </div>
 
@@ -231,34 +234,20 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
           </div>
         </div>
 
-        {/* HU-42 — interfaz mínima para probar el flujo completo. Nota
-            para Codex: esta sección es intencionalmente básica (sin
-            iconografía ni jerarquía visual propia); ver especificación
-            funcional completa en el informe de auditoría. */}
-        {rechazos.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-brand-muted">
-              Operaciones rechazadas por el servidor ({rechazos.length})
-            </h4>
-            <div className="rounded-2xl border border-amber-400/60 bg-amber-50 p-3 space-y-2">
-              {rechazos.map((r) => (
-                <div key={r.id} className="flex items-center justify-between gap-2 text-xs border-b border-amber-300/50 pb-2 last:border-0 last:pb-0">
-                  <div>
-                    <span className="font-bold text-amber-900 block">{r.tabla} · {r.operacion}</span>
-                    <span className="text-amber-800">{r.motivo}</span>
-                  </div>
-                  <button
-                    onClick={() => handleResolver(r.id)}
-                    disabled={resolviendoId === r.id}
-                    className="shrink-0 rounded-lg border border-amber-600/40 bg-white px-2.5 py-1.5 text-[11px] font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
-                  >
-                    Marcar resuelto
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <section aria-label="Registros que necesitan atención" className="space-y-3">
+          <h4 className="font-display text-lg font-bold text-brand-ink">
+            {rechazos.length > 0 ? `${rechazos.length} registros necesitan revisión` : "Sin registros rechazados por revisar"}
+          </h4>
+          {rechazos.length > 0 && <p className="text-sm leading-relaxed text-brand-ink/80">Estos registros no fueron aceptados. No están sincronizados, aunque no queden cambios por enviar.</p>}
+          {errorRevision && <AvisoInterfaz tono="error">{errorRevision}</AvisoInterfaz>}
+          {rechazos.map((r) => (
+            <RegistroRechazado key={r.id} registro={r} resolviendo={resolviendoId === r.id}
+              onResolver={(id) => {
+                setErrorRevision(null);
+                handleResolver(id).catch(() => setErrorRevision("No se pudo guardar la revisión. El registro sigue pendiente; intenta nuevamente."));
+              }} />
+          ))}
+        </section>
 
         {/* Botón de Comprobación */}
         <div className="flex justify-between items-center pt-2">
