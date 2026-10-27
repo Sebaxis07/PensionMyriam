@@ -71,8 +71,51 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
     const transaction = await database.getNextCrudTransaction();
     if (!transaction) return;
 
+    // HU-22: insumo.costo_promedio/cantidad_total SOLO debe recalcularlos
+    // el trigger app.recalcular_costo_promedio() al insertar en
+    // compra_insumo (0001_init.sql) — esa es la ÚNICA fuente de verdad
+    // del Promedio Móvil Ponderado. El cliente escribe localmente ese
+    // mismo cálculo en insumo (espejo optimista, para ver el costo
+    // actualizado al instante sin conexión — ver registrarCompraInsumo.ts),
+    // pero esa escritura nunca debe llegar intacta al servidor: el rol
+    // "authenticated" SÍ tiene permiso de escribir insumo (Supabase
+    // otorga privilegios amplios por defecto; la restricción real la
+    // pone RLS, que para la Administradora permite escribir) — así que
+    // si se sincronizara tal cual, el trigger del INSERT en
+    // compra_insumo volvería a sumar la MISMA compra sobre un insumo que
+    // el cliente ya había actualizado, contándola DOS VECES. Esto pasa
+    // en DOS formas distintas, confirmadas ambas en
+    // db/pgtap/10_pmp_insumo.sql:
+    //   (a) insumo EXISTENTE: el cliente emite un PATCH con el PMP ya
+    //       recalculado — se omite por completo, el insert en
+    //       compra_insumo basta.
+    //   (b) insumo NUEVO: el cliente emite un PUT (insert) con
+    //       cantidad_total/costo_promedio ya iguales a esta primera
+    //       compra (no hay insumo previo con el que promediar) — ese
+    //       insert SÍ debe llegar (compra_insumo.insumo_id es FK y
+    //       exige que la fila exista), pero con cantidad_total=0 y
+    //       costo_promedio=0, para que el trigger arranque desde cero y
+    //       calcule él solo el valor correcto a partir de la compra.
+    const haySuCompraEnEstaTransaccion = transaction.crud.some((o) => o.table === "compra_insumo");
+
     try {
       for (const op of transaction.crud) {
+        // (a) insumo EXISTENTE: el PATCH con el PMP ya recalculado nunca
+        // es una escritura legítima para sincronizar — el trigger es la
+        // única fuente de verdad, así que se omite siempre, sin importar
+        // si esta transacción puntual trae o no su compra_insumo.
+        if (op.table === "insumo" && op.op === UpdateType.PATCH) {
+          continue;
+        }
+        // (b) insumo NUEVO: el insert sí debe llegar (FK de
+        // compra_insumo.insumo_id), pero solo se fuerza a cero cuando
+        // viene junto a su primera compra en la MISMA transacción — si
+        // alguna vez existiera una creación de catálogo sin compra
+        // asociada, sus valores iniciales no deben tocarse.
+        if (op.table === "insumo" && op.op === UpdateType.PUT && haySuCompraEnEstaTransaccion) {
+          op.opData = { ...(op.opData ?? {}), cantidad_total: 0, costo_promedio: 0 };
+        }
+
         const table = supabase.from(op.table);
         const pk = PK_POR_TABLA[op.table] ?? "id";
         try {

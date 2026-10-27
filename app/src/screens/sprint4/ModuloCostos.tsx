@@ -17,6 +17,7 @@ import {
   IconTag,
   IconUtensils
 } from "../../components/Icons";
+import { mesHoySantiago } from "../../lib/fechaNegocio";
 
 interface ModuloCostosProps {
   usuarioId: string;
@@ -77,7 +78,7 @@ export function ModuloCostos({ usuarioId }: ModuloCostosProps) {
 
   // Cálculos consolidados para el mes actual
   const resumenMes = useMemo(() => {
-    const mesActualStr = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const mesActualStr = mesHoySantiago(); // "YYYY-MM", día de negocio en Santiago
     const comprasMes = compras.filter((c) => c.fecha.startsWith(mesActualStr));
 
     const totalGastadoMes = comprasMes.reduce((acc, c) => acc + c.monto_total, 0);

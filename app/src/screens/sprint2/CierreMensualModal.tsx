@@ -5,7 +5,7 @@ import { descargarPreFacturaPdf } from "../../features/reportes/generarPreFactur
 import { descargarPlanillaExcel } from "../../features/reportes/generarPlanillaExcel";
 import { formatearMonedaCLP } from "../../lib/pdf/pdfMakeConfig";
 import { powersync } from "../../lib/powersync";
-import { fechaHoySantiago } from "../../lib/fechaNegocio";
+import { fechaHoySantiago, inicioDiaSantiagoUTC, finDiaSantiagoUTC } from "../../lib/fechaNegocio";
 import {
   IconCheck,
   IconClipboardCheck,
@@ -102,11 +102,10 @@ export function CierreMensualModal({
          join trabajador t on t.id = c.trabajador_id
          left join producto_extra p on p.id = c.producto_extra_id
          where t.contrato_empresa_id = ?
-           and date(c.fecha_hora) >= date(?)
-           and date(c.fecha_hora) <= date(?)
+           and c.fecha_hora >= ? and c.fecha_hora < ?
            and c.consumo_corregido_id is null
          order by c.fecha_hora asc`,
-        [contratoEmpresaId, primerDia, ultimoDia]
+        [contratoEmpresaId, inicioDiaSantiagoUTC(primerDia).toISOString(), finDiaSantiagoUTC(ultimoDia).toISOString()]
       );
 
       // Descuadres del mes para la hoja 2

@@ -30,6 +30,12 @@ echo "=== Generando 30 trabajadores x 4 tipos x 30 dias ($EMPRESA) ==="
 psql_admin <<SQL
 \timing on
 
+-- Fechas de negocio en zona Santiago, no UTC — mismo defecto corregido
+-- en seed-demo.sh/seed-demo-empresa.sh. Sin BEGIN explícito en este
+-- script (autocommit por sentencia), así que un SET simple (sin LOCAL)
+-- alcanza para el resto de esta sesión de psql.
+set timezone to 'America/Santiago';
+
 do \$\$
 declare
   v_admin uuid := (select id from public.usuario where nombre = 'María (Administradora)');

@@ -2,14 +2,15 @@ import { useMemo } from "react";
 import { useQuery } from "@powersync/react";
 import { MetricasMargen } from "./types";
 import { generarRecomendacionMargen, obtenerEstadoSemaforo } from "./recomendarMargen";
+import { mesHoySantiago, inicioDiaSantiagoUTC, finDiaSantiagoUTC } from "../../lib/fechaNegocio";
 
+/** Rango del mes de negocio actual, en Santiago (no en la zona del dispositivo). */
 function obtenerRangoMesActual() {
-  const ahora = new Date();
-  const y = ahora.getFullYear();
-  const m = String(ahora.getMonth() + 1).padStart(2, "0");
-  const primerDia = `${y}-${m}-01`;
-  const ultimoDiaNum = new Date(y, ahora.getMonth() + 1, 0).getDate();
-  const ultimoDia = `${y}-${m}-${String(ultimoDiaNum).padStart(2, "0")}`;
+  const mesStr = mesHoySantiago(); // "YYYY-MM"
+  const [y, m] = mesStr.split("-").map(Number);
+  const primerDia = `${mesStr}-01`;
+  const ultimoDiaNum = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const ultimoDia = `${mesStr}-${String(ultimoDiaNum).padStart(2, "0")}`;
   return { primerDia, ultimoDia, totalDiasMes: ultimoDiaNum };
 }
 
@@ -73,9 +74,9 @@ export function useMargenProyectado(): MetricasMargen {
   const { data: consumosConteo } = useQuery<{ count: number }>(
     `select count(*) as count
      from consumo
-     where date(fecha_hora) >= ? and date(fecha_hora) <= ?
+     where fecha_hora >= ? and fecha_hora < ?
        and consumo_corregido_id is null`,
-    [primerDia, ultimoDia]
+    [inicioDiaSantiagoUTC(primerDia).toISOString(), finDiaSantiagoUTC(ultimoDia).toISOString()]
   );
 
   return useMemo(() => {
@@ -111,9 +112,14 @@ export function useMargenProyectado(): MetricasMargen {
       0
     ) + nochesTuristas;
 
-    // Costo diario real estimado por trabajador (1 cama + 3 comidas)
-    // Si hay compras registradas, se prorratea. Si el negocio está recién partiendo,
-    // se toma el costo base calibrado con la administradora ($14.000 por trabajador/día).
+    // Costo diario real estimado por trabajador (1 cama + 3 comidas).
+    // Si hay compras registradas, se prorratea. Si el negocio está recién
+    // partiendo (sin compras aún), se usa $14.000/trabajador/día como piso
+    // de arranque — ESTIMACIÓN DEL EQUIPO, no un valor confirmado por la
+    // Administradora: las actas de las reuniones solo registran la
+    // ganancia líquida agregada ($3-4M/mes para 30 personas, ~50% de
+    // margen neto), nunca un costo diario individual. Pendiente de
+    // validar junto con ella antes de tratarlo como un hecho del negocio.
     let costoDiarioTrabajador = 14000;
     if (totalComprasMonto > 0 && trabajadoresEsperadosMes > 0) {
       costoDiarioTrabajador = Math.round(totalComprasMonto / trabajadoresEsperadosMes);

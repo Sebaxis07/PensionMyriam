@@ -1,6 +1,6 @@
 import { useQuery } from "@powersync/react";
 import { useMemo } from "react";
-import { fechaHoySantiago, sumarDiasYMD } from "../../lib/fechaNegocio";
+import { fechaHoySantiago, sumarDiasYMD, inicioDiaSantiagoUTC, finDiaSantiagoUTC } from "../../lib/fechaNegocio";
 
 export interface DiaPendienteConciliacion {
   fecha: string;
@@ -123,10 +123,9 @@ export function useCierreMensual(
      join trabajador t on t.id = c.trabajador_id
      left join producto_extra p on p.id = c.producto_extra_id
      where t.contrato_empresa_id = ?
-       and date(c.fecha_hora) >= date(?)
-       and date(c.fecha_hora) <= date(?)
+       and c.fecha_hora >= ? and c.fecha_hora < ?
        and c.consumo_corregido_id is null`,
-    [contratoEmpresaId, primerDiaMes, ultimoDiaMes]
+    [contratoEmpresaId, inicioDiaSantiagoUTC(primerDiaMes).toISOString(), finDiaSantiagoUTC(ultimoDiaMes).toISOString()]
   );
 
   const isLoading =
