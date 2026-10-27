@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Revisión visual · Sprints 3 y 4</title>
+<style>
+body{margin:0;padding:24px;background:#e1dcd2;color:#2a2418;font:16px/1.5 system-ui,sans-serif}h1,h2{font-family:Georgia,serif}header{padding:20px;background:#fffaf1;border:1px solid #ddd0b3;border-radius:24px}h1{margin:0}select,a{font:inherit;padding:10px;min-height:44px;border:1px solid #731d0a;border-radius:12px;background:#fffaf1;color:#731d0a}nav{display:flex;gap:16px;flex-wrap:wrap;align-items:center}.comparacion{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.panel{overflow:auto;background:#fffaf1;border-radius:16px;padding:12px}iframe{height:780px;border:0;background:#e1dcd2}label{display:grid;gap:4px}a{display:inline-block;box-sizing:border-box}@media(max-width:800px){.comparacion{grid-template-columns:1fr}body{padding:12px}}
+</style>
+<header><h1>Revisión visual de Sprints 3 y 4</h1><p>Datos ficticios y adaptadores aislados. Esta vista permite revisar el diseño; no verifica el servidor, los permisos de base de datos ni la sincronización real.</p>
+<nav><label>Pantalla<select id="vista"><option value="consumos">Consumos</option><option value="conciliacion">Conciliación</option><option value="rechazos">Operaciones rechazadas</option><option value="cierre">Cierre mensual y reportes</option><option value="costos">Compras e insumos</option><option value="dashboard">Resumen del negocio</option><option value="compra">Registrar compra</option><option value="empresas">Empresas y contratos</option><option value="seleccion_empresa">Selección de empresa</option></select></label>
+<label>Ancho de pantalla<select id="ancho"><option>390</option><option>320</option><option>768</option><option>1024</option><option>1280</option></select></label>
+<label>Escenario<select id="estado"><option value="normal">Con registros</option><option value="vacio">Sin registros</option><option value="pendiente">Días pendientes</option><option value="error">Error de guardado</option><option value="cargando">Carga (si el componente la expone)</option><option value="bajo">Margen bajo</option></select></label>
+<a id="abrir" target="_blank" rel="noopener">Abrir versión actual</a></nav>
+<p>WhatsApp: en Consumos, pulsa «Ver resumen del día». Las descargas contienen únicamente datos ficticios.</p></header>
+<main class="comparacion"><section><h2>Antes</h2><div class="panel"><iframe title="Diseño anterior" id="antes"></iframe></div></section><section><h2>Después</h2><div class="panel"><iframe title="Diseño actual" id="despues"></iframe></div></section></main>
+<script>
+const vista=document.querySelector('#vista'),ancho=document.querySelector('#ancho'),estado=document.querySelector('#estado');
+function actualizar(){const ruta='/pruebas-ui-sprints34/?vista='+vista.value+'&estado='+(vista.value==='rechazos'?'rechazos':estado.value);for(const [id,puerto] of [['antes',5187],['despues',5186]]){const frame=document.getElementById(id);frame.style.width=ancho.value+'px';frame.src='http://127.0.0.1:'+puerto+ruta;}document.querySelector('#abrir').href='http://127.0.0.1:5186'+ruta;}
+for(const control of [vista,ancho,estado])control.addEventListener('change',actualizar);actualizar();
+</script></html>

@@ -73,7 +73,7 @@ export function GraficoTacometroMargen({
       colorTexto: "text-emerald-700",
       colorBadge: "bg-emerald-100 text-emerald-900 border-emerald-300",
       etiqueta: "Rentabilidad Saludable",
-      mensaje: "Tus ingresos cubren con holgura los costos quincenales de compras calculados por PMP."
+      mensaje: "Los ingresos estimados superan las compras registradas. Revisa que estén anotados todos los gastos."
     },
     amarillo: {
       colorStroke: "#f59e0b", // Amber 500
@@ -87,17 +87,17 @@ export function GraficoTacometroMargen({
       colorTexto: "text-red-700",
       colorBadge: "bg-red-100 text-red-900 border-red-300",
       etiqueta: "Alerta Crítica de Margen",
-      mensaje: "Ganancia por debajo del 20%. Ajusta tus compras o renegocia la tarifa convenida."
+      mensaje: "La estimación necesita atención. Revisa las compras y la tarifa del contrato."
     }
   }[estadoSemaforo];
 
   return (
-    <div className="flex flex-col items-center justify-between rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card">
+    <div className="ui-operativa flex flex-col items-center justify-between rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card">
       {/* Cabecera limpia */}
       <div className="w-full text-center">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+            <span className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
               Semáforo de Ganancia
             </span>
             <BotonExplicacion
@@ -107,26 +107,26 @@ export function GraficoTacometroMargen({
               ejemplo="Zona Verde = negocio rentable y protegido. Zona Amarilla = compras caras, vigilar gastos. Zona Roja = peligro de trabajar a pérdida."
             />
           </div>
-          <span className="text-[11px] font-bold text-brand-muted bg-brand-sand-light px-2.5 py-0.5 rounded-full border border-brand-border/60">
+          <span className="text-xs font-bold text-brand-ink/80 bg-brand-sand-deep px-2.5 py-0.5 rounded-full border border-brand-border/60">
             Medidor Mensual
           </span>
         </div>
         <h3 className="font-display text-base md:text-lg font-black text-brand-ink mt-1">
           Velocímetro de Ganancia del Mes
         </h3>
-        <p className="text-xs text-brand-muted">
-          Medidor visual de rentabilidad estilo tacómetro
+        <p className="text-sm text-brand-ink/80">
+          Estimación de ingresos frente a compras registradas
         </p>
       </div>
 
       {/* Tacómetro Instrumentado SVG con aguja limpia y espacio totalmente libre */}
       <div className="relative my-2 w-full max-w-[280px] flex flex-col items-center justify-center">
-        <svg viewBox="0 0 220 118" className="w-full overflow-visible">
+        <svg role="img" aria-label={`Margen estimado: ${margenPorcentaje} por ciento. Escala orientativa pendiente de validar.`} viewBox="0 0 220 118" className="w-full overflow-visible text-brand-ink">
           {/* Pista base suave */}
           <path
             d="M 38 96 A 72 72 0 0 1 182 96"
             fill="none"
-            stroke="#f1e9de"
+            stroke="currentColor" className="text-brand-border"
             strokeWidth="12"
             strokeLinecap="round"
           />
@@ -159,10 +159,10 @@ export function GraficoTacometroMargen({
           />
 
           {/* Ticks y Marcas de escala en los extremos */}
-          <text x="26" y="108" textAnchor="middle" className="text-[10px] font-bold fill-brand-muted">
+          <text x="26" y="108" textAnchor="middle" className="text-xs font-bold fill-brand-muted">
             0%
           </text>
-          <text x="194" y="108" textAnchor="middle" className="text-[10px] font-bold fill-brand-muted">
+          <text x="194" y="108" textAnchor="middle" className="text-xs font-bold fill-brand-muted">
             100%
           </text>
 
@@ -171,18 +171,18 @@ export function GraficoTacometroMargen({
             {/* Polígono estilizado de la aguja */}
             <polygon
               points={puntosAguja}
-              fill="#1e293b"
+              fill="currentColor"
               className="drop-shadow-sm"
             />
             {/* Casquillo central (pivote) */}
             <circle cx={cx} cy={cy} r="8" fill="#1e293b" />
-            <circle cx={cx} cy={cy} r="3.5" fill="#f8fafc" />
+            <circle cx={cx} cy={cy} r="3.5" fill="currentColor" className="text-brand-card" />
           </g>
         </svg>
 
         {/* Marcador de meta 35% como etiqueta flotante sutil */}
-        <div className="absolute top-1 left-12 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-xs pointer-events-none">
-          Meta 35%
+        <div className="relative mt-2 text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-sm pointer-events-none">
+          Referencia 35% · Por validar
         </div>
       </div>
 
@@ -194,11 +194,11 @@ export function GraficoTacometroMargen({
           >
             {margenPorcentaje}%
           </span>
-          <span className="text-xs font-black uppercase tracking-wider text-brand-muted">
+          <span className="text-sm font-black uppercase tracking-wider text-brand-ink/80">
             Margen
           </span>
         </div>
-        <p className="text-xs text-brand-muted font-medium mt-1">
+        <p className="text-sm text-brand-ink/80 font-medium mt-1">
           Margen proyectado del mes en curso
         </p>
       </div>
@@ -206,30 +206,30 @@ export function GraficoTacometroMargen({
       {/* Insignia / Estado dinámico con explicación */}
       <div className="mt-2 w-full text-center">
         <span
-          className={`inline-block px-3.5 py-1 text-xs font-black rounded-full border ${configSemaforo.colorBadge}`}
+          className={`inline-block px-3.5 py-1 text-sm font-black rounded-full border ${configSemaforo.colorBadge}`}
         >
           {configSemaforo.etiqueta}
         </span>
-        <p className="text-xs text-brand-ink/90 mt-2 px-2 leading-relaxed">
+        <p className="text-sm text-brand-ink/90 mt-2 px-2 leading-relaxed">
           {configSemaforo.mensaje}
         </p>
       </div>
 
       {/* Datos clave de apoyo financiero */}
-      <div className="mt-4 grid grid-cols-2 gap-2 w-full pt-3 border-t border-brand-border/60 text-xs">
-        <div className="text-center p-2.5 rounded-xl bg-brand-sand-light border border-brand-border/50">
-          <span className="text-[10px] font-semibold text-brand-muted block uppercase">
+      <div className="mt-4 grid grid-cols-2 gap-2 w-full pt-3 border-t border-brand-border/60 text-sm">
+        <div className="text-center p-2.5 rounded-xl bg-brand-sand-deep border border-brand-border/50">
+          <span className="text-xs font-semibold text-brand-ink/80 block uppercase">
             Total Ingresos
           </span>
           <span className="font-display text-sm font-bold text-brand-ink block mt-0.5">
             ${ingresosTotales.toLocaleString("es-CL")}
           </span>
         </div>
-        <div className="text-center p-2.5 rounded-xl bg-brand-sand-light border border-brand-border/50">
-          <span className="text-[10px] font-semibold text-brand-muted block uppercase">
+        <div className="text-center p-2.5 rounded-xl bg-brand-sand-deep border border-brand-border/50">
+          <span className="text-xs font-semibold text-brand-ink/80 block uppercase">
             Compras Insumos
           </span>
-          <span className="font-display text-sm font-bold text-brand-terracotta block mt-0.5">
+          <span className="font-display text-sm font-bold text-brand-terracotta-deep block mt-0.5">
             ${costosTotales.toLocaleString("es-CL")}
           </span>
         </div>

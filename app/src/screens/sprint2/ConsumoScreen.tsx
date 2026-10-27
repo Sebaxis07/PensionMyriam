@@ -1,3 +1,5 @@
+import { AvisoInterfaz, describirErrorUi } from "../../components/MensajeInterfaz";
+import { Dialogo } from "../../components/Dialogo";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@powersync/react";
 import {
@@ -67,6 +69,8 @@ export function ConsumoScreen({
   const [guardandoLote, setGuardandoLote] = useState(false);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [mensajesError, setMensajesError] = useState<string[]>([]);
+  const [mostrarResumen, setMostrarResumen] = useState(false);
+  const [avisoResumen, setAvisoResumen] = useState<{ tono: "informacion" | "exito" | "error"; texto: string } | null>(null);
   const [toastExito, setToastExito] = useState<string | null>(null);
 
   // Catálogo de productos extra para colación
@@ -139,7 +143,7 @@ export function ConsumoScreen({
   // 1-Click: Marcado directo de un trabajador individual
   async function handleMarcarIndividual(trabajador: TrabajadorConsumoRow) {
     if (tipoRacion === "colacion" && !productoExtraId) {
-      alert("Por favor selecciona primero un producto del catálogo para la colación.");
+      setMensajesError(["Primero selecciona un producto del catálogo para la colación."]);
       return;
     }
 
@@ -169,7 +173,7 @@ export function ConsumoScreen({
       // Quitar de seleccionados si estaba
       setSeleccionados((prev) => prev.filter((id) => id !== trabajador.id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al registrar la ración.");
+      setMensajesError([describirErrorUi(err instanceof Error ? err.message : "Error al registrar la ración.")]);
     } finally {
       setGuardandoId(null);
     }
@@ -180,7 +184,7 @@ export function ConsumoScreen({
     if (!seleccionados.length) return;
 
     if (tipoRacion === "colacion" && !productoExtraId) {
-      alert("Por favor selecciona primero un producto del catálogo para la colación.");
+      setMensajesError(["Primero selecciona un producto del catálogo para la colación."]);
       return;
     }
 
@@ -227,7 +231,7 @@ export function ConsumoScreen({
       setToastExito(`✓ Colación registrada para ${trabajadorSeleccionado.nombre}`);
       setTimeout(() => setToastExito(null), 3500);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al registrar la colación.");
+      setMensajesError([describirErrorUi(err instanceof Error ? err.message : "Error al registrar la colación.")]);
     } finally {
       setGuardandoAccion(false);
     }
@@ -249,7 +253,7 @@ export function ConsumoScreen({
       setToastExito(`✓ Corrección guardada con éxito`);
       setTimeout(() => setToastExito(null), 3500);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al guardar la corrección.");
+      setMensajesError([describirErrorUi(err instanceof Error ? err.message : "Error al guardar la corrección.")]);
     } finally {
       setGuardandoAccion(false);
     }
@@ -262,7 +266,7 @@ export function ConsumoScreen({
     <div className="flex w-full flex-col gap-4">
       {/* Toast flotante de éxito */}
       {toastExito && (
-        <div className="fixed top-16 right-4 z-50 flex items-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-xl animate-in fade-in slide-in-from-top-3">
+        <div role="status" aria-live="polite" className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950">
           <IconCheckCircle className="h-5 w-5 shrink-0" />
           <span>{toastExito}</span>
         </div>
@@ -273,7 +277,7 @@ export function ConsumoScreen({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-sand text-brand-terracotta">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-sand text-brand-terracotta-deep">
                 <IconUtensils className="h-4 w-4" />
               </div>
               <h2 className="font-display text-lg sm:text-xl font-bold text-brand-ink">
@@ -286,8 +290,8 @@ export function ConsumoScreen({
                 ejemplo="Si Juan Pérez baja a almorzar, buscas su nombre y tocas 'Servir plato'. Quedará marcado en verde y no se podrá duplicar."
               />
             </div>
-            <p className="mt-1 text-xs text-brand-muted">
-              Marca las raciones servidas en el mesón para asegurar el cobro y la conciliación mensual.
+            <p className="mt-1 text-sm text-brand-ink/80">
+              Elige una comida y registra a quién se la entregaste. La tarifa del contrato no cambia por la cantidad servida.
             </p>
           </div>
 
@@ -295,39 +299,16 @@ export function ConsumoScreen({
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
               <button
                 onClick={() => setMostrarModalCatalogo(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition shadow-2xs"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand transition shadow-sm"
               >
-                <IconPlus className="h-3.5 w-3.5 text-brand-terracotta" />
+                <IconPlus className="h-3.5 w-3.5 text-brand-terracotta-deep" />
                 <span>Lista de Colaciones ({productosExtra.length})</span>
               </button>
 
-              {/* HU-21: solo arma el texto y lo copia/abre en wa.me — nunca
-                  afirma un envío automático. Especificación visual
-                  completa pendiente para Codex (ver informe). */}
-              <button
-                onClick={async () => {
-                  const texto = armarResumenDiaTexto(empresaNombre ?? "esta empresa", resumenDia, headcount);
-                  const copiado = await copiarResumenDiaTexto(texto);
-                  setToastExito(
-                    copiado
-                      ? "✓ Resumen del día copiado — pégalo donde quieras enviarlo"
-                      : "No se pudo copiar automáticamente; usa el botón de WhatsApp"
-                  );
-                  setTimeout(() => setToastExito(null), 3500);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition shadow-2xs"
-              >
-                <span>📋</span>
-                <span>Copiar resumen del día</span>
-              </button>
-              <button
-                onClick={() =>
-                  abrirResumenDiaWhatsApp(armarResumenDiaTexto(empresaNombre ?? "esta empresa", resumenDia, headcount))
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand transition shadow-2xs"
-              >
-                <span>💬</span>
-                <span>Enviar por WhatsApp</span>
+              <button type="button" onClick={() => setMostrarResumen(!mostrarResumen)}
+                aria-expanded={mostrarResumen}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-terracotta-deep px-4 py-3 text-sm font-bold text-white">
+                {mostrarResumen ? "Ocultar resumen del día" : "Ver resumen del día"}
               </button>
             </div>
           )}
@@ -335,7 +316,7 @@ export function ConsumoScreen({
 
         {/* Selector de Pestañas de Servicios Informativas */}
         <div className="mt-4">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-brand-muted mb-2">
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-ink/80 mb-2">
             Elige el servicio que estás atendiendo:
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -359,17 +340,17 @@ export function ConsumoScreen({
                   }}
                   className={`relative flex flex-col items-center justify-between rounded-2xl border p-2.5 sm:p-3 text-center transition-all cursor-pointer active:scale-95 ${
                     activo
-                      ? "border-brand-terracotta bg-brand-terracotta text-white shadow-brand ring-2 ring-brand-terracotta/30"
+                      ? "border-brand-terracotta bg-brand-terracotta-deep text-white shadow-brand ring-2 ring-brand-terracotta/30"
                       : "border-brand-border/70 bg-white text-brand-ink hover:bg-brand-sand/30 hover:border-brand-border"
                   }`}
                 >
                   {/* Badge de Horario Actual */}
                   {esTurnoActual && (
                     <span
-                      className={`absolute -top-2 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-xs ${
+                      className={`absolute -top-2 rounded-full px-2 py-0.5 text-xs font-black uppercase tracking-wider shadow-sm ${
                         activo
                           ? "bg-amber-300 text-amber-950"
-                          : "bg-brand-terracotta text-white animate-pulse"
+                          : "bg-brand-terracotta-deep text-white motion-safe:animate-pulse"
                       }`}
                     >
                       Turno actual
@@ -378,12 +359,12 @@ export function ConsumoScreen({
 
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="text-xl sm:text-2xl">{info.icon}</span>
-                    <span className="font-bold text-xs sm:text-sm">{info.nombreCorto}</span>
+                    <span className="font-bold text-sm sm:text-sm">{info.nombreCorto}</span>
                   </div>
 
                   <span
-                    className={`mt-1 text-[10px] font-medium leading-none ${
-                      activo ? "text-white/80" : "text-brand-muted"
+                    className={`mt-1 text-xs font-medium leading-none ${
+                      activo ? "text-white/80" : "text-brand-ink/80"
                     }`}
                   >
                     {info.horario}
@@ -391,7 +372,7 @@ export function ConsumoScreen({
 
                   {/* Micro-métrica en vivo */}
                   <div
-                    className={`mt-2 w-full rounded-lg px-1.5 py-0.5 text-[10px] font-bold ${
+                    className={`mt-2 w-full rounded-lg px-1.5 py-0.5 text-xs font-bold ${
                       activo
                         ? "bg-white/20 text-white"
                         : "bg-brand-sand/40 text-brand-ink"
@@ -411,11 +392,11 @@ export function ConsumoScreen({
 
         {/* Advertencias o paneles específicos para Colación y Cama */}
         {tipoRacion === "cama_noche" && (
-          <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 flex items-start gap-2.5">
+          <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-3.5 text-sm text-blue-900 flex items-start gap-2.5">
             <span className="text-base shrink-0">🛏️</span>
             <div>
               <p className="font-bold">Generación automática de pernocta</p>
-              <p className="text-[11px] text-blue-950/80 mt-0.5">
+              <p className="text-xs text-blue-950/80 mt-0.5">
                 Las noches de cama se registran automáticamente por el sistema cada medianoche para todos los trabajadores con habitación asignada. Usa este panel solo para registrar manualmente a un trabajador que haya llegado de improvisto.
               </p>
             </div>
@@ -423,11 +404,11 @@ export function ConsumoScreen({
         )}
 
         {tipoRacion === "colacion" && (
-          <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50/80 p-3.5 text-xs text-amber-950 space-y-2.5">
+          <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50/80 p-3.5 text-sm text-amber-950 space-y-2.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-base">🥪</span>
-                <span className="font-bold text-xs">
+                <span className="font-bold text-sm">
                   Selecciona la colación o plato especial que vas a entregar:
                 </span>
               </div>
@@ -435,7 +416,7 @@ export function ConsumoScreen({
                 <button
                   type="button"
                   onClick={() => setMostrarModalCatalogo(true)}
-                  className="text-xs font-semibold text-brand-terracotta hover:underline self-start sm:self-auto"
+                  className="text-sm font-semibold text-brand-terracotta-deep hover:underline self-start sm:self-auto"
                 >
                   + Administrar precios
                 </button>
@@ -445,10 +426,10 @@ export function ConsumoScreen({
             {productosExtra.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] font-bold text-amber-900 block mb-1">
+                  <label htmlFor="consumoscreen-productoextraid-1" className="text-xs font-bold text-amber-900 block mb-1">
                     Producto del catálogo:
                   </label>
-                  <select
+                  <select id="consumoscreen-productoextraid-1"
                     value={productoExtraId}
                     onChange={(e) => {
                       const id = e.target.value;
@@ -456,7 +437,7 @@ export function ConsumoScreen({
                       const prod = productosExtra.find((p) => p.id === id);
                       if (prod) setRecargoExtra(prod.precio_unitario);
                     }}
-                    className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                    className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
                   >
                     {productosExtra.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -467,36 +448,36 @@ export function ConsumoScreen({
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-amber-900 block mb-1">
+                  <label htmlFor="consumoscreen-recargoextra-1" className="text-xs font-bold text-amber-900 block mb-1">
                     Valor a cobrar a la empresa:
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-brand-muted">$</span>
-                    <input
+                    <span className="text-sm font-bold text-brand-ink/80">$</span>
+                    <input id="consumoscreen-recargoextra-1"
                       type="number"
                       step="100"
                       value={recargoExtra}
                       onChange={(e) => setRecargoExtra(Number(e.target.value) || 0)}
-                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
                     />
-                    <span className="text-[11px] text-brand-muted">CLP</span>
+                    <span className="text-xs text-brand-ink/80">CLP</span>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-amber-300 bg-white p-3 text-center">
-                <p className="text-xs font-semibold text-brand-ink">
+                <p className="text-sm font-semibold text-brand-ink">
                   Aún no tienes productos creados en la lista de colaciones.
                 </p>
                 {esAdmin ? (
                   <button
                     onClick={() => setMostrarModalCatalogo(true)}
-                    className="mt-2 rounded-xl bg-brand-terracotta px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-brand-terracotta-deep"
+                    className="mt-2 rounded-xl bg-brand-terracotta-deep px-4 py-1.5 text-sm font-bold text-white shadow-sm hover:bg-brand-terracotta-deep"
                   >
                     Crear primer producto (ej. Colación de terreno)
                   </button>
                 ) : (
-                  <p className="text-[11px] text-brand-muted mt-1">
+                  <p className="text-xs text-brand-ink/80 mt-1">
                     Solicita a la Administradora cargar los precios antes de registrar colaciones.
                   </p>
                 )}
@@ -505,6 +486,32 @@ export function ConsumoScreen({
           </div>
         )}
       </div>
+
+      {esAdmin && mostrarResumen && (
+        <section aria-label="Resumen del día para compartir" className="space-y-4 rounded-3xl border border-brand-border bg-brand-card p-5 shadow-card">
+          <div><h3 className="font-display text-xl font-bold text-brand-ink">Resumen listo para revisar</h3>
+            <p className="mt-1 text-sm text-brand-ink/80">Corresponde a {empresaNombre ?? "esta empresa"}. Copiar el texto no lo envía. En WhatsApp debes revisar el mensaje y pulsar Enviar.</p></div>
+          <label className="block text-sm font-semibold text-brand-ink" htmlFor="resumen-dia-compartir">Texto del resumen</label>
+          <textarea id="resumen-dia-compartir" readOnly rows={8} value={armarResumenDiaTexto(empresaNombre ?? "esta empresa", resumenDia, headcount)}
+            className="w-full rounded-2xl border border-brand-border bg-white p-4 text-base leading-relaxed text-brand-ink" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button type="button" onClick={async () => {
+              try {
+                const copiado = await copiarResumenDiaTexto(armarResumenDiaTexto(empresaNombre ?? "esta empresa", resumenDia, headcount));
+                setAvisoResumen(copiado ? { tono: "exito", texto: "Texto copiado. Ahora puedes pegarlo donde quieras compartirlo." }
+                  : { tono: "error", texto: "No se pudo copiar. Selecciona el texto del resumen para copiarlo manualmente." });
+              } catch { setAvisoResumen({ tono: "error", texto: "No se pudo copiar. El texto sigue disponible para seleccionarlo manualmente." }); }
+            }} className="rounded-xl bg-brand-terracotta-deep px-4 py-3 text-sm font-bold text-white">Copiar texto</button>
+            <button type="button" onClick={() => {
+              try {
+                abrirResumenDiaWhatsApp(armarResumenDiaTexto(empresaNombre ?? "esta empresa", resumenDia, headcount));
+                setAvisoResumen({ tono: "informacion", texto: "Se solicitó abrir WhatsApp. Revisa el mensaje y pulsa Enviar allí; aún no se ha confirmado un envío." });
+              } catch { setAvisoResumen({ tono: "error", texto: "No se pudo abrir WhatsApp. Puedes copiar el texto y compartirlo manualmente." }); }
+            }} className="rounded-xl border border-brand-border bg-white px-4 py-3 text-sm font-bold text-brand-ink">Abrir WhatsApp</button>
+          </div>
+          {avisoResumen && <AvisoInterfaz tono={avisoResumen.tono}>{avisoResumen.texto}</AvisoInterfaz>}
+        </section>
+      )}
 
       {/* Hero Card: Resumen Visual y Estado del Servicio Seleccionado */}
       <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-4 sm:p-5 shadow-card space-y-3.5">
@@ -515,14 +522,14 @@ export function ConsumoScreen({
               <h3 className="font-display text-base sm:text-lg font-bold text-brand-ink leading-tight">
                 Estado de {infoServicio.label} Hoy
               </h3>
-              <p className="text-xs text-brand-muted">
+              <p className="text-sm text-brand-ink/80">
                 {empresaNombre ? `Para nómina de ${empresaNombre}` : "Resumen del turno actual"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-center">
-            <span className="text-xs font-bold text-brand-ink">
+            <span className="text-sm font-bold text-brand-ink">
               {porcentajeServido}% atendido
             </span>
           </div>
@@ -535,7 +542,7 @@ export function ConsumoScreen({
               porcentajeServido === 100
                 ? "bg-emerald-600"
                 : porcentajeServido > 0
-                ? "bg-brand-terracotta"
+                ? "bg-brand-terracotta-deep"
                 : "bg-transparent"
             }`}
             style={{ width: `${porcentajeServido}%` }}
@@ -548,14 +555,14 @@ export function ConsumoScreen({
           <div className="rounded-2xl border border-emerald-300 bg-emerald-50/70 p-2.5 sm:p-3">
             <div className="flex items-center justify-center gap-1 text-emerald-800">
               <IconCheckCircle className="h-4 w-4" />
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">
                 Ya comieron
               </span>
             </div>
             <p className="font-display text-xl sm:text-2xl font-black text-emerald-950 mt-0.5">
               {servidos.length}
             </p>
-            <span className="text-[10px] text-emerald-800/80">platos entregados</span>
+            <span className="text-xs text-emerald-800/80">platos entregados</span>
           </div>
 
           {/* Pendientes */}
@@ -568,35 +575,35 @@ export function ConsumoScreen({
           >
             <div className="flex items-center justify-center gap-1">
               <IconClock className="h-4 w-4 text-amber-700" />
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-900">
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-900">
                 Faltan por comer
               </span>
             </div>
             <p className="font-display text-xl sm:text-2xl font-black mt-0.5">
               {pendientes.length}
             </p>
-            <span className="text-[10px] text-amber-800/80">
+            <span className="text-xs text-amber-800/80">
               {pendientes.length > 0 ? "en espera" : "¡todos listos!"}
             </span>
           </div>
 
           {/* Dotación total */}
           <div className="rounded-2xl border border-brand-border/70 bg-brand-sand/30 p-2.5 sm:p-3">
-            <div className="flex items-center justify-center gap-1 text-brand-muted">
+            <div className="flex items-center justify-center gap-1 text-brand-ink/80">
               <IconUsers className="h-4 w-4" />
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">
                 Dotación total
               </span>
             </div>
             <p className="font-display text-xl sm:text-2xl font-black text-brand-ink mt-0.5">
               {dotacionTotal}
             </p>
-            <span className="text-[10px] text-brand-muted">trabajadores</span>
+            <span className="text-xs text-brand-ink/80">trabajadores</span>
           </div>
         </div>
 
         {/* Mensaje de estado amigable */}
-        <div className="rounded-xl bg-brand-sand/40 p-2.5 text-xs text-brand-ink border border-brand-border/50 flex items-center gap-2">
+        <div className="rounded-xl bg-brand-sand/40 p-2.5 text-sm text-brand-ink border border-brand-border/50 flex items-center gap-2">
           <span className="text-base">💡</span>
           {pendientes.length > 0 ? (
             <span>
@@ -614,18 +621,19 @@ export function ConsumoScreen({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-2xl border border-brand-border/70 bg-brand-card p-3 shadow-sm">
         {/* Buscador de nombres */}
         <div className="relative flex-1">
-          <IconSearch className="absolute left-3.5 top-2.5 h-4 w-4 text-brand-muted" />
+          <IconSearch className="absolute left-3.5 top-2.5 h-4 w-4 text-brand-ink/80" />
           <input
             type="text"
+            aria-label="Buscar trabajador"
             placeholder="Buscar trabajador por nombre…"
             value={busquedaTrabajador}
             onChange={(e) => setBusquedaTrabajador(e.target.value)}
-            className="w-full rounded-xl border border-brand-border bg-white pl-9 pr-8 py-2 text-xs text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
+            className="w-full rounded-xl border border-brand-border bg-white pl-9 pr-8 py-2 text-sm text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
           />
           {busquedaTrabajador && (
             <button
               onClick={() => setBusquedaTrabajador("")}
-              className="absolute right-2.5 top-2 text-xs font-bold text-brand-muted hover:text-brand-ink"
+              className="absolute right-2.5 top-2 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
             >
               ✕
             </button>
@@ -637,10 +645,10 @@ export function ConsumoScreen({
           <button
             type="button"
             onClick={() => setFiltroEstado("pendientes")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`rounded-xl px-3 py-1.5 text-sm font-bold transition-all ${
               filtroEstado === "pendientes"
-                ? "bg-amber-600 text-white shadow-xs"
-                : "bg-brand-sand/50 text-brand-muted hover:text-brand-ink border border-transparent"
+                ? "bg-amber-600 text-white shadow-sm"
+                : "bg-brand-sand/50 text-brand-ink/80 hover:text-brand-ink border border-transparent"
             }`}
           >
             Faltan por comer ({pendientes.length})
@@ -648,10 +656,10 @@ export function ConsumoScreen({
           <button
             type="button"
             onClick={() => setFiltroEstado("servidos")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`rounded-xl px-3 py-1.5 text-sm font-bold transition-all ${
               filtroEstado === "servidos"
-                ? "bg-emerald-700 text-white shadow-xs"
-                : "bg-brand-sand/50 text-brand-muted hover:text-brand-ink border border-transparent"
+                ? "bg-emerald-700 text-white shadow-sm"
+                : "bg-brand-sand/50 text-brand-ink/80 hover:text-brand-ink border border-transparent"
             }`}
           >
             Ya comieron ({servidos.length})
@@ -659,10 +667,10 @@ export function ConsumoScreen({
           <button
             type="button"
             onClick={() => setFiltroEstado("todos")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`rounded-xl px-3 py-1.5 text-sm font-bold transition-all ${
               filtroEstado === "todos"
-                ? "bg-brand-terracotta text-white shadow-xs"
-                : "bg-brand-sand/50 text-brand-muted hover:text-brand-ink border border-transparent"
+                ? "bg-brand-terracotta-deep text-white shadow-sm"
+                : "bg-brand-sand/50 text-brand-ink/80 hover:text-brand-ink border border-transparent"
             }`}
           >
             Todos ({filas.length})
@@ -671,13 +679,13 @@ export function ConsumoScreen({
       </div>
 
       {/* Barra de Acción Masiva (Cuando hay selección de cuadrilla) */}
-      <div className="sticky top-14 z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-2xl border border-brand-border/80 bg-brand-sand/95 p-3 shadow-md backdrop-blur-md">
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-2xl border border-brand-border/80 bg-brand-sand/95 p-3 shadow-md backdrop-blur-md">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={alternarSeleccionarTodosPendientes}
             disabled={!pendientes.length}
-            className="text-xs font-bold text-brand-terracotta hover:underline disabled:opacity-40"
+            className="text-sm font-bold text-brand-terracotta-deep hover:underline disabled:opacity-40"
           >
             {seleccionados.length === pendientes.length && pendientes.length > 0
               ? "Desmarcar todos"
@@ -685,7 +693,7 @@ export function ConsumoScreen({
           </button>
 
           {seleccionados.length > 0 && (
-            <span className="rounded-full bg-brand-terracotta/15 px-2.5 py-0.5 text-xs font-bold text-brand-terracotta">
+            <span className="rounded-full bg-brand-terracotta-deep/15 px-2.5 py-0.5 text-sm font-bold text-brand-terracotta-deep">
               {seleccionados.length} seleccionados
             </span>
           )}
@@ -695,7 +703,7 @@ export function ConsumoScreen({
           type="button"
           onClick={handleMarcarLote}
           disabled={guardandoLote || !seleccionados.length || (tipoRacion === "colacion" && !productoExtraId)}
-          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand-terracotta px-5 py-2 text-xs sm:text-sm font-bold text-white shadow-brand transition-all hover:bg-brand-terracotta-deep active:scale-95 disabled:opacity-40"
+          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand-terracotta-deep px-5 py-2 text-sm sm:text-sm font-bold text-white shadow-brand transition-all hover:bg-brand-terracotta-deep active:scale-95 disabled:opacity-40"
         >
           <IconCheck className="h-4 w-4" />
           <span>
@@ -708,9 +716,9 @@ export function ConsumoScreen({
 
       {/* Errores si los hay */}
       {mensajesError.length > 0 && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-900 font-semibold space-y-1">
+        <div role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 p-3.5 text-sm text-amber-900 font-semibold space-y-1">
           {mensajesError.map((msg, i) => (
-            <p key={i}>⚠️ {msg}</p>
+            <p key={i}>⚠️ {describirErrorUi(msg)}</p>
           ))}
         </div>
       )}
@@ -741,7 +749,7 @@ export function ConsumoScreen({
           return (
             <div
               key={f.id}
-              className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all shadow-xs ${
+              className={`flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all shadow-sm ${
                 yaRegistrado
                   ? "border-emerald-300/80 bg-emerald-50/60"
                   : seleccionado
@@ -751,18 +759,22 @@ export function ConsumoScreen({
             >
               {/* Checkbox y Datos del Trabajador */}
               <div className="flex items-center gap-3 min-w-0 flex-1">
+                <label className="flex min-h-11 min-w-11 items-center justify-center">
                 <input
                   type="checkbox"
                   disabled={yaRegistrado}
                   checked={seleccionado || yaRegistrado}
                   onChange={() => !yaRegistrado && alternarSeleccion(f.id)}
+                  aria-label={`Seleccionar a ${f.nombre} para ${infoServicio.nombreCorto}`}
                   title={yaRegistrado ? "Ya registrado" : "Seleccionar para marcar en lote"}
-                  className="h-5 w-5 rounded-md border-brand-border text-brand-terracotta focus:ring-brand-terracotta disabled:opacity-40 cursor-pointer"
+                  className="h-5 w-5 rounded-md border-brand-border text-brand-terracotta-deep focus:ring-brand-terracotta disabled:opacity-40 cursor-pointer"
                 />
+
+                </label>
 
                 {/* Avatar con Iniciales */}
                 <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-bold text-xs ${
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-bold text-sm ${
                     yaRegistrado
                       ? "bg-emerald-600 text-white"
                       : "bg-brand-sand text-brand-ink"
@@ -772,12 +784,12 @@ export function ConsumoScreen({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h4 className="truncate font-bold text-sm sm:text-base text-brand-ink">
+                  <h4 className="break-words font-bold text-sm sm:text-base text-brand-ink">
                     {f.nombre}
                   </h4>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {yaRegistrado ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
                         <span>✓ Ya comió</span>
                         {horaLegible && (
                           <span className="text-emerald-800/80 font-normal">
@@ -786,7 +798,7 @@ export function ConsumoScreen({
                         )}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700">
                         <span>⏳ Pendiente de servicio</span>
                       </span>
                     )}
@@ -802,9 +814,9 @@ export function ConsumoScreen({
                     onClick={() => handleMarcarIndividual(f)}
                     disabled={estaGuardando || (tipoRacion === "colacion" && !productoExtraId)}
                     title={`Marcar ${infoServicio.nombreCorto} para ${f.nombre}`}
-                    className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                    className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    <span>{infoServicio.icon}</span>
+                    <span aria-hidden="true">{infoServicio.icon}</span>
                     <span>{estaGuardando ? "Marcando…" : "Servir"}</span>
                   </button>
                 ) : (
@@ -816,7 +828,7 @@ export function ConsumoScreen({
                       setMotivoCorreccion("");
                     }}
                     title="Ver historial o corregir error"
-                    className="rounded-xl border border-emerald-300 bg-white px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-50 transition"
+                    className="rounded-xl border border-emerald-300 bg-white px-3 py-1.5 text-sm font-bold text-emerald-800 hover:bg-emerald-50 transition"
                   >
                     Detalle
                   </button>
@@ -831,8 +843,9 @@ export function ConsumoScreen({
                       setConsumoACorregir(null);
                       setMotivoCorreccion("");
                     }}
+                    aria-label={`Opciones de consumo de ${f.nombre}`}
                     title="Opciones adicionales (colación extra, correcciones)"
-                    className="rounded-xl border border-brand-border/60 bg-white p-2 text-brand-muted hover:bg-brand-sand hover:text-brand-ink transition"
+                    className="rounded-xl border border-brand-border/60 bg-white p-2 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink transition"
                   >
                     ⋯
                   </button>
@@ -843,7 +856,7 @@ export function ConsumoScreen({
         })}
 
         {!trabajadoresFiltrados.length && (
-          <div className="col-span-full rounded-3xl border border-dashed border-brand-border/70 bg-brand-card p-10 text-center text-xs text-brand-muted space-y-2">
+          <div className="col-span-full rounded-3xl border border-dashed border-brand-border/70 bg-brand-card p-10 text-center text-sm text-brand-ink/80 space-y-2">
             <div className="text-3xl">🔍</div>
             <p className="font-bold text-sm text-brand-ink">
               {busquedaTrabajador
@@ -867,10 +880,7 @@ export function ConsumoScreen({
 
       {/* Modal de Detalle Individual, Colación Extra y Corrección Inmutable */}
       {trabajadorSeleccionado && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm animate-in fade-in duration-150"
-          onClick={() => setTrabajadorSeleccionado(null)}
-        >
+        <Dialogo titulo="Consumos de la persona seleccionada" onCerrar={() => setTrabajadorSeleccionado(null)} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm animate-in fade-in duration-150">
           <div
             className="w-full max-w-lg rounded-3xl border border-brand-border/80 bg-brand-card p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
@@ -885,12 +895,12 @@ export function ConsumoScreen({
                   <h3 className="font-display text-lg font-bold text-brand-ink">
                     {trabajadorSeleccionado.nombre}
                   </h3>
-                  <p className="text-xs text-brand-muted">Historial y opciones de consumo</p>
+                  <p className="text-sm text-brand-ink/80">Historial y opciones de consumo</p>
                 </div>
               </div>
               <button
                 onClick={() => setTrabajadorSeleccionado(null)}
-                className="rounded-full p-1.5 text-brand-muted hover:bg-brand-sand hover:text-brand-ink"
+                aria-label="Cerrar diálogo" className="rounded-full p-1.5 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink"
               >
                 ✕
               </button>
@@ -900,28 +910,28 @@ export function ConsumoScreen({
             {consumoACorregir ? (
               <div className="rounded-2xl border border-amber-300 bg-amber-50/80 p-4 space-y-3">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
                     Corrección de Ración
                   </span>
                   <h4 className="font-display text-base font-bold text-brand-ink">
                     Corregir {SERVICIOS_INFO[consumoACorregir.tipo_consumo]?.label}
                   </h4>
-                  <p className="text-[11px] text-brand-muted mt-0.5">
-                    El registro original se mantiene por auditoría inmutable. La corrección anulará este cobro creando una transacción compensatoria.
+                  <p className="text-xs text-brand-ink/80 mt-0.5">
+                    El registro original se conserva. La corrección queda anotada aparte con su motivo; no borra lo registrado ni cambia la tarifa pactada del contrato.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-brand-ink mb-1">
-                    Motivo obligatorio de la corrección <span className="text-brand-terracotta">*</span>
+                  <label htmlFor="consumoscreen-motivocorreccion-1" className="block text-sm font-bold text-brand-ink mb-1">
+                    Motivo obligatorio de la corrección <span className="text-brand-terracotta-deep">*</span>
                   </label>
-                  <textarea
+                  <textarea id="consumoscreen-motivocorreccion-1"
                     rows={2}
                     required
                     placeholder="Ej: Turno extraordinario en faena / Marcado por error en mesón"
                     value={motivoCorreccion}
                     onChange={(e) => setMotivoCorreccion(e.target.value)}
-                    className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                    className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-sm text-brand-ink focus:border-brand-terracotta focus:outline-none"
                   />
                 </div>
 
@@ -932,7 +942,7 @@ export function ConsumoScreen({
                       setConsumoACorregir(null);
                       setMotivoCorreccion("");
                     }}
-                    className="rounded-xl border border-brand-border bg-white px-3.5 py-2 text-xs font-bold text-brand-muted hover:text-brand-ink"
+                    className="rounded-xl border border-brand-border bg-white px-3.5 py-2 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
                   >
                     Cancelar
                   </button>
@@ -940,7 +950,7 @@ export function ConsumoScreen({
                     type="button"
                     onClick={handleGuardarCorreccion}
                     disabled={!motivoCorreccion.trim() || guardandoAccion}
-                    className="rounded-xl bg-brand-terracotta px-4 py-2 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep disabled:opacity-50"
+                    className="rounded-xl bg-brand-terracotta-deep px-4 py-2 text-sm font-bold text-white shadow-brand hover:bg-brand-terracotta-deep disabled:opacity-50"
                   >
                     {guardandoAccion ? "Guardando…" : "Confirmar anulación/corrección"}
                   </button>
@@ -950,7 +960,7 @@ export function ConsumoScreen({
 
             {/* Listado de Consumos Recientes del Trabajador */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
                 Raciones registradas recientemente
               </h4>
 
@@ -959,17 +969,17 @@ export function ConsumoScreen({
                   {consumosTrabajador.map((c) => (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between rounded-xl border border-brand-border/60 bg-white p-3 shadow-xs"
+                      className="flex items-center justify-between rounded-xl border border-brand-border/60 bg-white p-3 shadow-sm"
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="text-xl">{SERVICIOS_INFO[c.tipo_consumo]?.icon}</span>
                         <div>
-                          <p className="text-xs font-bold text-brand-ink">
+                          <p className="text-sm font-bold text-brand-ink">
                             {c.producto_nombre
                               ? `${c.producto_nombre} (Colación)`
                               : SERVICIOS_INFO[c.tipo_consumo]?.label}
                           </p>
-                          <p className="text-[10px] text-brand-muted">
+                          <p className="text-xs text-brand-ink/80">
                             {new Date(c.fecha_hora).toLocaleTimeString("es-CL", {
                               hour: "2-digit",
                               minute: "2-digit"
@@ -986,7 +996,7 @@ export function ConsumoScreen({
                           setConsumoACorregir(c);
                           setMotivoCorreccion("");
                         }}
-                        className="rounded-lg border border-brand-border bg-brand-sand/30 px-2.5 py-1 text-[11px] font-bold text-brand-muted hover:border-brand-terracotta hover:text-brand-terracotta transition"
+                        className="rounded-lg border border-brand-border bg-brand-sand/30 px-2.5 py-1 text-xs font-bold text-brand-ink/80 hover:border-brand-terracotta hover:text-brand-terracotta-deep transition"
                       >
                         Corregir
                       </button>
@@ -994,7 +1004,7 @@ export function ConsumoScreen({
                   ))}
                 </div>
               ) : (
-                <p className="rounded-xl border border-brand-border/40 bg-brand-sand/20 p-3 text-center text-xs text-brand-muted">
+                <p className="rounded-xl border border-brand-border/40 bg-brand-sand/20 p-3 text-center text-sm text-brand-ink/80">
                   No hay consumos registrados para este trabajador hoy.
                 </p>
               )}
@@ -1002,13 +1012,13 @@ export function ConsumoScreen({
 
             {/* Sección para registrar Colación Individual Extra */}
             <div className="border-t border-brand-border/60 pt-3 space-y-2.5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-ink">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-brand-ink">
                 Entregar Colación de Terreno o Plato Especial
               </h4>
 
               {productosExtra.length > 0 ? (
                 <div className="space-y-2">
-                  <select
+                  <select aria-label="Colación o plato especial"
                     value={productoExtraId}
                     onChange={(e) => {
                       const id = e.target.value;
@@ -1016,7 +1026,7 @@ export function ConsumoScreen({
                       const prod = productosExtra.find((p) => p.id === id);
                       if (prod) setRecargoExtra(prod.precio_unitario);
                     }}
-                    className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-xs font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                    className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-sm font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
                   >
                     {productosExtra.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -1026,13 +1036,13 @@ export function ConsumoScreen({
                   </select>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-brand-muted">Monto adicional:</span>
-                    <input
+                    <span className="text-sm font-semibold text-brand-ink/80">Monto adicional:</span>
+                    <input aria-label="Monto adicional de la colación"
                       type="number"
                       step="100"
                       value={recargoExtra}
                       onChange={(e) => setRecargoExtra(Number(e.target.value) || 0)}
-                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
                     />
                   </div>
 
@@ -1040,13 +1050,13 @@ export function ConsumoScreen({
                     type="button"
                     onClick={handleGuardarColacionIndividual}
                     disabled={guardandoAccion || !productoExtraId}
-                    className="w-full rounded-xl bg-brand-terracotta py-2.5 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition disabled:opacity-50"
+                    className="w-full rounded-xl bg-brand-terracotta-deep py-2.5 text-sm font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition disabled:opacity-50"
                   >
                     {guardandoAccion ? "Guardando…" : "Registrar colación para este trabajador"}
                   </button>
                 </div>
               ) : (
-                <p className="text-xs text-brand-muted">
+                <p className="text-sm text-brand-ink/80">
                   No hay productos cargados en el catálogo de colaciones.
                 </p>
               )}
@@ -1056,13 +1066,13 @@ export function ConsumoScreen({
               <button
                 type="button"
                 onClick={() => setTrabajadorSeleccionado(null)}
-                className="rounded-xl border border-brand-border bg-brand-sand/40 px-4 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand"
+                className="rounded-xl border border-brand-border bg-brand-sand/40 px-4 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand"
               >
                 Cerrar
               </button>
             </div>
           </div>
-        </div>
+        </Dialogo>
       )}
 
       {/* Modal de Catálogo de Extras */}

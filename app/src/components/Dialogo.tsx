@@ -25,6 +25,9 @@ export function Dialogo({ titulo, onCerrar, className, children }: {
     document.body.style.overflow = "hidden";
 
     function manejarTecla(evento: KeyboardEvent) {
+      // El foco puede volver al body al retirar un subformulario. Solo responde el diálogo superior.
+      const dialogos = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      if (dialogos[dialogos.length - 1] !== elemento) return;
       if (evento.key === "Escape") {
         evento.preventDefault();
         cerrarActual.current();
@@ -36,6 +39,9 @@ export function Dialogo({ titulo, onCerrar, className, children }: {
       if (!primero) {
         evento.preventDefault();
         elemento?.focus();
+      } else if (!elemento?.contains(document.activeElement)) {
+        evento.preventDefault();
+        (evento.shiftKey ? ultimo : primero).focus();
       } else if (evento.shiftKey && (document.activeElement === primero || document.activeElement === elemento)) {
         evento.preventDefault();
         ultimo.focus();
@@ -44,9 +50,9 @@ export function Dialogo({ titulo, onCerrar, className, children }: {
         primero.focus();
       }
     }
-    elemento.addEventListener("keydown", manejarTecla);
+    document.addEventListener("keydown", manejarTecla, true);
     return () => {
-      elemento.removeEventListener("keydown", manejarTecla);
+      document.removeEventListener("keydown", manejarTecla, true);
       document.body.style.overflow = desbordamientoAnterior;
       if (origen?.isConnected) origen.focus();
     };
@@ -55,7 +61,8 @@ export function Dialogo({ titulo, onCerrar, className, children }: {
   return (
     <div ref={marco} role="dialog" aria-modal="true" aria-label={titulo} tabIndex={-1}
       className={className}
-      onClick={(evento) => { if (evento.target === evento.currentTarget) onCerrar(); }}>
+      onKeyDown={(evento) => evento.stopPropagation()}
+      onClick={(evento) => { evento.stopPropagation(); if (evento.target === evento.currentTarget) onCerrar(); }}>
       {children}
     </div>
   );

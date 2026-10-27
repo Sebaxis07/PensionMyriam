@@ -26,7 +26,7 @@ h1, h2, h3, h4 {
     @apply leading-relaxed;
     overflow-wrap: break-word;
   }
-  .ui-operativa :where(button, input, select, textarea) {
+  .ui-operativa :where(button, input:not([type="checkbox"]), select, textarea) {
     min-height: 44px;
   }
   .ui-operativa :where(input, select, textarea) {
@@ -64,4 +64,15 @@ h1, h2, h3, h4 {
       transition: none !important;
     }
   }
+}
+
+@layer components {
+  .ui-operativa input[type="checkbox"] { width: 24px; height: 24px; flex-shrink: 0; }
+  .ui-operativa :where([role="button"], summary):focus-visible {
+    outline: 2px solid theme('colors.brand.terracotta-deep'); outline-offset: 3px;
+  }
+  .ui-operativa summary { min-height: 44px; display: flex; align-items: center; }
+  .ui-operativa :where([role="button"]) { min-width: 0; }
+  .ui-operativa :where(table) { font-size: .875rem; }
+  .ui-operativa .ui-tabla { max-width: 100%; overflow-x: auto; }
 }

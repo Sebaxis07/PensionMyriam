@@ -1,3 +1,5 @@
+import { describirErrorUi } from "../../components/MensajeInterfaz";
+import { Dialogo } from "../../components/Dialogo";
 import { useState, FormEvent } from "react";
 import { CategoriaCompra } from "../../features/costos/types";
 import { registrarCompraInsumo } from "../../features/costos/registrarCompraInsumo";
@@ -151,27 +153,27 @@ export function RegistrarCompraModal({
       : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+    <Dialogo titulo="Registrar compra" onCerrar={onCerrar} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm animate-fadeIn overflow-y-auto">
       <div className="relative w-full max-w-lg rounded-3xl border border-brand-border/80 bg-brand-card p-6 shadow-2xl my-6">
         {/* Cabecera amigable */}
         <div className="flex items-start justify-between gap-3 border-b border-brand-border/60 pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-900 border border-amber-300 shadow-sm">
               <IconShoppingCart className="h-6 w-6 text-amber-900" />
             </div>
             <div>
               <h3 className="font-display text-xl font-black text-brand-ink leading-tight">
-                Anotar Compra de Mercadería
+                Registrar compra
               </h3>
-              <p className="text-xs text-brand-muted">
-                Registra los insumos comprados para actualizar los costos y la ganancia.
+              <p className="text-sm text-brand-ink/80">
+                Anota el producto, la cantidad y el total pagado.
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onCerrar}
-            className="rounded-xl p-2 text-brand-muted hover:bg-brand-sand-light hover:text-brand-ink"
+            aria-label="Cerrar diálogo" className="rounded-xl p-2 text-brand-ink/80 hover:bg-brand-sand-deep hover:text-brand-ink"
           >
             <IconClose className="h-5 w-5" />
           </button>
@@ -180,7 +182,7 @@ export function RegistrarCompraModal({
         <form onSubmit={handleSubmit} className="mt-5 space-y-5">
           {/* 1. Categoría de Compra con Botones Grandes */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-2">
+            <label className="block text-sm font-bold uppercase tracking-wider text-brand-ink/80 mb-2">
               1. Tipo de Mercadería
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -193,14 +195,14 @@ export function RegistrarCompraModal({
                     onClick={() => handleSeleccionarCategoria(c.id)}
                     className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all ${
                       seleccionada
-                        ? "border-brand-terracotta bg-brand-sand-light font-black text-brand-terracotta shadow-xs ring-2 ring-brand-terracotta/20"
-                        : "border-brand-border/70 bg-white text-brand-ink hover:bg-brand-sand-light/50"
+                        ? "border-brand-terracotta bg-brand-sand-deep font-black text-brand-terracotta-deep shadow-sm ring-2 ring-brand-terracotta/20"
+                        : "border-brand-border/70 bg-white text-brand-ink hover:bg-brand-sand-deep/50"
                     }`}
                   >
                     <div className="mb-1 flex items-center justify-center">
-                      {c.renderIcon(`h-6 w-6 ${seleccionada ? "text-brand-terracotta" : "text-brand-ink"}`)}
+                      {c.renderIcon(`h-6 w-6 ${seleccionada ? "text-brand-terracotta-deep" : "text-brand-ink"}`)}
                     </div>
-                    <span className="text-xs">{c.label}</span>
+                    <span className="text-sm">{c.label}</span>
                   </button>
                 );
               })}
@@ -209,16 +211,16 @@ export function RegistrarCompraModal({
 
           {/* 2. Nombre del Insumo / Producto */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1.5">
+            <label htmlFor="registrarcompramodal-nombreinsumo-1" className="block text-sm font-bold uppercase tracking-wider text-brand-ink/80 mb-1.5">
               2. ¿Qué producto compraste?
             </label>
-            <input
+            <input id="registrarcompramodal-nombreinsumo-1"
               type="text"
               list="insumos-sugeridos"
               value={nombreInsumo}
               onChange={(e) => setNombreInsumo(e.target.value)}
               placeholder="Ej. Pollo entero, Papas, Gas 45kg..."
-              className="w-full rounded-2xl border border-brand-border bg-white px-4 py-3 text-sm font-semibold text-brand-ink focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta shadow-xs"
+              className="w-full rounded-2xl border border-brand-border bg-white px-4 py-3 text-sm font-semibold text-brand-ink focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta shadow-sm"
               required
             />
             <datalist id="insumos-sugeridos">
@@ -234,7 +236,7 @@ export function RegistrarCompraModal({
                   key={ej}
                   type="button"
                   onClick={() => handleSeleccionarEjemplo(ej)}
-                  className="rounded-lg bg-brand-sand-light px-2.5 py-1 text-[11px] font-semibold text-brand-ink hover:bg-brand-sand border border-brand-border/50"
+                  className="rounded-lg bg-brand-sand-deep px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-brand-sand border border-brand-border/50"
                 >
                   + {ej}
                 </button>
@@ -245,47 +247,47 @@ export function RegistrarCompraModal({
           {/* 3. Monto y Cantidad */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1.5">
+              <label htmlFor="registrarcompramodal-montototal-1" className="block text-sm font-bold uppercase tracking-wider text-brand-ink/80 mb-1.5">
                 3. Total Pagado ($ CLP)
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-brand-muted text-sm">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-brand-ink/80 text-sm">
                   $
                 </span>
-                <input
+                <input id="registrarcompramodal-montototal-1"
                   type="number"
                   min="0"
                   step="100"
                   value={montoTotal}
                   onChange={(e) => setMontoTotal(e.target.value ? Number(e.target.value) : "")}
                   placeholder="Ej. 45000"
-                  className="w-full rounded-2xl border border-brand-border bg-white pl-8 pr-4 py-3 text-sm font-black text-brand-ink focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta shadow-xs"
+                  className="w-full rounded-2xl border border-brand-border bg-white pl-8 pr-4 py-3 text-sm font-black text-brand-ink focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta shadow-sm"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1.5">
+              <label htmlFor="registrarcompramodal-cantidad-1" className="block text-sm font-bold uppercase tracking-wider text-brand-ink/80 mb-1.5">
                 4. Cantidad Comprada
               </label>
               <div className="flex gap-2">
-                <input
+                <input id="registrarcompramodal-cantidad-1"
                   type="number"
                   min="0.1"
                   step="any"
                   value={cantidad}
                   onChange={(e) => setCantidad(e.target.value ? Number(e.target.value) : "")}
                   placeholder="Ej. 10"
-                  className="w-full rounded-2xl border border-brand-border bg-white px-4 py-3 text-sm font-black text-brand-ink focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta shadow-xs"
+                  className="w-full rounded-2xl border border-brand-border bg-white px-4 py-3 text-sm font-black text-brand-ink focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta shadow-sm"
                   required
                 />
-                <input
+                <input aria-label="Unidad de medida"
                   type="text"
                   value={unidadMedida}
                   onChange={(e) => setUnidadMedida(e.target.value)}
                   placeholder="kg, unid"
-                  className="w-24 shrink-0 rounded-2xl border border-brand-border bg-brand-sand-light/60 px-3 py-3 text-xs font-bold text-brand-ink text-center"
+                  className="w-24 shrink-0 rounded-2xl border border-brand-border bg-brand-sand-deep/60 px-3 py-3 text-sm font-bold text-brand-ink text-center"
                 />
               </div>
             </div>
@@ -293,9 +295,9 @@ export function RegistrarCompraModal({
 
           {/* Resumen del costo por unidad calculado en vivo */}
           {costoUnitarioCalculado !== null && (
-            <div className="rounded-2xl bg-brand-sand-light/60 border border-brand-border/60 p-3 text-center text-xs">
-              <span className="text-brand-muted">Costo calculado por {unidadMedida}: </span>
-              <span className="font-display font-black text-brand-terracotta text-sm">
+            <div className="rounded-2xl bg-brand-sand-deep/60 border border-brand-border/60 p-3 text-center text-sm">
+              <span className="text-brand-ink/80">Costo calculado por {unidadMedida}: </span>
+              <span className="font-display font-black text-brand-terracotta-deep text-sm">
                 ${costoUnitarioCalculado.toLocaleString("es-CL")}
               </span>
             </div>
@@ -303,40 +305,40 @@ export function RegistrarCompraModal({
 
           {/* 4. Rendimiento Estimado Guiado */}
           <div className="rounded-2xl border border-brand-border/60 bg-white p-3.5 space-y-1.5">
-            <label className="block text-xs font-bold text-brand-ink">
+            <label htmlFor="registrarcompramodal-rendimiento-1" className="block text-sm font-bold text-brand-ink">
               💡 ¿Para cuántos platos o días calcula que rinde? (Opcional)
             </label>
-            <p className="text-[11px] text-brand-muted">
+            <p className="text-xs text-brand-ink/80">
               Por ejemplo: si estos 10 kg de pollo rinden para 40 almuerzos, anota 40.
             </p>
             <div className="flex items-center gap-2 pt-1">
-              <input
+              <input id="registrarcompramodal-rendimiento-1"
                 type="number"
                 min="1"
                 value={rendimiento}
                 onChange={(e) => setRendimiento(e.target.value ? Number(e.target.value) : "")}
                 placeholder="Ej. 40 raciones"
-                className="w-full rounded-xl border border-brand-border bg-brand-sand-light/30 px-3 py-2 text-xs font-bold text-brand-ink"
+                className="w-full rounded-xl border border-brand-border bg-brand-sand-deep/30 px-3 py-2 text-sm font-bold text-brand-ink"
               />
             </div>
           </div>
 
           {/* Fecha de la compra */}
           <div>
-            <label className="block text-xs font-bold text-brand-muted mb-1">
+            <label htmlFor="registrarcompramodal-fecha-1" className="block text-sm font-bold text-brand-ink/80 mb-1">
               Fecha de la compra
             </label>
-            <input
+            <input id="registrarcompramodal-fecha-1"
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
-              className="rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink shadow-xs"
+              className="rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-ink shadow-sm"
             />
           </div>
 
           {error && (
-            <div className="rounded-2xl border border-red-300 bg-red-50 p-3.5 text-xs font-bold text-red-700">
-              ⚠️ {error}
+            <div role="alert" className="rounded-2xl border border-red-300 bg-red-50 p-3.5 text-sm font-bold text-red-700">
+              ⚠️ {describirErrorUi(error)}
             </div>
           )}
 
@@ -345,14 +347,14 @@ export function RegistrarCompraModal({
             <button
               type="button"
               onClick={onCerrar}
-              className="rounded-2xl border border-brand-border bg-white px-4 py-3 text-xs font-bold text-brand-ink hover:bg-brand-sand-light transition"
+              className="rounded-2xl border border-brand-border bg-white px-4 py-3 text-sm font-bold text-brand-ink hover:bg-brand-sand-deep transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={guardando}
-              className="min-h-[48px] flex-1 flex items-center justify-center gap-2 rounded-2xl bg-brand-terracotta hover:bg-brand-terracotta-deep px-5 py-3 text-xs font-bold text-white shadow-brand transition active:scale-95 disabled:opacity-50"
+              className="min-h-[48px] flex-1 flex items-center justify-center gap-2 rounded-2xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep px-5 py-3 text-sm font-bold text-white shadow-brand transition active:scale-95 disabled:opacity-50"
             >
               <IconCheck className="h-4 w-4" />
               <span>{guardando ? "Guardando compra…" : "Guardar Compra de Mercadería"}</span>
@@ -360,6 +362,6 @@ export function RegistrarCompraModal({
           </div>
         </form>
       </div>
-    </div>
+    </Dialogo>
   );
 }
