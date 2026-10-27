@@ -1,5 +1,6 @@
 import pdfMake, { formatearMonedaCLP } from "../../lib/pdf/pdfMakeConfig";
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
+import { obtenerConfigPension } from "../perfil/useConfigPension";
 
 export interface DatosVoucherTurista {
   reservaId: string;
@@ -12,7 +13,15 @@ export interface DatosVoucherTurista {
 }
 
 export function construirDocDefinicionVoucher(datos: DatosVoucherTurista): TDocumentDefinitions {
-  const tarifaPorNoche = datos.tarifaNoche ?? 15000;
+  // HU-39: "Dado que modifico la CuentaRUT, el teléfono o la tarifa
+  // base, cuando guardo, entonces los próximos comprobantes PDF
+  // reflejan la nueva información". Hasta el Sprint 5 este documento
+  // traía el banco, el titular, el RUT y el correo escritos a mano en el
+  // código, así que editar la configuración no cambiaba nada de lo que
+  // la huésped recibía impreso: el único criterio de HU-39 no se
+  // cumplía. Ahora todo sale de la configuración replicada.
+  const config = obtenerConfigPension();
+  const tarifaPorNoche = datos.tarifaNoche ?? config.tarifaBaseNoche;
   const noches = Math.max(1, datos.nochesEstimadas ?? 1);
   const total = noches * tarifaPorNoche;
 
@@ -25,7 +34,7 @@ export function construirDocDefinicionVoucher(datos: DatosVoucherTurista): TDocu
         columns: [
           {
             stack: [
-              { text: "PENSIÓN SEÑORA MIRIAM", style: "headerMarca" },
+              { text: config.nombrePension.toUpperCase(), style: "headerMarca" },
               { text: "Hospedaje Familiar y Alimentación", style: "subMarca" },
               { text: "Caleta Paposo, Región de Antofagasta · Chile", style: "metaMarca" }
             ]
@@ -49,7 +58,7 @@ export function construirDocDefinicionVoucher(datos: DatosVoucherTurista): TDocu
         style: "saludo"
       },
       {
-        text: "Confirmamos la reserva de su estadía en Pensión Señora Miriam con los siguientes detalles:",
+        text: `Confirmamos la reserva de su estadía en ${config.nombrePension} con los siguientes detalles:`,
         style: "parrafo"
       },
 
@@ -88,11 +97,11 @@ export function construirDocDefinicionVoucher(datos: DatosVoucherTurista): TDocu
                   { text: "Datos para Transferencia Electrónica (Opcional)", style: "tituloBanco" },
                   {
                     text: [
-                      { text: "Banco: ", bold: true }, "BancoEstado\n",
-                      { text: "Tipo de Cuenta: ", bold: true }, "CuentaRUT\n",
-                      { text: "Titular: ", bold: true }, "María (Pensión Señora Miriam)\n",
-                      { text: "RUT: ", bold: true }, "12.345.678-9\n",
-                      { text: "Correo de comprobante: ", bold: true }, "contacto@pension-myriam.local"
+                      { text: "Banco: ", bold: true }, `${config.bancoNombre}\n`,
+                      { text: "Tipo de Cuenta: ", bold: true }, `${config.tipoCuenta}\n`,
+                      { text: "Titular: ", bold: true }, `${config.titularNombre}\n`,
+                      { text: "RUT: ", bold: true }, `${config.rutTitular}\n`,
+                      { text: "Correo de comprobante: ", bold: true }, config.correoContacto
                     ],
                     style: "textoBanco"
                   },
@@ -125,7 +134,11 @@ export function construirDocDefinicionVoucher(datos: DatosVoucherTurista): TDocu
                     style: "tituloPrivacidad"
                   },
                   {
-                    text: "Sus datos personales son tratados con estricta confidencialidad por Pensión Señora Miriam exclusivamente para la gestión operativa de su reserva y obligaciones tributarias de hospedaje. Se conservan durante el plazo legal aplicable. Para ejercer sus derechos de acceso, rectificación, supresión o portabilidad (plazo legal de respuesta: 30 días corridos), contáctenos en Caleta Paposo o al correo oficial de la pensión.",
+                    // HU-32: la cláusula debe informar finalidad, plazo
+                    // de conservación y CÓMO ejercer los derechos ARCO.
+                    // El canal sale de la configuración (HU-39), no de un
+                    // correo escrito en el código que nadie revisa.
+                    text: `Sus datos personales son tratados con estricta confidencialidad por ${config.nombrePension} exclusivamente para la gestión operativa de su reserva y las obligaciones tributarias del hospedaje. Se conservan durante el plazo legal aplicable y luego se eliminan o anonimizan. Para ejercer sus derechos de acceso, rectificación, supresión o portabilidad (plazo legal de respuesta: 30 días corridos), escriba a ${config.correoContacto} o llame al ${config.whatsappContacto}.`,
                     style: "textoPrivacidad"
                   }
                 ]

@@ -16,8 +16,15 @@ import {
   IconClipboardCheck,
   IconUsers
 } from "../../components/Icons";
-import { useConfigPension } from "./useConfigPension";
+import { useConfigPension, type ConfigPension } from "./useConfigPension";
 import { GestionCuentasTab } from "../usuarios/GestionCuentasTab";
+import { LARGO_MINIMO_PASSWORD } from "../usuarios/useGestionUsuarios";
+import {
+  solicitarSupresionDatos,
+  registrarExportacionFichaTitular,
+  estaAnonimizado,
+  type TipoTitular
+} from "../privacidad/supresionDatos";
 import { supabase } from "../../lib/supabase";
 import { powersync } from "../../lib/powersync";
 
@@ -52,8 +59,9 @@ export function PerfilConfigModal({
   const { config, actualizarConfig, restaurarDefectos } = useConfigPension();
 
   // Estados locales para edición de pensión
-  const [formPension, setFormPension] = useState(config);
+  const [formPension, setFormPension] = useState<ConfigPension>(config);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+  const [errorPension, setErrorPension] = useState<string | null>(null);
 
   // Estados locales para cambio de clave
   const [nuevaPassword, setNuevaPassword] = useState("");
@@ -70,15 +78,31 @@ export function PerfilConfigModal({
   const [buscandoTitular, setBuscandoTitular] = useState(false);
   const [mensajePrivacidad, setMensajePrivacidad] = useState<{ tipo: "exito" | "error"; texto: string } | null>(null);
   const [titularAAnonimizar, setTitularAAnonimizar] = useState<TitularResultado | null>(null);
+  // HU-34: la constancia en la bitácora debe llevar motivo. Antes no se
+  // pedía en ninguna parte.
+  const [motivoSupresion, setMotivoSupresion] = useState("");
+  const [suprimiendo, setSuprimiendo] = useState(false);
 
   const esAdmin = usuario.rol === "administradora";
   const estaOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
 
-  const handleGuardarPension = (e: React.FormEvent) => {
+  // La configuración ahora se valida (Zod, con los mismos límites que los
+  // CHECK de la tabla) y se escribe en la réplica local, que PowerSync
+  // sube cuando haya señal. Por eso puede fallar y hay que decirlo: antes
+  // era un setItem en localStorage que no podía rechazar nada.
+  const handleGuardarPension = async (e: React.FormEvent) => {
     e.preventDefault();
-    actualizarConfig(formPension);
-    setGuardadoExitoso(true);
-    setTimeout(() => setGuardadoExitoso(false), 3000);
+    setErrorPension(null);
+    try {
+      await actualizarConfig(formPension);
+      setGuardadoExitoso(true);
+      setTimeout(() => setGuardadoExitoso(false), 3000);
+    } catch (err: any) {
+      // Zod devuelve el primer mensaje en lenguaje cercano; si viene otra
+      // cosa, se muestra tal cual antes que un "error" sin explicación.
+      const primerMensaje = err?.errors?.[0]?.message ?? err?.message;
+      setErrorPension(primerMensaje || "No se pudieron guardar los datos.");
+    }
   };
 
   const handleCambiarPassword = async (e: React.FormEvent) => {
@@ -93,10 +117,10 @@ export function PerfilConfigModal({
       return;
     }
 
-    if (nuevaPassword.length < 6) {
+    if (nuevaPassword.length < LARGO_MINIMO_PASSWORD) {
       setMensajePassword({
         tipo: "error",
-        texto: "La nueva contraseña debe tener al menos 6 caracteres."
+        texto: `La nueva contraseña debe tener al menos ${LARGO_MINIMO_PASSWORD} caracteres.`
       });
       return;
     }
@@ -226,9 +250,20 @@ export function PerfilConfigModal({
       a.click();
       URL.revokeObjectURL(url);
 
+      // Entregar una copia de los datos de una persona es una SALIDA de
+      // datos personales del sistema: queda en la bitácora igual que la
+      // supresión. Si no hay señal no se puede registrar, y eso se dice
+      // en el mensaje en vez de dar por hecho que quedó asentado.
+      const registrada = await registrarExportacionFichaTitular({
+        tipo_titular: t.tipo as TipoTitular,
+        titular_id: t.id
+      });
+
       setMensajePrivacidad({
         tipo: "exito",
-        texto: `Ficha de datos exportada para ${t.nombre}. Se entregó respaldo conforme al derecho de portabilidad.`
+        texto: registrada
+          ? `Ficha de datos entregada para ${t.nombre}. Quedó registrada en la bitácora conforme al derecho de acceso y portabilidad.`
+          : `Ficha de datos entregada para ${t.nombre}. Sin señal no se pudo registrar en la bitácora: vuelve a generarla con conexión para dejar constancia.`
       });
     } catch (err: any) {
       setMensajePrivacidad({
@@ -238,38 +273,45 @@ export function PerfilConfigModal({
     }
   };
 
-  // Anonimizar titular manualmente (Derecho de Supresión / Cancelación)
+  // Anonimizar titular (Derecho de Supresión, HU-34).
+  //
+  // Antes esto era `powersync.execute("update trabajador set …")`: una
+  // escritura local que no dejaba constancia en la bitácora, no pedía
+  // motivo y no bloqueaba a nadie (el único freno era que la pestaña
+  // estuviera oculta). Ahora va por el RPC del servidor, que autoriza
+  // por rol y escribe la bitácora en la misma transacción — ver
+  // features/privacidad/supresionDatos.ts y
+  // db/migrations/0019_supresion_arco.sql.
   const handleConfirmarAnonimizacion = async () => {
     if (!titularAAnonimizar) return;
     const t = titularAAnonimizar;
 
+    setSuprimiendo(true);
+    setMensajePrivacidad(null);
     try {
-      const ahora = new Date().toISOString();
-      if (t.tipo === "trabajador") {
-        await powersync.execute(
-          "update trabajador set nombre = 'TRABAJADOR ANONIMIZADO (SOLICITUD TITULAR)', rut = null, anonimizado_at = ? where id = ?",
-          [ahora, t.id]
-        );
-      } else {
-        await powersync.execute(
-          "update reserva set huesped_nombre = 'TURISTA ANONIMIZADO (SOLICITUD TITULAR)' where id = ?",
-          [t.id]
-        );
-      }
-
-      setTitularAAnonimizar(null);
-      setMensajePrivacidad({
-        tipo: "exito",
-        texto: `Se anonimizó exitosamente a "${t.nombre}". Los movimientos del libro contable (Ledger) permanecen 100% íntegros y cuadrados sin datos personales identificables.`
+      const resultado = await solicitarSupresionDatos({
+        tipoTitular: t.tipo as TipoTitular,
+        titularId: t.id,
+        motivo: motivoSupresion
       });
 
-      // Refrescar resultados
-      handleBuscarTitulares();
+      setTitularAAnonimizar(null);
+      setMotivoSupresion("");
+      setMensajePrivacidad({
+        tipo: "exito",
+        texto: resultado.ya_estaba_anonimizado
+          ? `Los datos de "${t.nombre}" ya estaban eliminados. Se registró igualmente la solicitud en la bitácora.`
+          : `Se eliminaron los datos personales de "${t.nombre}" y quedó constancia en la bitácora. Los movimientos del libro contable permanecen íntegros y cuadrados, sin datos identificables.`
+      });
+
+      await handleBuscarTitulares();
     } catch (err: any) {
       setMensajePrivacidad({
         tipo: "error",
-        texto: "Error al anonimizar titular: " + (err.message || String(err))
+        texto: err?.message || "No se pudo completar la eliminación de datos."
       });
+    } finally {
+      setSuprimiendo(false);
     }
   };
 
@@ -457,7 +499,7 @@ export function PerfilConfigModal({
                     </label>
                     <input
                       type="password"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder={`Mínimo ${LARGO_MINIMO_PASSWORD} caracteres`}
                       value={nuevaPassword}
                       onChange={(e) => setNuevaPassword(e.target.value)}
                       className="w-full rounded-xl border border-brand-border bg-brand-sand-light/30 px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
@@ -552,8 +594,8 @@ export function PerfilConfigModal({
                   </label>
                   <input
                     type="email"
-                    value={formPension.correoConfirmacion}
-                    onChange={(e) => setFormPension({ ...formPension, correoConfirmacion: e.target.value })}
+                    value={formPension.correoContacto}
+                    onChange={(e) => setFormPension({ ...formPension, correoContacto: e.target.value })}
                     className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
                     placeholder="pension.paposo@gmail.com"
                   />
@@ -629,11 +671,59 @@ export function PerfilConfigModal({
                 </div>
               </div>
 
+              {/* HU-33: el plazo de gracia antes de anonimizar la nómina
+                  ya facturada. El criterio oficial lo marca como
+                  "propuesto: 7 días, POR VALIDAR con la Administradora",
+                  así que es un parámetro y no una constante del código.
+                  Lo aplica el job de pg_cron en el servidor. Ubicación y
+                  diseño definitivos de este bloque: Codex. */}
+              <div className="rounded-2xl border border-brand-border/70 bg-white p-4 space-y-3">
+                <div className="flex items-center gap-2 border-b border-brand-border/40 pb-2">
+                  <IconClipboardCheck className="h-4 w-4 text-brand-terracotta" />
+                  <h3 className="font-display text-sm font-bold text-brand-ink">
+                    Borrado de nóminas (Ley 21.719)
+                  </h3>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-brand-ink block mb-1">
+                    Días de espera después de cerrar la facturación del mes
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={formPension.diasGraciaAnonimizacion}
+                    onChange={(e) =>
+                      setFormPension({
+                        ...formPension,
+                        diasGraciaAnonimizacion: Number(e.target.value)
+                      })
+                    }
+                    className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                  />
+                  <p className="mt-1 text-[10px] text-brand-muted leading-relaxed">
+                    Pasados estos días desde que cierras la facturación de una empresa, el
+                    sistema reemplaza solo los nombres y RUT de su nómina. Las raciones, las
+                    fechas y los montos quedan intactos.
+                  </p>
+                </div>
+              </div>
+
+              {errorPension && (
+                <div className="rounded-2xl border border-rose-300 bg-rose-50 p-3 flex items-start gap-2">
+                  <IconAlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span className="text-xs font-medium text-rose-900 leading-relaxed">
+                    {errorPension}
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    restaurarDefectos();
+                  onClick={async () => {
+                    setErrorPension(null);
+                    await restaurarDefectos();
                     setFormPension(config);
                   }}
                   className="text-xs font-bold text-brand-muted hover:text-brand-ink transition"
@@ -734,7 +824,13 @@ export function PerfilConfigModal({
 
                     <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                       {resultadosTitulares.map((titular) => {
-                        const yaAnonimizado = titular.nombre.includes("ANONIMIZADO") || !!titular.anonimizado_at;
+                        // La marca exacta la define features/privacidad/
+                        // supresionDatos.ts, para que pantalla y servidor
+                        // no discrepen sobre qué cuenta como anonimizado.
+                        const yaAnonimizado =
+                          estaAnonimizado(titular.tipo as TipoTitular, titular.nombre) ||
+                          titular.nombre.includes("ANONIMIZADO") ||
+                          !!titular.anonimizado_at;
 
                         return (
                           <div
@@ -802,10 +898,34 @@ export function PerfilConfigModal({
                     El nombre se reemplazará por <em>"TRABAJADOR ANONIMIZADO"</em> y se eliminará el RUT.
                     <strong> Los consumos y raciones registradas se conservarán 100% intactas</strong> para respaldar la facturación y la trazabilidad fiscal del negocio.
                   </p>
+                  {/* HU-34: "se deja constancia en la bitácora con motivo
+                      y fecha". El motivo es obligatorio y lo valida
+                      también el servidor; sin él no se puede confirmar.
+                      El diseño definitivo de este campo y del diálogo
+                      queda para Codex (docs/sprint-5-handoff-codex.md). */}
+                  <div>
+                    <label className="text-[11px] font-bold text-rose-900 block mb-1">
+                      ¿Por qué se eliminan estos datos?
+                    </label>
+                    <input
+                      type="text"
+                      value={motivoSupresion}
+                      onChange={(e) => setMotivoSupresion(e.target.value)}
+                      maxLength={500}
+                      className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs text-brand-ink focus:border-rose-500 focus:outline-none"
+                      placeholder="Ej: la persona pidió por escrito que borremos sus datos"
+                    />
+                    <p className="mt-1 text-[10px] text-rose-700">
+                      Queda guardado junto a la fecha como respaldo de la solicitud.
+                    </p>
+                  </div>
                   <div className="flex items-center justify-end gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => setTitularAAnonimizar(null)}
+                      onClick={() => {
+                        setTitularAAnonimizar(null);
+                        setMotivoSupresion("");
+                      }}
                       className="rounded-xl border border-rose-200 bg-white px-3 py-1.5 text-xs font-bold text-brand-ink hover:bg-rose-100/50 transition"
                     >
                       Cancelar
@@ -813,9 +933,10 @@ export function PerfilConfigModal({
                     <button
                       type="button"
                       onClick={handleConfirmarAnonimizacion}
-                      className="rounded-xl bg-rose-700 px-4 py-1.5 text-xs font-black text-white hover:bg-rose-800 transition shadow-xs"
+                      disabled={suprimiendo || motivoSupresion.trim().length < 5}
+                      className="rounded-xl bg-rose-700 px-4 py-1.5 text-xs font-black text-white hover:bg-rose-800 transition shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Sí, Anonimizar Definitivamente
+                      {suprimiendo ? "Eliminando…" : "Sí, Anonimizar Definitivamente"}
                     </button>
                   </div>
                 </div>

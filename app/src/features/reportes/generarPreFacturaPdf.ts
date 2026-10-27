@@ -1,5 +1,6 @@
 import pdfMake, { formatearMonedaCLP } from "../../lib/pdf/pdfMakeConfig";
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
+import { obtenerConfigPension } from "../perfil/useConfigPension";
 import type { EstadoCierreMensual } from "../cierre/useCierreMensual";
 
 export interface DatosPreFactura {
@@ -28,6 +29,8 @@ const ETIQUETAS_MOTIVO: Record<string, string> = {
 
 export function construirDocDefinicionPreFactura(datos: DatosPreFactura): TDocumentDefinitions {
   const { cierre } = datos;
+
+  const config = obtenerConfigPension();
 
   // Filas de trabajadores
   const filasTrabajadores = cierre.trabajadoresDetalle.map((t) => [
@@ -269,10 +272,40 @@ export function construirDocDefinicionPreFactura(datos: DatosPreFactura): TDocum
             alignment: "center"
           }
         ]
+      },
+
+      // HU-32: cláusula informativa al pie. Este documento sale de la
+      // pensión con MÁS datos personales que el voucher de turista
+      // (nombre de cada trabajador de la nómina y de los supervisores
+      // que autorizaron los descuadres), así que la transparencia sobre
+      // finalidad, plazo de conservación y canal ARCO corresponde acá
+      // con más razón que en el comprobante de una noche.
+      {
+        margin: [0, 14, 0, 0],
+        table: {
+          widths: ["*"],
+          body: [
+            [
+              {
+                fillColor: "#F3F4F6",
+                stack: [
+                  { text: "PROTECCIÓN DE DATOS PERSONALES (LEY N° 21.719)", style: "tituloPrivacidad" },
+                  {
+                    text: `Los nombres y RUT de la nómina se tratan únicamente para conciliar y facturar los servicios de este período. Una vez cerrada la facturación se anonimizan de forma automática transcurrido el plazo de gracia vigente (${config.diasGraciaAnonimizacion} días), conservando solo las cantidades y montos del libro contable. Para ejercer derechos de acceso, rectificación, supresión o portabilidad (respuesta en 30 días corridos): ${config.correoContacto}.`,
+                    style: "textoPrivacidad"
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        layout: "noBorders"
       }
     ],
     styles: {
       headerMarca: { fontSize: 13, bold: true, color: "#92400E" },
+      tituloPrivacidad: { fontSize: 7.5, bold: true, color: "#4B5563", margin: [0, 0, 0, 2] },
+      textoPrivacidad: { fontSize: 7, color: "#6B7280", lineHeight: 1.3 },
       subMarca: { fontSize: 9, color: "#78350F" },
       metaMarca: { fontSize: 7.5, color: "#6B7280" },
       tituloDoc: { fontSize: 13, bold: true, color: "#1F2937" },

@@ -12,10 +12,13 @@ export interface DatosMensajeWhatsApp {
 }
 
 export function armarMensajeWhatsAppReserva(datos: DatosMensajeWhatsApp): string {
-  const noches = Math.max(1, datos.nochesEstimadas ?? 1);
-  const tarifa = datos.tarifaNoche ?? 15000;
-  const total = noches * tarifa;
   const config = obtenerConfigPension();
+  const noches = Math.max(1, datos.nochesEstimadas ?? 1);
+  // HU-39: la tarifa por defecto sale de la configuración replicada, no
+  // de un literal — editarla en el modal tiene que cambiar el monto que
+  // se envía, igual que el del comprobante PDF.
+  const tarifa = datos.tarifaNoche ?? config.tarifaBaseNoche;
+  const total = noches * tarifa;
 
   return (
     `¡Hola ${datos.huespedNombre}! Le confirmamos su reserva en *${config.nombrePension}* (Caleta Paposo):\n\n` +
@@ -30,7 +33,11 @@ export function armarMensajeWhatsAppReserva(datos: DatosMensajeWhatsApp): string
     `Titular: ${config.titularNombre}\n` +
     `RUT: ${config.rutTitular}\n\n` +
     `_No exigimos abono previo. Puede pagar al llegar en efectivo o transferencia._\n\n` +
-    `🔒 *Privacidad (Ley 21.719):* Sus datos se tratan exclusivamente para coordinar su estadía y registro de hospedaje. Para consultas o ejercicio de sus derechos, responda a este mensaje.\n\n` +
+    // HU-32: párrafo breve de transparencia. Nombra la finalidad, el
+    // plazo de conservación y el canal REAL para ejercer derechos ARCO
+    // (el que la Administradora configura en HU-39), en vez de un
+    // "responda a este mensaje" que no es un canal formal.
+    `🔒 *Privacidad (Ley 21.719):* Sus datos se usan solo para coordinar su estadía y el registro de hospedaje, y se conservan por el plazo legal. Para acceder, corregir o eliminar sus datos escriba a ${config.correoContacto}.\n\n` +
     `¡Le esperamos!`
   );
 }

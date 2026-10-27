@@ -22,7 +22,14 @@ describe("armarMensajeWhatsAppReserva", () => {
     expect(mensaje).toContain("CuentaRUT");
     expect(mensaje).toContain("No exigimos abono previo");
     expect(mensaje).toContain("Privacidad (Ley 21.719)");
-    expect(mensaje).toContain("ejercicio de sus derechos");
+    // Sprint 5 (HU-32): el párrafo de transparencia dejó de decir
+    // "responda a este mensaje" —que no es un canal formal— y ahora
+    // nombra la finalidad, el plazo de conservación y el correo real
+    // configurado en HU-39. La exigencia es más estricta que antes, no
+    // más laxa: se verifica que estén los tres elementos.
+    expect(mensaje).toContain("coordinar su estadía");
+    expect(mensaje).toContain("plazo legal");
+    expect(mensaje).toContain("acceder, corregir o eliminar sus datos");
   });
 
   it("utiliza valores por defecto si no se especifican noches o tarifa", () => {
