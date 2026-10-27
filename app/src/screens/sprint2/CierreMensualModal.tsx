@@ -1,5 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCierreMensual } from "../../features/cierre/useCierreMensual";
+import {
+  registrarCierreFacturacion,
+  buscarCierrePeriodo,
+  fechaAnonimizacionPrevista,
+  type CierreFacturacionRow
+} from "../../features/cierre/registrarCierreFacturacion";
+import { useConfigPension } from "../../features/perfil/useConfigPension";
+import { useUsuarioActual } from "../../lib/useUsuarioActual";
 import { conciliarPeriodo } from "../../features/conciliacion/useConciliacion";
 import { descargarPreFacturaPdf } from "../../features/reportes/generarPreFacturaPdf";
 import { descargarPlanillaExcel } from "../../features/reportes/generarPlanillaExcel";
@@ -49,6 +57,52 @@ export function CierreMensualModal({
 
   const cierre = useCierreMensual(contratoEmpresaId, anio, mes);
   const periodoTexto = `${NOMBRES_MESES[mes - 1]} ${anio}`;
+
+  // HU-33: registrar el cierre de facturación del período. Es el hecho
+  // que arranca el plazo de retención de datos personales — sin él, la
+  // purga automática no puede distinguir un período facturado de uno
+  // que nadie facturó nunca (ver features/cierre/registrarCierreFacturacion.ts).
+  const usuarioActual = useUsuarioActual();
+  const { config } = useConfigPension();
+  const [cierreRegistrado, setCierreRegistrado] = useState<CierreFacturacionRow | null>(null);
+  const [registrandoCierre, setRegistrandoCierre] = useState(false);
+  const [errorCierre, setErrorCierre] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    setCierreRegistrado(null);
+    buscarCierrePeriodo(contratoEmpresaId, anio, mes)
+      .then((fila) => {
+        if (vigente) setCierreRegistrado(fila);
+      })
+      .catch(() => {
+        // Sin réplica todavía: el botón queda ofreciendo cerrar y la
+        // escritura es idempotente, así que no pasa nada si se repite.
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [contratoEmpresaId, anio, mes]);
+
+  async function handleRegistrarCierre() {
+    if (!usuarioActual) return;
+    setRegistrandoCierre(true);
+    setErrorCierre(null);
+    try {
+      const fila = await registrarCierreFacturacion({
+        contratoEmpresaId,
+        anio,
+        mes,
+        totalFacturado: cierre.granTotal,
+        cerradoPor: usuarioActual.id
+      });
+      setCierreRegistrado(fila);
+    } catch (err: any) {
+      setErrorCierre(err?.message || "No se pudo registrar el cierre del período.");
+    } finally {
+      setRegistrandoCierre(false);
+    }
+  }
 
   async function handleConciliarPendientes() {
     setProcesandoPeriodo(true);
@@ -333,6 +387,49 @@ export function CierreMensualModal({
                   <IconClipboardCheck className="h-4 w-4" />
                   <span>{descargandoExcel ? "Generando Excel…" : "Descargar Planilla Contadora (Excel)"}</span>
                 </button>
+              </div>
+
+              {/* HU-33: marcar el período como facturado y cerrado. Es lo
+                  que arranca el plazo tras el cual se borran los nombres
+                  de la nómina. Diseño definitivo de este bloque: Codex
+                  (ver docs/sprint-5-handoff-codex.md). */}
+              <div className="rounded-2xl border border-brand-border/70 bg-white p-4 space-y-2">
+                {cierreRegistrado ? (
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-emerald-900">
+                      ✓ Facturación de {periodoTexto} cerrada
+                    </p>
+                    <p className="text-[11px] text-brand-muted leading-relaxed">
+                      Desde el{" "}
+                      {fechaAnonimizacionPrevista(
+                        cierreRegistrado.cerrado_at,
+                        config.diasGraciaAnonimizacion
+                      ).toLocaleDateString("es-CL")}{" "}
+                      el sistema reemplaza los nombres y RUT de esta nómina. Las raciones, las
+                      fechas y los montos quedan intactos.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-brand-muted leading-relaxed">
+                      Al cerrar la facturación queda el respaldo del período y empieza a correr
+                      el plazo de {config.diasGraciaAnonimizacion} días para borrar los nombres
+                      de la nómina (Ley 21.719).
+                    </p>
+                    <button
+                      onClick={handleRegistrarCierre}
+                      disabled={registrandoCierre || !usuarioActual}
+                      className="w-full rounded-xl border border-brand-terracotta/40 bg-brand-sand/40 px-4 py-3 text-xs font-bold text-brand-terracotta hover:bg-brand-sand transition disabled:opacity-50"
+                    >
+                      {registrandoCierre
+                        ? "Cerrando facturación…"
+                        : `Cerrar facturación de ${periodoTexto}`}
+                    </button>
+                  </>
+                )}
+                {errorCierre && (
+                  <p className="text-[11px] font-medium text-rose-700">{errorCierre}</p>
+                )}
               </div>
             </div>
           )}
