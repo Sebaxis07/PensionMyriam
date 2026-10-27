@@ -1,3 +1,4 @@
+import { useQuery } from "@powersync/react";
 import { useEffect, useState } from "react";
 import { powersync } from "../lib/powersync";
 import { IconAlertTriangle, IconRefresh, IconWifiOff } from "./Icons";
@@ -14,6 +15,10 @@ export function SyncStatusBadge({
   onClick?: () => void;
   compact?: boolean;
 }) {
+  const { data: resumenRechazos, isLoading: revisandoRechazos, error: errorRechazos } = useQuery<{ n: number }>(
+    "select count(*) as n from operacion_rechazada where resuelta is null or resuelta = 0"
+  );
+  const cantidadRechazos = resumenRechazos?.[0]?.n ?? 0;
   const [connected, setConnected] = useState(powersync.currentStatus?.connected ?? false);
   // Estado de presentación del SDK: no interviene en la cola ni en los reintentos.
   const [enviando, setEnviando] = useState(Boolean(powersync.currentStatus?.dataFlowStatus?.uploading));
@@ -54,6 +59,15 @@ export function SyncStatusBadge({
   }, []);
 
   const badgeContent = (() => {
+    if (errorRechazos) {
+      return <span className="inline-flex items-center gap-1.5 rounded-full border border-red-600/30 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-800"><IconAlertTriangle className="h-3.5 w-3.5 shrink-0" />Necesita atención · No se pudo revisar el estado</span>;
+    }
+    if (revisandoRechazos) {
+      return <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-border bg-brand-card px-2.5 py-1 text-xs text-brand-ink"><IconRefresh className="h-3.5 w-3.5 motion-safe:animate-spin" />Revisando registros…</span>;
+    }
+    if (cantidadRechazos > 0) {
+      return <span className="inline-flex items-center gap-1.5 rounded-full border border-red-600/30 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-800"><IconAlertTriangle className="h-3.5 w-3.5 shrink-0" /><span>{compact ? "Necesita atención" : `${cantidadRechazos} registro(s) necesitan revisión${connected ? "" : " · Sin conexión"}`}</span></span>;
+    }
     if (!connected) {
       return (
         <span className={`inline-flex items-center gap-1.5 rounded-full border border-stone-400/40 bg-stone-200/90 text-stone-700 shadow-sm ${
@@ -104,7 +118,7 @@ export function SyncStatusBadge({
         type="button"
         onClick={onClick}
         title="Toca para ver el estado detallado de sincronización y conectividad"
-        aria-label={connected ? huboError ? "Ver problema de conexión" : pendingCount > 0 || enviando ? "Ver cambios pendientes de envío" : "Ver estado: registros al día" : "Ver estado: sin conexión, registros guardados en este celular"}
+        aria-label={cantidadRechazos > 0 ? "Ver registros que necesitan atención" : connected ? huboError ? "Ver problema de conexión" : pendingCount > 0 || enviando ? "Ver cambios pendientes de envío" : "Ver estado: registros al día" : "Ver estado: sin conexión, registros guardados en este celular"}
         className="ui-operativa inline-flex min-h-11 items-center transition-transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-terracotta/30 rounded-full cursor-pointer"
       >
         <span role="status" aria-live="polite">{badgeContent}</span>
