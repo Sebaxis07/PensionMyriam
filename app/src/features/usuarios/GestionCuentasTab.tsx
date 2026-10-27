@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   useGestionUsuarios,
+  LARGO_MINIMO_PASSWORD,
   type RolUsuario,
   type UsuarioItem
 } from "./useGestionUsuarios";
@@ -9,6 +10,18 @@ import {
   IconPlus,
   IconAlertTriangle
 } from "../../components/Icons";
+
+/**
+ * HU-36 pide la "fecha de registro" legible. Se formatea en es-CL y sin
+ * hora: a la Administradora le interesa desde cuándo existe la cuenta,
+ * no el timestamp exacto.
+ */
+export function formatearFechaRegistro(creadoEn?: string | null): string {
+  if (!creadoEn) return "fecha no registrada";
+  const fecha = new Date(creadoEn);
+  if (Number.isNaN(fecha.getTime())) return "fecha no registrada";
+  return fecha.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
+}
 
 interface GestionCuentasTabProps {
   usuarioActual: { id: string; nombre: string; rol: string };
@@ -155,13 +168,13 @@ export function GestionCuentasTab({ usuarioActual }: GestionCuentasTabProps) {
             {/* Contraseña */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-brand-ink mb-1">
-                Contraseña inicial <span className="text-brand-terracotta">*</span> (mínimo 6 caracteres)
+                Contraseña inicial <span className="text-brand-terracotta">*</span> (mínimo {LARGO_MINIMO_PASSWORD} caracteres)
               </label>
               <div className="relative">
                 <input
                   type={mostrarPassword ? "text" : "password"}
                   required
-                  minLength={6}
+                  minLength={LARGO_MINIMO_PASSWORD}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -294,6 +307,15 @@ export function GestionCuentasTab({ usuarioActual }: GestionCuentasTabProps) {
                         </span>
                       )}
                     </div>
+                    {/* HU-36: "veo nombre, correo, rol (con distintivo
+                        visual) y fecha de registro". El correo y la
+                        fecha faltaban: la tarjeta solo mostraba nombre y
+                        rol. La presentación final (jerarquía, truncado,
+                        tipografía) queda para Codex — ver
+                        docs/sprint-5-handoff-codex.md. */}
+                    <p className="truncate text-[11px] text-brand-muted" title={u.email ?? undefined}>
+                      {u.email ?? "Sin correo registrado"}
+                    </p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[9px] font-bold border ${
@@ -303,6 +325,9 @@ export function GestionCuentasTab({ usuarioActual }: GestionCuentasTabProps) {
                         }`}
                       >
                         {esRolAdmin ? "Administradora" : "Encargada"}
+                      </span>
+                      <span className="text-[9px] text-brand-muted">
+                        Desde {formatearFechaRegistro(u.created_at)}
                       </span>
                     </div>
                   </div>

@@ -48,7 +48,10 @@ crear_usuario_si_falta() {
     -H "Content-Type: application/json" \
     -d "{\"email\":\"$email\",\"password\":\"$password\",\"email_confirm\":true,\"role\":\"authenticated\"}")
   auth_id=$(node -e "console.log(JSON.parse(process.argv[1]).id)" "$resp")
-  psql_admin -c "insert into public.usuario (auth_uid, rol, nombre) values ('$auth_id', '$rol', '$nombre')"
+  # El correo también va en public.usuario: HU-36 lo muestra en el
+  # listado de cuentas y auth.users no se replica al celular
+  # (db/migrations/0017_seguridad_cuentas.sql).
+  psql_admin -c "insert into public.usuario (auth_uid, rol, nombre, email) values ('$auth_id', '$rol', '$nombre', '$email')"
   echo "  usuario '$nombre' creado ($auth_id)"
 }
 
