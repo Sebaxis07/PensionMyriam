@@ -12,7 +12,7 @@ import "@testing-library/jest-dom/vitest";
  */
 const { getAll, registerListener, listeners, currentStatus } = vi.hoisted(() => {
   const listeners: Array<(status: any) => void> = [];
-  const currentStatus = { connected: false, dataFlowStatus: { uploading: false } };
+  const currentStatus = { connected: false, dataFlowStatus: { uploading: false, uploadError: undefined as Error | undefined, downloadError: undefined as Error | undefined } };
   const getAll = vi.fn().mockResolvedValue([{ n: 0 }]);
   const registerListener = vi.fn((handlers: { statusChanged: (s: any) => void }) => {
     listeners.push(handlers.statusChanged);
@@ -39,7 +39,7 @@ import { SyncStatusBadge } from "./SyncStatusBadge";
 function emitirEstado(connected: boolean, uploading: boolean) {
   currentStatus.connected = connected;
   currentStatus.dataFlowStatus.uploading = uploading;
-  listeners.forEach((fn) => fn({ connected, dataFlowStatus: { uploading } }));
+  listeners.forEach((fn) => fn({ connected, dataFlowStatus: { ...currentStatus.dataFlowStatus, uploading } }));
 }
 
 describe("SyncStatusBadge (HU-29)", () => {
@@ -53,6 +53,8 @@ describe("SyncStatusBadge (HU-29)", () => {
     listeners.length = 0;
     currentStatus.connected = false;
     currentStatus.dataFlowStatus.uploading = false;
+    currentStatus.dataFlowStatus.uploadError = undefined;
+    currentStatus.dataFlowStatus.downloadError = undefined;
   });
 
   it("sin conexión y sin pendientes: muestra 'Sin red' (nunca 'Sincronizado' en offline)", async () => {
@@ -72,7 +74,7 @@ describe("SyncStatusBadge (HU-29)", () => {
     await act(async () => {
       emitirEstado(true, false);
     });
-    await waitFor(() => expect(screen.getByText("Enviando pendientes…")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Cambios pendientes de envío")).toBeInTheDocument());
     expect(screen.queryByText("Sincronizado")).not.toBeInTheDocument();
   });
 
@@ -112,7 +114,7 @@ describe("SyncStatusBadge (HU-29)", () => {
     await act(async () => {
       emitirEstado(true, false);
     });
-    await waitFor(() => expect(screen.getByText("Enviando pendientes…")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Cambios pendientes de envío")).toBeInTheDocument());
 
     // La cola ya se vació de verdad.
     getAll.mockResolvedValue([{ n: 0 }]);
@@ -131,6 +133,43 @@ describe("SyncStatusBadge (HU-29)", () => {
       emitirEstado(true, true);
     });
     await waitFor(() => expect(screen.getByText("Enviando pendientes…")).toBeInTheDocument());
+  });
+
+  it("sin red con pendientes: informa guardado local y nunca simula un envío", async () => {
+    getAll.mockResolvedValue([{ n: 3 }]);
+    render(<SyncStatusBadge />);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Sin red · Cambios guardados en este celular"));
+    expect(screen.queryByText("Enviando pendientes…")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sincronizado")).not.toBeInTheDocument();
+  });
+
+  it("la versión compacta comunica sus estados en español", async () => {
+    render(<SyncStatusBadge compact onClick={() => {}} />);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Sin red"));
+    expect(screen.getByRole("button")).toHaveAccessibleName(/sin conexión/);
+    await act(async () => { emitirEstado(true, false); });
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Al día"));
+    expect(screen.getByRole("button")).toHaveAccessibleName(/registros al día/);
+  });
+
+  it("actualiza la presentación al empezar el envío sin cambiar la cantidad pendiente", async () => {
+    getAll.mockResolvedValue([{ n: 3 }]);
+    render(<SyncStatusBadge />);
+    await act(async () => { emitirEstado(true, false); });
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Cambios pendientes de envío"));
+    await act(async () => { emitirEstado(true, true); });
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Enviando pendientes…"));
+  });
+
+  it("muestra un problema comunicado por el SDK sin revelar detalles técnicos ni marcar al día", async () => {
+    render(<SyncStatusBadge />);
+    await act(async () => {
+      currentStatus.dataFlowStatus.uploadError = new Error("detalle técnico privado");
+      emitirEstado(true, false);
+    });
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("No se pudo actualizar · Revisa la conexión"));
+    expect(screen.queryByText("Sincronizado")).not.toBeInTheDocument();
+    expect(screen.queryByText("detalle técnico privado")).not.toBeInTheDocument();
   });
 
   it("es táctil: con onClick, responde a un click real del usuario", async () => {

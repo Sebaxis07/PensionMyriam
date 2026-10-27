@@ -21,3 +21,6 @@ test-results/
 # Editor / OS
 .DS_Store
 Thumbs.db
+
+# Evidencias locales de las pruebas de presentación
+/output/revision-ui/

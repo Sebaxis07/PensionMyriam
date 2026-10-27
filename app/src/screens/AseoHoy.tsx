@@ -1,3 +1,4 @@
+import { Dialogo } from "../components/Dialogo";
 import { useState, useMemo } from "react";
 import { useQuery } from "@powersync/react";
 import { powersync } from "../lib/powersync";
@@ -260,11 +261,11 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 pb-8 animate-fadeIn">
+    <div className="ui-operativa mx-auto flex w-full max-w-6xl flex-col gap-5 pb-8 animate-fadeIn">
       {/* Toast de notificación flotante */}
       {notificacionExito && (
-        <div className="fixed top-16 right-4 left-4 sm:left-auto sm:w-96 z-50 flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-900/95 text-white p-3.5 px-4 shadow-xl backdrop-blur-md animate-slideDown">
-          <div className="flex items-center gap-2.5 text-xs font-semibold">
+        <div role="status" aria-live="polite" className="fixed top-16 right-4 left-4 sm:left-auto sm:w-96 z-50 flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-900/95 text-white p-3.5 px-4 shadow-xl backdrop-blur-md animate-slideDown">
+          <div className="flex items-center gap-2.5 text-sm font-semibold">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shrink-0">
               ✓
             </span>
@@ -272,6 +273,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
           </div>
           <button
             onClick={() => setNotificacionExito(null)}
+            aria-label="Cerrar confirmación de aseo"
             className="text-white/80 hover:text-white font-bold text-sm"
           >
             ✕
@@ -283,28 +285,28 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border/60 pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-terracotta/15 text-brand-terracotta">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-terracotta-deep/15 text-brand-terracotta-deep">
               <IconBroom className="h-5 w-5" />
             </div>
             <h1 className="font-display text-2xl font-black text-brand-ink">
-              Módulo de Aseo y Limpieza
+              Aseo diario y salidas
             </h1>
           </div>
-          <p className="mt-1 text-xs text-brand-muted">
-            Monitoreo en tiempo real del estado de higiene, aseos diarios y recambio de sábanas en Paposo.
+          <p className="mt-1 text-sm text-brand-ink/80">
+            Revisa qué habitaciones necesitan aseo y marca las que ya están listas.
           </p>
         </div>
 
         {/* Botón de historial de hoy */}
         <button
           onClick={() => setMostrarHistorial(!mostrarHistorial)}
-          className={`inline-flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition self-start sm:self-auto ${
+          className={`inline-flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-sm font-bold transition self-start sm:self-auto ${
             mostrarHistorial
-              ? "border-brand-terracotta bg-brand-sand text-brand-ink shadow-xs"
-              : "border-brand-border bg-white text-brand-muted hover:border-brand-border/80 hover:text-brand-ink"
+              ? "border-brand-terracotta bg-brand-sand text-brand-ink shadow-sm"
+              : "border-brand-border bg-white text-brand-ink/80 hover:border-brand-border/80 hover:text-brand-ink"
           }`}
         >
-          <IconClock className="h-4 w-4 text-brand-terracotta" />
+          <IconClock className="h-4 w-4 text-brand-terracotta-deep" />
           <span>Bitácora de Hoy ({historialHoy.length})</span>
         </button>
       </div>
@@ -312,16 +314,16 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
       {/* Panel de Métricas / KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* KPI 1: Recambio Urgente */}
-        <div
+        <button type="button" aria-pressed={filtro === "recambio"}
           onClick={() => setFiltro("recambio")}
-          className={`cursor-pointer rounded-3xl border p-4 transition-all ${
+          className={`cursor-pointer rounded-3xl border p-4 text-left transition-all ${
             filtro === "recambio"
               ? "border-rose-400 bg-rose-50/80 shadow-md ring-2 ring-rose-300"
               : "border-brand-border/70 bg-brand-card hover:bg-rose-50/40"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-800">
               Salida / Recambio
             </span>
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-rose-700">
@@ -332,24 +334,24 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
             <span className="font-display text-3xl font-black text-rose-900">
               {piezasRecambio.length}
             </span>
-            <span className="text-xs font-medium text-rose-700">
+            <span className="text-sm font-medium text-rose-700">
               {piezasRecambio.length === 1 ? "por liberar" : "por liberar"}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-brand-muted">Requieren cambio de sábanas</p>
-        </div>
+          <p className="mt-1 text-xs text-brand-ink/80">Requieren cambio de sábanas</p>
+        </button>
 
         {/* KPI 2: Diarios Pendientes */}
-        <div
+        <button type="button" aria-pressed={filtro === "diarios"}
           onClick={() => setFiltro("diarios")}
-          className={`cursor-pointer rounded-3xl border p-4 transition-all ${
+          className={`cursor-pointer rounded-3xl border p-4 text-left transition-all ${
             filtro === "diarios"
               ? "border-amber-400 bg-amber-50/80 shadow-md ring-2 ring-amber-300"
               : "border-brand-border/70 bg-brand-card hover:bg-amber-50/40"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
               Diario Pendiente
             </span>
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-800">
@@ -360,22 +362,22 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
             <span className="font-display text-3xl font-black text-amber-900">
               {piezasDiariasPendientes.length}
             </span>
-            <span className="text-xs font-medium text-amber-700">piezas ocupadas</span>
+            <span className="text-sm font-medium text-amber-700">piezas ocupadas</span>
           </div>
-          <p className="mt-1 text-[11px] text-brand-muted">Aseo matutino regular</p>
-        </div>
+          <p className="mt-1 text-xs text-brand-ink/80">Aseo matutino regular</p>
+        </button>
 
         {/* KPI 3: Completados Hoy */}
-        <div
+        <button type="button" aria-pressed={filtro === "limpias"}
           onClick={() => setFiltro("limpias")}
-          className={`cursor-pointer rounded-3xl border p-4 transition-all ${
+          className={`cursor-pointer rounded-3xl border p-4 text-left transition-all ${
             filtro === "limpias"
               ? "border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-300"
               : "border-brand-border/70 bg-brand-card hover:bg-emerald-50/40"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
               Aseos Listos Hoy
             </span>
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
@@ -386,20 +388,20 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
             <span className="font-display text-3xl font-black text-emerald-900">
               {piezasLimpiasHoy.length}
             </span>
-            <span className="text-xs font-medium text-emerald-700">
+            <span className="text-sm font-medium text-emerald-700">
               de {totalRequeridas || habitaciones.length}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-brand-muted">Con registro de hoy</p>
-        </div>
+          <p className="mt-1 text-xs text-brand-ink/80">Con registro de hoy</p>
+        </button>
 
         {/* KPI 4: Progreso Global */}
         <div className="rounded-3xl border border-brand-border/70 bg-brand-card p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-ink/80">
               Cumplimiento Hoy
             </span>
-            <span className="text-xs font-black text-brand-terracotta">{porcentajeAvance}%</span>
+            <span className="whitespace-nowrap text-sm font-black text-brand-terracotta-deep">{porcentajeAvance}%</span>
           </div>
 
           <div className="mt-2 space-y-1.5">
@@ -410,12 +412,12 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                     ? "bg-emerald-600"
                     : porcentajeAvance > 50
                     ? "bg-amber-500"
-                    : "bg-brand-terracotta"
+                    : "bg-brand-terracotta-deep"
                 }`}
                 style={{ width: `${porcentajeAvance}%` }}
               />
             </div>
-            <p className="text-[10px] text-right font-bold text-brand-ink">
+            <p className="text-xs text-right font-bold text-brand-ink">
               {totalPendientes === 0 ? "¡Todo al día!" : `${totalPendientes} pendientes restantes`}
             </p>
           </div>
@@ -430,10 +432,10 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
               ⚡
             </div>
             <div>
-              <p className="text-xs md:text-sm font-bold text-amber-950">
+              <p className="text-sm md:text-sm font-bold text-amber-950">
                 ¿Ronda matutina de aseo completada?
               </p>
-              <p className="text-[11px] text-amber-900/80">
+              <p className="text-xs text-amber-900/80">
                 Puedes registrar los {piezasDiariasPendientes.length} aseos diarios pendientes de una sola vez.
               </p>
             </div>
@@ -442,7 +444,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
           <button
             type="button"
             onClick={() => setMostrarConfirmacionMasiva(true)}
-            className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-800 hover:bg-amber-900 px-4 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95"
+            className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-800 hover:bg-amber-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition active:scale-95"
           >
             <IconCheck className="h-4 w-4" />
             <span>Marcar {piezasDiariasPendientes.length} diarios listos</span>
@@ -455,18 +457,18 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
         <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-5 shadow-card animate-fadeIn space-y-3">
           <div className="flex items-center justify-between border-b border-brand-border/60 pb-2.5">
             <div className="flex items-center gap-2">
-              <IconClock className="h-4 w-4 text-brand-terracotta" />
+              <IconClock className="h-4 w-4 text-brand-terracotta-deep" />
               <h3 className="font-display text-sm font-bold text-brand-ink">
                 Historial de Aseos Registrados Hoy
               </h3>
             </div>
-            <span className="text-xs font-semibold text-brand-muted">
+            <span className="text-sm font-semibold text-brand-ink/80">
               {historialHoy.length} {historialHoy.length === 1 ? "registro" : "registros"}
             </span>
           </div>
 
           {historialHoy.length === 0 ? (
-            <p className="py-4 text-center text-xs text-brand-muted">
+            <p className="py-4 text-center text-sm text-brand-ink/80">
               Aún no se han registrado aseos durante la jornada de hoy.
             </p>
           ) : (
@@ -474,22 +476,22 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
               {historialHoy.map((reg) => (
                 <div
                   key={reg.id}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-brand-border/70 bg-white p-2.5 text-xs shadow-2xs"
+                  className="flex items-center justify-between gap-2 rounded-xl border border-brand-border/70 bg-white p-2.5 text-sm shadow-sm"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 font-bold text-emerald-800 text-xs">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 font-bold text-emerald-800 text-sm">
                       #{reg.habitacion_numero}
                     </span>
                     <div className="min-w-0">
                       <p className="truncate font-bold text-brand-ink capitalize">
                         {reg.tipo === "post_checkout" ? "Recambio Salida" : "Aseo Diario"}
                       </p>
-                      <p className="truncate text-[10px] text-brand-muted">
+                      <p className="truncate text-xs text-brand-ink/80">
                         Por: {reg.responsable_nombre}
                       </p>
                     </div>
                   </div>
-                  <span className="shrink-0 font-mono text-[11px] font-bold text-brand-terracotta">
+                  <span className="shrink-0 font-mono text-xs font-bold text-brand-terracotta-deep">
                     {formatearHora(reg.fecha_hora)}
                   </span>
                 </div>
@@ -502,21 +504,21 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
       {/* Barra de Filtros y Buscador Táctil */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-2xl border border-brand-border/70 bg-brand-card p-3 shadow-sm">
         {/* Tabs de Filtro */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 text-sm">
           <button
             type="button"
             onClick={() => setFiltro("pendientes")}
             className={`flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition ${
               filtro === "pendientes"
-                ? "bg-brand-terracotta text-white shadow-xs"
-                : "bg-brand-sand-light text-brand-ink hover:bg-brand-sand"
+                ? "bg-brand-terracotta-deep text-white shadow-sm"
+                : "bg-brand-sand-deep text-brand-ink hover:bg-brand-sand"
             }`}
           >
             <span>Pendientes</span>
             {totalPendientes > 0 && (
               <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                  filtro === "pendientes" ? "bg-white text-brand-terracotta" : "bg-rose-600 text-white"
+                className={`rounded-full px-1.5 py-0.2 text-xs font-black ${
+                  filtro === "pendientes" ? "bg-white text-brand-terracotta-deep" : "bg-rose-600 text-white"
                 }`}
               >
                 {totalPendientes}
@@ -529,14 +531,14 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
             onClick={() => setFiltro("recambio")}
             className={`flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition ${
               filtro === "recambio"
-                ? "bg-rose-700 text-white shadow-xs"
-                : "bg-brand-sand-light text-brand-ink hover:bg-brand-sand"
+                ? "bg-rose-700 text-white shadow-sm"
+                : "bg-brand-sand-deep text-brand-ink hover:bg-brand-sand"
             }`}
           >
             <span>Recambio Salida</span>
             {piezasRecambio.length > 0 && (
               <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                className={`rounded-full px-1.5 py-0.2 text-xs font-black ${
                   filtro === "recambio" ? "bg-white text-rose-700" : "bg-rose-100 text-rose-800"
                 }`}
               >
@@ -550,14 +552,14 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
             onClick={() => setFiltro("diarios")}
             className={`flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition ${
               filtro === "diarios"
-                ? "bg-amber-700 text-white shadow-xs"
-                : "bg-brand-sand-light text-brand-ink hover:bg-brand-sand"
+                ? "bg-amber-700 text-white shadow-sm"
+                : "bg-brand-sand-deep text-brand-ink hover:bg-brand-sand"
             }`}
           >
             <span>Diarios</span>
             {piezasDiariasPendientes.length > 0 && (
               <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                className={`rounded-full px-1.5 py-0.2 text-xs font-black ${
                   filtro === "diarios" ? "bg-white text-amber-700" : "bg-amber-100 text-amber-800"
                 }`}
               >
@@ -571,8 +573,8 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
             onClick={() => setFiltro("limpias")}
             className={`flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition ${
               filtro === "limpias"
-                ? "bg-emerald-700 text-white shadow-xs"
-                : "bg-brand-sand-light text-brand-ink hover:bg-brand-sand"
+                ? "bg-emerald-700 text-white shadow-sm"
+                : "bg-brand-sand-deep text-brand-ink hover:bg-brand-sand"
             }`}
           >
             <span>Listas hoy ({piezasLimpiasHoy.length})</span>
@@ -583,8 +585,8 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
             onClick={() => setFiltro("todas")}
             className={`flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition ${
               filtro === "todas"
-                ? "bg-brand-ink text-white shadow-xs"
-                : "bg-brand-sand-light text-brand-muted hover:text-brand-ink"
+                ? "bg-brand-ink text-white shadow-sm"
+                : "bg-brand-sand-deep text-brand-ink/80 hover:text-brand-ink"
             }`}
           >
             <span>Todas ({habitaciones.length})</span>
@@ -593,18 +595,19 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
 
         {/* Buscador */}
         <div className="relative w-full md:w-56 shrink-0">
-          <IconSearch className="absolute left-3 top-2.5 h-4 w-4 text-brand-muted" />
+          <IconSearch className="absolute left-3 top-2.5 h-4 w-4 text-brand-ink/80" />
           <input
             type="text"
-            placeholder="Buscar por # o pasajero…"
+            aria-label="Buscar habitación o huésped para aseo"
+                placeholder="Buscar por # o pasajero…"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full rounded-xl border border-brand-border bg-white pl-9 pr-7 py-2 text-xs text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none"
+            className="w-full rounded-xl border border-brand-border bg-white pl-9 pr-7 py-2 text-sm text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none"
           />
           {busqueda && (
             <button
               onClick={() => setBusqueda("")}
-              className="absolute right-2.5 top-2 text-xs font-bold text-brand-muted hover:text-brand-ink"
+              className="absolute right-2.5 top-2 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
             >
               ✕
             </button>
@@ -647,14 +650,14 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                   <div className="flex items-center gap-3">
                     {/* Número de Habitación */}
                     <div
-                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-display text-xl font-black shadow-xs ${
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-display text-xl font-black shadow-sm ${
                         esRecambio
                           ? "bg-rose-600 text-white"
                           : esDiarioPendiente
                           ? "bg-amber-500 text-white"
                           : estaLimpiaHoy
                           ? "bg-emerald-600 text-white"
-                          : "bg-brand-sand-light text-brand-ink border border-brand-border/60"
+                          : "bg-brand-sand-deep text-brand-ink border border-brand-border/60"
                       }`}
                     >
                       #{hab.numero}
@@ -664,7 +667,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                       <h2 className="font-display text-base font-bold text-brand-ink leading-tight">
                         Pieza #{hab.numero}
                       </h2>
-                      <p className="text-[11px] text-brand-muted">
+                      <p className="text-xs text-brand-ink/80">
                         Capacidad: {hab.capacidad} {hab.capacidad === 1 ? "cama" : "camas"}
                       </p>
                     </div>
@@ -672,40 +675,40 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
 
                   {/* Badge de Estado Semántico */}
                   {esRecambio ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-100 px-2.5 py-1 text-[10px] font-black text-rose-800 uppercase tracking-wider animate-pulse">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-100 px-2.5 py-1 text-xs font-black text-rose-800 uppercase tracking-wider motion-safe:animate-pulse">
                       <IconAlertTriangle className="h-3 w-3" />
                       Prioridad
                     </span>
                   ) : esDiarioPendiente ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-900">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-900">
                       Pendiente
                     </span>
                   ) : estaLimpiaHoy ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
                       <IconCheckCircle className="h-3 w-3 text-emerald-700" />
                       Limpia hoy
                     </span>
                   ) : estaEnMantencion ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-200 px-2.5 py-1 text-[10px] font-semibold text-stone-700">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700">
                       <IconWrench className="h-3 w-3" />
                       Mantención
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-brand-border bg-brand-sand-light px-2.5 py-1 text-[10px] font-bold text-brand-muted">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-brand-border bg-brand-sand-deep px-2.5 py-1 text-xs font-bold text-brand-ink/80">
                       Disponible
                     </span>
                   )}
                 </div>
 
                 {/* Información de Huésped / Situación */}
-                <div className="rounded-2xl border border-brand-border/50 bg-white/80 p-3 space-y-1.5 text-xs">
+                <div className="rounded-2xl border border-brand-border/50 bg-white/80 p-3 space-y-1.5 text-sm">
                   {esRecambio && (
                     <>
                       <div className="flex items-center gap-1.5 text-rose-950 font-bold">
                         <IconSparkles className="h-4 w-4 text-rose-600 shrink-0" />
                         <span>Salida de huésped · Recambio de sábanas</span>
                       </div>
-                      <p className="text-[11px] text-brand-muted pl-5">
+                      <p className="text-xs text-brand-ink/80 pl-5">
                         Último pasajero:{" "}
                         <strong className="text-brand-ink">{hab.ultimo_huesped || "No registrado"}</strong>
                       </p>
@@ -715,12 +718,12 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                   {esOcupada && (
                     <>
                       <div className="flex items-center gap-1.5 text-brand-ink font-bold">
-                        <IconUser className="h-4 w-4 text-brand-terracotta shrink-0" />
+                        <IconUser className="h-4 w-4 text-brand-terracotta-deep shrink-0" />
                         <span className="truncate">
                           Huésped: {hab.huesped_actual || "Pasajero activo"}
                         </span>
                       </div>
-                      <p className="text-[11px] text-brand-muted pl-5">
+                      <p className="text-xs text-brand-ink/80 pl-5">
                         {esDiarioPendiente
                           ? estaEnVentanaIdeal(hab.tipo_cliente_actual, horaActual)
                             ? "⚠️ Aseo diario pendiente — huésped probablemente fuera ahora, buen momento"
@@ -731,19 +734,19 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                   )}
 
                   {estaDisponible && !estaLimpiaHoy && (
-                    <p className="text-[11px] text-brand-muted">
+                    <p className="text-xs text-brand-ink/80">
                       Pieza sin ocupantes actuales. Lista para asignación.
                     </p>
                   )}
 
                   {estaDisponible && estaLimpiaHoy && (
-                    <p className="text-[11px] text-emerald-800 font-semibold">
+                    <p className="text-xs text-emerald-800 font-semibold">
                       ✓ Liberada y limpia hoy ({formatearHora(hab.ultimo_aseo_fecha)}).
                     </p>
                   )}
 
                   {estaEnMantencion && (
-                    <p className="text-[11px] text-stone-600">
+                    <p className="text-xs text-stone-600">
                       Motivo: {hab.motivo_mantencion || "En revisión general"}
                     </p>
                   )}
@@ -758,7 +761,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                     type="button"
                     disabled={procesando}
                     onClick={() => marcarAseoPostCheckout(hab)}
-                    className="w-full flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md transition active:scale-[0.98] disabled:opacity-50"
+                    className="w-full flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm sm:text-sm shadow-md transition active:scale-[0.98] disabled:opacity-50"
                   >
                     <IconSparkles className="h-4 w-4 text-emerald-200" />
                     <span>{procesando ? "Liberando pieza…" : "Completar Aseo y Liberar Pieza"}</span>
@@ -771,7 +774,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                     type="button"
                     disabled={procesando}
                     onClick={() => marcarAseoDiario(hab)}
-                    className="w-full flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-brand-terracotta hover:bg-brand-terracotta-deep text-white font-bold text-xs sm:text-sm shadow-brand transition active:scale-[0.98] disabled:opacity-50"
+                    className="w-full flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep text-white font-bold text-sm sm:text-sm shadow-brand transition active:scale-[0.98] disabled:opacity-50"
                   >
                     <IconCheck className="h-4 w-4" />
                     <span>{procesando ? "Guardando…" : "Marcar Aseo Diario Listo"}</span>
@@ -781,7 +784,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                 {/* Caso 3: Pieza que ya tuvo su aseo hoy */}
                 {estaLimpiaHoy && (
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800">
+                    <span className="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-800">
                       <IconCheckCircle className="h-4 w-4 text-emerald-600" />
                       Aseo completado
                     </span>
@@ -789,7 +792,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                       type="button"
                       disabled={procesando}
                       onClick={() => marcarAseoDiario(hab)}
-                      className="rounded-xl border border-brand-border bg-white px-3 py-1.5 text-[11px] font-semibold text-brand-muted hover:text-brand-ink hover:bg-brand-sand-light transition"
+                      className="rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink/80 hover:text-brand-ink hover:bg-brand-sand-deep transition"
                     >
                       + Repaso
                     </button>
@@ -802,16 +805,16 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                     type="button"
                     disabled={procesando}
                     onClick={() => marcarAseoDiario(hab)}
-                    className="w-full flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-white hover:bg-brand-sand-light text-brand-ink text-xs font-bold transition"
+                    className="w-full flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-white hover:bg-brand-sand-deep text-brand-ink text-sm font-bold transition"
                   >
-                    <IconBroom className="h-3.5 w-3.5 text-brand-terracotta" />
+                    <IconBroom className="h-3.5 w-3.5 text-brand-terracotta-deep" />
                     <span>Registrar aseo preventivo</span>
                   </button>
                 )}
 
                 {/* Caso 5: Mantención */}
                 {estaEnMantencion && (
-                  <p className="text-center text-[11px] text-stone-500 py-1 font-medium">
+                  <p className="text-center text-xs text-stone-500 py-1 font-medium">
                     En mantenimiento · No disponible para aseo
                   </p>
                 )}
@@ -822,7 +825,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
 
         {habitacionesFiltradas.length === 0 && (
           <div className="col-span-full rounded-3xl border border-dashed border-brand-border bg-brand-card p-10 text-center space-y-3">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <div className="ui-operativa mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
               <IconCheckCircle className="h-8 w-8" />
             </div>
             <h3 className="font-display text-lg font-bold text-brand-ink">
@@ -830,7 +833,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                 ? "¡Excelente! No hay aseos pendientes por el momento"
                 : "No se encontraron habitaciones para este filtro"}
             </h3>
-            <p className="text-xs text-brand-muted max-w-sm mx-auto">
+            <p className="text-sm text-brand-ink/80 max-w-sm mx-auto">
               {filtro === "pendientes"
                 ? "Todas las habitaciones ocupadas y salidas ya fueron atendidas durante el día de hoy."
                 : "Prueba seleccionando otra pestaña como 'Todas' o limpiando el texto del buscador."}
@@ -839,7 +842,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
               <button
                 type="button"
                 onClick={() => setFiltro("todas")}
-                className="mt-2 rounded-xl bg-brand-sand px-4 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand/80 transition"
+                className="mt-2 rounded-xl bg-brand-sand px-4 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand/80 transition"
               >
                 Ver todas las habitaciones
               </button>
@@ -850,10 +853,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
 
       {/* Modal de Confirmación para Registro Masivo */}
       {mostrarConfirmacionMasiva && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm animate-fadeIn"
-          onClick={() => setMostrarConfirmacionMasiva(false)}
-        >
+        <Dialogo titulo="Confirmar aseo diario" onCerrar={() => setMostrarConfirmacionMasiva(false)} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm animate-fadeIn">
           <div
             className="w-full max-w-md rounded-3xl border border-brand-border bg-brand-card p-6 shadow-2xl space-y-4 animate-scaleUp"
             onClick={(e) => e.stopPropagation()}
@@ -866,17 +866,17 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
               <h3 className="font-display text-lg font-black text-brand-ink">
                 Confirmar Ronda de Aseo Diario
               </h3>
-              <p className="mt-1 text-xs text-brand-muted leading-relaxed">
+              <p className="mt-1 text-sm text-brand-ink/80 leading-relaxed">
                 Estás a punto de marcar como listas las siguientes{" "}
                 <strong>{piezasDiariasPendientes.length} habitaciones ocupadas</strong>:
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-2 rounded-xl bg-brand-sand-light border border-brand-border/60">
+            <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-2 rounded-xl bg-brand-sand-deep border border-brand-border/60">
               {piezasDiariasPendientes.map((p) => (
                 <span
                   key={p.id}
-                  className="rounded-lg bg-white border border-brand-border px-2.5 py-1 text-xs font-bold text-brand-ink shadow-2xs"
+                  className="rounded-lg bg-white border border-brand-border px-2.5 py-1 text-sm font-bold text-brand-ink shadow-sm"
                 >
                   Pieza #{p.numero} ({p.huesped_actual || "Ocupada"})
                 </span>
@@ -887,7 +887,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
               <button
                 type="button"
                 onClick={() => setMostrarConfirmacionMasiva(false)}
-                className="rounded-xl px-4 py-2.5 text-xs font-bold text-brand-muted hover:text-brand-ink"
+                className="rounded-xl px-4 py-2.5 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
               >
                 Cancelar
               </button>
@@ -895,13 +895,13 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
                 type="button"
                 disabled={guardandoMasivo}
                 onClick={confirmarTodosLosDiarios}
-                className="rounded-xl bg-amber-800 hover:bg-amber-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition active:scale-95 disabled:opacity-50"
+                className="rounded-xl bg-amber-800 hover:bg-amber-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-95 disabled:opacity-50"
               >
                 {guardandoMasivo ? "Registrando…" : "Sí, marcar todas como listas"}
               </button>
             </div>
           </div>
-        </div>
+        </Dialogo>
       )}
     </div>
   );

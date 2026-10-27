@@ -1,3 +1,4 @@
+import { Dialogo } from "../../components/Dialogo";
 import { useMemo, useState, type FormEvent } from "react";
 import { useEmpresas } from "../../features/empresas/useEmpresas";
 import { crearEmpresa } from "../../features/empresas/crearEmpresa";
@@ -121,21 +122,21 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+    <div className="ui-operativa mx-auto flex w-full max-w-5xl flex-col gap-6">
       {/* 1. Tarjetas de Métricas Ejecutivas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         <div className="flex items-center gap-3.5 rounded-2xl border border-brand-border/80 bg-brand-card p-4 shadow-card">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-sand-light text-brand-terracotta">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-sand-deep text-brand-terracotta-deep">
             <IconBriefcase className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-muted">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-brand-ink/80">
               Empresas Registradas
             </p>
             <p className="font-display text-2xl font-black text-brand-ink">
               {stats.totalEmpresas}
             </p>
-            <p className="text-[11px] text-brand-muted">Clientes corporativos</p>
+            <p className="text-xs text-brand-ink/80">Clientes corporativos</p>
           </div>
         </div>
 
@@ -144,13 +145,13 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
             <IconCalendar className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-muted">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-brand-ink/80">
               Contratos Vigentes
             </p>
             <p className="font-display text-2xl font-black text-emerald-800">
               {stats.contratosActivos}
             </p>
-            <p className="text-[11px] text-emerald-700 font-medium">Operando actualmente</p>
+            <p className="text-xs text-emerald-700 font-medium">Operando actualmente</p>
           </div>
         </div>
 
@@ -159,13 +160,13 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
             <IconUsers className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-muted">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-brand-ink/80">
               Dotación Contratada
             </p>
             <p className="font-display text-2xl font-black text-brand-ink">
-              {stats.dotacionTotal} <span className="text-xs font-bold text-brand-muted">cupos</span>
+              {stats.dotacionTotal} <span className="text-sm font-bold text-brand-ink/80">cupos</span>
             </p>
-            <p className="text-[11px] text-brand-muted">Trabajadores pactados</p>
+            <p className="text-xs text-brand-ink/80">Trabajadores pactados</p>
           </div>
         </div>
       </div>
@@ -175,19 +176,20 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
         <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           {/* Campo de Búsqueda */}
           <div className="relative flex-1 max-w-md">
-            <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
+            <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-ink/80" />
             <input
               type="text"
-              placeholder="Buscar por empresa, RUT o supervisor…"
+              aria-label="Buscar empresa por nombre, RUT o contacto"
+              placeholder="Buscar empresa, RUT o contacto…"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full rounded-xl border border-brand-border bg-white pl-9 pr-3.5 py-2 text-xs font-semibold text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
+              className="w-full rounded-xl border border-brand-border bg-white pl-9 pr-3.5 py-2 text-sm font-semibold text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
             />
             {busqueda && (
               <button
                 type="button"
                 onClick={() => setBusqueda("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-brand-muted hover:text-brand-ink"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-brand-ink/80 hover:text-brand-ink"
               >
                 ✕
               </button>
@@ -195,14 +197,14 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
           </div>
 
           {/* Filtros de Estado */}
-          <div className="flex items-center gap-1 overflow-x-auto text-xs pb-1 sm:pb-0">
+          <div className="flex items-center gap-1 overflow-x-auto text-sm pb-1 sm:pb-0">
             <button
               type="button"
               onClick={() => setFiltro("todas")}
               className={`rounded-lg px-2.5 py-1.5 font-bold transition ${
                 filtro === "todas"
-                  ? "bg-brand-sand/80 text-brand-terracotta shadow-xs"
-                  : "text-brand-muted hover:bg-brand-sand/30"
+                  ? "bg-brand-sand/80 text-brand-terracotta-deep shadow-sm"
+                  : "text-brand-ink/80 hover:bg-brand-sand/30"
               }`}
             >
               Todas ({empresas.length})
@@ -212,8 +214,8 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
               onClick={() => setFiltro("activas")}
               className={`rounded-lg px-2.5 py-1.5 font-bold transition ${
                 filtro === "activas"
-                  ? "bg-emerald-100 text-emerald-800 shadow-xs"
-                  : "text-brand-muted hover:bg-brand-sand/30"
+                  ? "bg-emerald-100 text-emerald-800 shadow-sm"
+                  : "text-brand-ink/80 hover:bg-brand-sand/30"
               }`}
             >
               Vigentes ({stats.contratosActivos})
@@ -223,8 +225,8 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
               onClick={() => setFiltro("sin_contrato")}
               className={`rounded-lg px-2.5 py-1.5 font-bold transition ${
                 filtro === "sin_contrato"
-                  ? "bg-stone-200 text-stone-800 shadow-xs"
-                  : "text-brand-muted hover:bg-brand-sand/30"
+                  ? "bg-stone-200 text-stone-800 shadow-sm"
+                  : "text-brand-ink/80 hover:bg-brand-sand/30"
               }`}
             >
               Sin Contrato ({stats.totalEmpresas - stats.contratosActivos})
@@ -239,7 +241,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
             setError(null);
             setMostrarModalAlta(true);
           }}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta px-4 py-2.5 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition active:scale-95 shrink-0"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta-deep px-4 py-2.5 text-sm font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition active:scale-95 shrink-0"
         >
           <IconPlus className="h-4 w-4" />
           <span>Nueva Empresa</span>
@@ -266,7 +268,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
                 {/* Cabecera de la Tarjeta */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-sand-light border border-brand-border text-brand-terracotta font-display font-black text-sm shadow-xs">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-sand-deep border border-brand-border text-brand-terracotta-deep font-display font-black text-sm shadow-sm">
                       {iniciales}
                     </div>
                     <div className="min-w-0">
@@ -275,15 +277,15 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
                       </h3>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         {emp.rut ? (
-                          <span className="rounded-md border border-brand-border bg-white px-2 py-0.5 text-[10px] font-mono font-semibold text-brand-ink">
+                          <span className="rounded-md border border-brand-border bg-white px-2 py-0.5 text-xs font-mono font-semibold text-brand-ink">
                             RUT: {emp.rut}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-brand-muted italic">Sin RUT</span>
+                          <span className="text-xs text-brand-ink/80 italic">Sin RUT</span>
                         )}
                         {emp.contacto && (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-brand-muted truncate">
-                            <IconUser className="h-3 w-3 shrink-0 text-brand-terracotta" />
+                          <span className="inline-flex items-center gap-1 text-xs text-brand-ink/80 truncate">
+                            <IconUser className="h-3 w-3 shrink-0 text-brand-terracotta-deep" />
                             <span className="truncate">{emp.contacto}</span>
                           </span>
                         )}
@@ -293,7 +295,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
 
                   {/* Insignia de Estado */}
                   <span
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
                       tieneVigente
                         ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                         : tieneContrato
@@ -304,7 +306,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
                         tieneVigente
-                          ? "bg-emerald-600 animate-pulse"
+                          ? "bg-emerald-600 motion-safe:animate-pulse"
                           : tieneContrato
                           ? "bg-amber-600"
                           : "bg-stone-500"
@@ -323,41 +325,41 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
                 {/* Resumen del Contrato / Dotación */}
                 {tieneContrato ? (
                   <div className="mt-4 rounded-2xl border border-brand-border/60 bg-white p-3.5 space-y-2">
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="p-1.5 rounded-xl bg-brand-sand-light/60">
-                        <span className="text-[10px] uppercase font-bold text-brand-muted block">
+                    <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                      <div className="p-1.5 rounded-xl bg-brand-sand-deep/60">
+                        <span className="text-xs uppercase font-bold text-brand-ink/80 block">
                           Dotación
                         </span>
                         <span className="font-display text-base font-black text-brand-ink">
                           {emp.headcount ?? "-"}
                         </span>
-                        <span className="text-[9px] text-brand-muted block">trabajadores</span>
+                        <span className="text-xs text-brand-ink/80 block">trabajadores</span>
                       </div>
 
-                      <div className="p-1.5 rounded-xl bg-brand-sand-light/60">
-                        <span className="text-[10px] uppercase font-bold text-brand-muted block">
+                      <div className="p-1.5 rounded-xl bg-brand-sand-deep/60">
+                        <span className="text-xs uppercase font-bold text-brand-ink/80 block">
                           Tarifa Pactada
                         </span>
-                        <span className="font-display text-base font-black text-brand-terracotta">
+                        <span className="font-display text-base font-black text-brand-terracotta-deep">
                           {emp.tarifa_convenida ? formatearMonedaCLP(emp.tarifa_convenida) : "-"}
                         </span>
-                        <span className="text-[9px] text-brand-muted block">por día / cupo</span>
+                        <span className="text-xs text-brand-ink/80 block">por día / cupo</span>
                       </div>
 
-                      <div className="p-1.5 rounded-xl bg-brand-sand-light/60">
-                        <span className="text-[10px] uppercase font-bold text-brand-muted block">
+                      <div className="p-1.5 rounded-xl bg-brand-sand-deep/60">
+                        <span className="text-xs uppercase font-bold text-brand-ink/80 block">
                           Nómina Activa
                         </span>
                         <span className="font-display text-base font-black text-emerald-800">
                           {emp.total_trabajadores ?? 0}
                         </span>
-                        <span className="text-[9px] text-brand-muted block">
+                        <span className="text-xs text-brand-ink/80 block">
                           {emp.camas_asignadas ?? 0} con cama
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-brand-muted pt-1 border-t border-brand-border/40 px-1">
+                    <div className="flex items-center justify-between text-xs text-brand-ink/80 pt-1 border-t border-brand-border/40 px-1">
                       <span>Vigencia:</span>
                       <span className="font-semibold text-brand-ink">
                         {formatearFechaCorta(emp.vigencia_desde)} → {formatearFechaCorta(emp.vigencia_hasta)}
@@ -365,7 +367,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-4 rounded-2xl border border-dashed border-brand-border bg-brand-sand-light/40 p-3.5 text-center text-xs text-brand-muted">
+                  <div className="mt-4 rounded-2xl border border-dashed border-brand-border bg-brand-sand-deep/40 p-3.5 text-center text-sm text-brand-ink/80">
                     No tiene contratos vigentes. Pulsa "+ Nuevo Contrato" para asignar dotación y tarifa.
                   </div>
                 )}
@@ -376,7 +378,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
                 <button
                   type="button"
                   onClick={() => onNuevoContrato?.(emp.id)}
-                  className="rounded-xl border border-brand-border bg-brand-sand-light hover:bg-brand-sand px-3 py-2 text-xs font-bold text-brand-ink transition text-center shrink-0"
+                  className="rounded-xl border border-brand-border bg-brand-sand-deep hover:bg-brand-sand px-3 py-2 text-sm font-bold text-brand-ink transition text-center shrink-0"
                 >
                   + Contrato
                 </button>
@@ -384,7 +386,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
                 <button
                   type="button"
                   onClick={() => onSeleccionarEmpresa?.(emp.id, emp.contrato_id ?? undefined)}
-                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep px-4 py-2 text-xs font-bold text-white transition shadow-sm active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep px-4 py-2 text-sm font-bold text-white transition shadow-sm active:scale-95"
                 >
                   <span>Ver Nómina y Consumos</span>
                   <IconChevronRight className="h-3.5 w-3.5" />
@@ -396,13 +398,13 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
 
         {!empresasFiltradas.length && (
           <div className="col-span-full rounded-3xl border border-brand-border/70 bg-brand-card p-12 text-center shadow-card">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-sand-light text-brand-muted">
+            <div className="ui-operativa mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-sand-deep text-brand-ink/80">
               <IconBriefcase className="h-7 w-7" />
             </div>
             <h3 className="mt-4 font-display text-lg font-bold text-brand-ink">
               No se encontraron empresas contratistas
             </h3>
-            <p className="mt-1 text-xs text-brand-muted max-w-sm mx-auto">
+            <p className="mt-1 text-sm text-brand-ink/80 max-w-sm mx-auto">
               {busqueda
                 ? "No hay resultados para el término de búsqueda ingresado."
                 : "Aún no hay empresas registradas con el filtro seleccionado."}
@@ -413,24 +415,25 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
 
       {/* 4. Modal para Alta de Empresa */}
       {mostrarModalAlta && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
+        <Dialogo titulo="Registrar empresa" onCerrar={() => setMostrarModalAlta(false)} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm animate-fadeIn">
           <div className="w-full max-w-md rounded-3xl border border-brand-border bg-brand-card p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-brand-border/60">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-sand-light text-brand-terracotta">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-sand-deep text-brand-terracotta-deep">
                   <IconBriefcase className="h-4 w-4" />
                 </div>
                 <div>
                   <h3 className="font-display text-base font-bold text-brand-ink">
                     Registrar Empresa Contratista
                   </h3>
-                  <p className="text-[11px] text-brand-muted">Cliente corporativo para nóminas B2B</p>
+                  <p className="text-xs text-brand-ink/80">Datos de contacto de la empresa</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setMostrarModalAlta(false)}
-                className="rounded-full p-1.5 text-brand-muted hover:bg-brand-sand"
+                aria-label="Cerrar registro de empresa"
+                className="rounded-full p-1.5 text-brand-ink/80 hover:bg-brand-sand"
               >
                 <IconClose className="h-4 w-4" />
               </button>
@@ -438,10 +441,10 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
 
             <form onSubmit={handleGuardar} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-muted mb-1">
-                  Razón Social <span className="text-brand-terracotta">*</span>
+                <label htmlFor="empresa-razon" className="block text-xs font-bold uppercase tracking-wider text-brand-ink/80 mb-1">
+                  Razón Social <span className="text-brand-terracotta-deep">*</span>
                 </label>
-                <input
+                <input id="empresa-razon"
                   type="text"
                   required
                   autoFocus
@@ -453,10 +456,10 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-muted mb-1">
+                <label htmlFor="empresa-rut" className="block text-xs font-bold uppercase tracking-wider text-brand-ink/80 mb-1">
                   RUT de la Empresa (opcional)
                 </label>
-                <input
+                <input id="empresa-rut"
                   type="text"
                   placeholder="Ej: 76.123.456-7"
                   value={rut}
@@ -466,10 +469,10 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-muted mb-1">
+                <label htmlFor="empresa-contacto" className="block text-xs font-bold uppercase tracking-wider text-brand-ink/80 mb-1">
                   Contacto o Supervisor de Faena (opcional)
                 </label>
-                <input
+                <input id="empresa-contacto"
                   type="text"
                   placeholder="Ej: Don Roberto Gómez (+56 9 1234 5678)"
                   value={contacto}
@@ -479,7 +482,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
               </div>
 
               {error && (
-                <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-700">
                   {error}
                 </div>
               )}
@@ -488,14 +491,14 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
                 <button
                   type="button"
                   onClick={() => setMostrarModalAlta(false)}
-                  className="rounded-xl px-4 py-2 text-xs font-bold text-brand-muted hover:text-brand-ink"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={guardando || !razonSocial.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-terracotta px-4 py-2 text-xs font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-terracotta-deep px-4 py-2 text-sm font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition disabled:opacity-50"
                 >
                   <IconCheck className="h-4 w-4" />
                   <span>{guardando ? "Registrando…" : "Registrar Empresa"}</span>
@@ -503,7 +506,7 @@ export function EmpresasScreen({ onSeleccionarEmpresa, onNuevoContrato }: Empres
               </div>
             </form>
           </div>
-        </div>
+        </Dialogo>
       )}
     </div>
   );

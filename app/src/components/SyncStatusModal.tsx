@@ -1,3 +1,5 @@
+import { SyncStatusBadge } from "./SyncStatusBadge";
+import { Dialogo } from "./Dialogo";
 import { useEffect, useState } from "react";
 import { powersync, connectPowerSync } from "../lib/powersync";
 import { useQuery } from "@powersync/react";
@@ -108,21 +110,22 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <Dialogo titulo="Estado de tus registros" onCerrar={onCerrar} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-3xl border border-brand-border bg-brand-card p-6 shadow-2xl space-y-5">
         {/* Cabecera */}
         <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-terracotta">
-              Conectividad y Offline
+            <p className="text-xs font-bold uppercase tracking-widest text-brand-terracotta-deep">
+              Guardado en este celular
             </p>
             <h3 className="font-display text-xl font-bold text-brand-ink">
-              Estado de Sincronización
+              Estado de tus registros
             </h3>
           </div>
           <button
             onClick={onCerrar}
-            className="rounded-full p-2 text-brand-muted hover:bg-brand-sand hover:text-brand-ink"
+            aria-label="Cerrar estado de tus registros"
+            className="rounded-full p-2 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink"
           >
             <IconClose className="h-5 w-5" />
           </button>
@@ -130,29 +133,30 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
 
         {/* Estado del propio dispositivo */}
         <div className="space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+          <h4 className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
             Este Dispositivo
           </h4>
+          <SyncStatusBadge />
 
           <div className="rounded-2xl border border-brand-border/80 bg-white p-4 space-y-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-brand-muted">Conexión con el servidor:</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm text-brand-ink/80">Conexión:</span>
               <div className="flex items-center gap-1.5">
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
-                    conectado ? "bg-emerald-500 animate-pulse" : "bg-stone-400"
+                    conectado ? "bg-emerald-500 motion-safe:animate-pulse" : "bg-stone-400"
                   }`}
                 />
-                <span className="text-xs font-bold text-brand-ink">
-                  {conectado ? "En línea (Conectado)" : "Sin conexión (Modo Offline)"}
+                <span className="text-sm font-bold text-brand-ink">
+                  {conectado ? "Conectado" : "Sin conexión"}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-t border-brand-border/50 pt-2.5">
-              <span className="text-xs text-brand-muted">Operaciones pendientes en cola:</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-brand-border/50 pt-2.5">
+              <span className="text-sm text-brand-ink/80">Cambios por enviar:</span>
               <span
-                className={`text-xs font-bold ${
+                className={`text-sm font-bold ${
                   tienePendientes || operacionesEnCola > 0
                     ? "text-amber-700"
                     : "text-emerald-700"
@@ -167,9 +171,9 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
             </div>
 
             {ultimaSincronizacion && (
-              <div className="flex items-center justify-between border-t border-brand-border/50 pt-2.5 text-xs text-brand-muted">
-                <span>Último contacto exitoso:</span>
-                <span className="font-semibold text-brand-ink">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-brand-border/50 pt-2.5 text-sm text-brand-ink/80">
+                <span>Última actualización:</span>
+                <span className="whitespace-nowrap font-semibold text-brand-ink">
                   {ultimaSincronizacion.toLocaleTimeString("es-CL", {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -181,9 +185,13 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
           </div>
         </div>
 
+        <p className="text-sm leading-relaxed text-brand-ink">
+          Sin internet puedes seguir trabajando. Los cambios quedan en este celular y se envían automáticamente cuando vuelve la conexión.
+        </p>
+
         {/* Estado del Equipo */}
         <div className="space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+          <h4 className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
             Dispositivos del Equipo
           </h4>
 
@@ -193,20 +201,20 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
               const esAdmin = u.rol === "administradora";
 
               return (
-                <div key={u.id} className="flex items-center justify-between py-2 text-xs">
+                <div key={u.id} className="flex items-center justify-between py-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <IconUser className="h-4 w-4 text-brand-terracotta" />
+                    <IconUser className="h-4 w-4 text-brand-terracotta-deep" />
                     <div>
                       <span className="font-bold text-brand-ink block">{u.nombre}</span>
-                      <span className="text-[10px] text-brand-muted uppercase">
+                      <span className="text-xs text-brand-ink/80 uppercase">
                         {esAdmin ? "Administradora" : "Encargada de Registro"}
                       </span>
                     </div>
                   </div>
 
                   <div className="text-right">
-                    <span className="text-[11px] text-brand-muted block">Última actividad:</span>
-                    <span className="text-xs font-semibold text-brand-ink">
+                    <span className="text-xs text-brand-ink/80 block">Última actividad:</span>
+                    <span className="text-sm font-semibold text-brand-ink">
                       {act
                         ? new Date(act).toLocaleDateString("es-CL", {
                             day: "2-digit",
@@ -257,20 +265,20 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
           <button
             onClick={handleComprobarConexion}
             disabled={comprobando}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3.5 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand/40 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3.5 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand/40 disabled:opacity-50"
           >
-            <IconRefresh className={`h-3.5 w-3.5 ${comprobando ? "animate-spin" : ""}`} />
+            <IconRefresh className={`h-3.5 w-3.5 ${comprobando ? "motion-safe:animate-spin" : ""}`} />
             <span>{comprobando ? "Comprobando…" : "Reconectar"}</span>
           </button>
 
           <button
             onClick={onCerrar}
-            className="rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep px-4 py-2 text-xs font-bold text-white shadow-brand"
+            className="rounded-xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep px-4 py-2 text-sm font-bold text-white shadow-brand"
           >
             Aceptar
           </button>
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }
