@@ -1,3 +1,4 @@
+import { Dialogo } from "../components/Dialogo";
 import { useState, useMemo } from "react";
 import { useQuery } from "@powersync/react";
 import {
@@ -56,7 +57,7 @@ export function RackHotelero({
   } | null>(null);
 
   // Consultar las 8 piezas
-  const { data: habitacionesRaw } = useQuery<HabitacionRow>(
+  const { data: habitacionesRaw, isLoading: cargandoHabitaciones } = useQuery<HabitacionRow>(
     "select id, numero, capacidad, estado from habitacion order by numero asc"
   );
   const habitaciones = habitacionesRaw ?? [];
@@ -150,12 +151,14 @@ export function RackHotelero({
     return mapa;
   }, [reservas, primerDiaMes, ultimoDiaMes]);
 
+  if (cargandoHabitaciones) return <p role="status" className="ui-operativa rounded-2xl border border-brand-border bg-brand-card p-6 text-base text-brand-ink">Cargando calendario…</p>;
+
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+    <div className="ui-operativa mx-auto flex w-full max-w-7xl flex-col gap-4">
       {onVolver && (
         <button
           onClick={onVolver}
-          className="inline-flex w-fit items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-muted hover:text-brand-ink"
+          className="inline-flex w-fit items-center gap-1.5 text-sm font-bold uppercase tracking-wider text-brand-ink/80 hover:text-brand-ink"
         >
           <IconChevronLeft className="h-4 w-4" />
           <span>Volver al inicio</span>
@@ -165,18 +168,18 @@ export function RackHotelero({
       {/* Cabecera y Navegación de Mes */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card">
         <div>
-          <div className="flex items-center gap-2">
-            <IconCalendar className="h-6 w-6 text-brand-terracotta" />
+          <div className="flex flex-wrap items-center gap-2">
+            <IconCalendar className="h-6 w-6 text-brand-terracotta-deep" />
             <h2 className="font-display text-2xl font-bold text-brand-ink">
               Calendario de Ocupación
             </h2>
           </div>
-          <p className="mt-1 text-xs text-brand-muted">
+          <p className="mt-1 text-sm text-brand-ink/80">
             Matriz de disponibilidad mensual de las 8 piezas. Toca un día disponible para registrar una reserva.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={mesAnterior}
             className="rounded-xl border border-brand-border bg-white p-2 text-brand-ink hover:bg-brand-sand/50 shadow-sm"
@@ -199,7 +202,7 @@ export function RackHotelero({
 
           <button
             onClick={irAHoy}
-            className="rounded-xl bg-brand-sand/60 px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand shadow-sm"
+            className="rounded-xl bg-brand-sand/60 px-3 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand shadow-sm"
           >
             Hoy
           </button>
@@ -207,8 +210,8 @@ export function RackHotelero({
       </div>
 
       {/* Leyenda de Colores */}
-      <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-brand-border/60 bg-white px-4 py-2.5 text-xs text-brand-muted shadow-sm">
-        <span className="font-bold uppercase tracking-wider text-[10px]">Estados:</span>
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-brand-border/60 bg-white px-4 py-2.5 text-sm text-brand-ink/80 shadow-sm">
+        <span className="font-bold uppercase tracking-wider text-xs">Estados:</span>
         <div className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-full bg-emerald-500" />
           <span className="font-medium text-brand-ink">Disponible (tocar para reservar)</span>
@@ -226,7 +229,7 @@ export function RackHotelero({
       {/* Matriz Scrollable Horizontal */}
       <div className="rounded-3xl border border-brand-border/80 bg-brand-card shadow-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs">
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-brand-border bg-brand-sand/30">
                 <th className="sticky left-0 z-20 bg-brand-sand/90 px-3 py-3 text-left font-bold uppercase tracking-wider text-brand-ink min-w-[120px] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
@@ -237,14 +240,14 @@ export function RackHotelero({
                     key={d.numero}
                     className={`px-1.5 py-2 text-center font-bold min-w-[34px] border-l border-brand-border/40 ${
                       d.esHoy
-                        ? "bg-brand-terracotta text-white font-extrabold"
+                        ? "bg-brand-terracotta-deep text-white font-extrabold"
                         : d.esFinDeSemana
-                        ? "bg-brand-sand/50 text-brand-muted"
+                        ? "bg-brand-sand/50 text-brand-ink/80"
                         : "text-brand-ink"
                     }`}
                   >
-                    <div className="text-[10px] uppercase">{d.diaSemana}</div>
-                    <div className="text-xs">{d.numero}</div>
+                    <div className="text-xs uppercase">{d.diaSemana}</div>
+                    <div className="text-sm">{d.numero}</div>
                   </th>
                 ))}
               </tr>
@@ -258,10 +261,10 @@ export function RackHotelero({
                   <tr key={h.id} className="border-b border-brand-border/40 hover:bg-brand-sand/10">
                     <td className="sticky left-0 z-10 bg-brand-card px-3 py-3 font-display font-bold text-brand-ink shadow-[2px_0_5px_rgba(0,0,0,0.05)] whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        <IconBed className="h-4 w-4 text-brand-terracotta" />
+                        <IconBed className="h-4 w-4 text-brand-terracotta-deep" />
                         <span>Pieza #{h.numero}</span>
                       </div>
-                      <span className="text-[10px] text-brand-muted font-normal">
+                      <span className="text-xs text-brand-ink/80 font-normal">
                         ({h.capacidad} camas)
                       </span>
                     </td>
@@ -285,6 +288,10 @@ export function RackHotelero({
                       return (
                         <td
                           key={d.numero}
+                          className="border-l border-brand-border/40 p-0 text-center">
+                          <button
+                          type="button"
+                          aria-label={`${tooltip}, ${d.fechaStr}`}
                           onClick={() => {
                             if (!mantencion && !ocupada) {
                               onSeleccionarParaReservar(h.id, d.fechaStr);
@@ -298,16 +305,17 @@ export function RackHotelero({
                               });
                             }
                           }}
-                          className={`h-11 border-l border-brand-border/40 text-center transition-colors cursor-pointer select-none ${bgColor} ${
+                          className={`h-11 w-full min-w-11 text-center transition-colors cursor-pointer select-none ${bgColor} ${
                             d.esHoy ? "ring-1 ring-inset ring-brand-terracotta/40" : ""
                           }`}
                           title={tooltip}
                         >
                           {ocupada && (
-                            <span className="block truncate px-0.5 text-[9px] max-w-[34px]">
+                            <span className="block truncate px-0.5 text-xs max-w-[34px]">
                               {(res?.huesped_nombre || "Ocupada").slice(0, 3)}
                             </span>
                           )}
+                          </button>
                         </td>
                       );
                     })}
@@ -321,27 +329,28 @@ export function RackHotelero({
 
       {/* Modal / Popover de detalle si toca una celda ocupada */}
       {celdaDetalle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <Dialogo titulo="Detalle de ocupación" onCerrar={() => setCeldaDetalle(null)} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-3xl border border-brand-border bg-brand-card p-5 shadow-2xl space-y-4">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                <p className="text-xs font-bold uppercase tracking-wider text-brand-ink/80">
                   Detalle de Ocupación
                 </p>
                 <h3 className="font-display text-lg font-bold text-brand-ink">
                   Pieza #{celdaDetalle.piezaNumero}
                 </h3>
-                <p className="text-xs text-brand-muted">{celdaDetalle.fecha}</p>
+                <p className="text-sm text-brand-ink/80">{celdaDetalle.fecha}</p>
               </div>
               <button
                 onClick={() => setCeldaDetalle(null)}
-                className="rounded-full p-1 text-brand-muted hover:bg-brand-sand"
+                aria-label="Cerrar detalle de ocupación"
+                className="rounded-full p-1 text-brand-ink/80 hover:bg-brand-sand"
               >
                 ✕
               </button>
             </div>
 
-            <div className="rounded-2xl border border-brand-border/70 bg-white p-3.5 space-y-2 text-xs">
+            <div className="rounded-2xl border border-brand-border/70 bg-white p-3.5 space-y-2 text-sm">
               {celdaDetalle.estado === "ocupada" ? (
                 <>
                   <div className="flex items-center gap-1.5 text-amber-900 font-bold">
@@ -362,13 +371,13 @@ export function RackHotelero({
             <div className="flex justify-end pt-1">
               <button
                 onClick={() => setCeldaDetalle(null)}
-                className="rounded-xl bg-brand-sand/70 hover:bg-brand-sand px-4 py-2 text-xs font-bold text-brand-ink"
+                className="rounded-xl bg-brand-sand/70 hover:bg-brand-sand px-4 py-2 text-sm font-bold text-brand-ink"
               >
                 Cerrar
               </button>
             </div>
           </div>
-        </div>
+        </Dialogo>
       )}
     </div>
   );

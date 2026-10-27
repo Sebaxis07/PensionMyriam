@@ -31,13 +31,14 @@ test("HU-04: clic en una celda libre del rack abre Reservar con la pieza y fecha
   // otras pruebas corrieron antes. Se toma la primera celda disponible
   // de esa fila (cualquier día del mes visible).
   const filaPieza3 = page.locator("tr", { has: page.getByText("Pieza #3", { exact: true }) });
-  const celdaLibre = filaPieza3.locator('td[title*="Disponible"]').first();
+  const celdaLibre = filaPieza3.locator('button[title*="Disponible"]').first();
   await expect(celdaLibre).toBeVisible({ timeout: 10_000 });
 
   // El título de la celda ("Pieza #3 - Disponible") no trae la fecha;
   // se lee del encabezado de columna correspondiente para verificar
   // después que el formulario quedó con la MISMA fecha.
-  const indiceColumna = await celdaLibre.evaluate((td) => {
+  const indiceColumna = await celdaLibre.evaluate((boton) => {
+    const td = boton.closest("td")!;
     const fila = td.parentElement!;
     return Array.from(fila.children).indexOf(td);
   });

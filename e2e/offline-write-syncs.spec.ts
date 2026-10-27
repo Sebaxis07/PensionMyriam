@@ -70,7 +70,7 @@ test("HU-27: check-in, registro de consumo y cambio de estado funcionan sin cone
   // ---------------------------------------------------------------
   const inicioCheckin = Date.now();
   await page.getByRole("button", { name: /^#1 /, exact: false }).click();
-  await page.getByRole("button", { name: "Registrar Check-in" }).click();
+  await page.getByRole("button", { name: "Registrar ingreso" }).click();
   await expect(page.getByRole("button", { name: /^#1 Ocupada/ })).toBeVisible({ timeout: 2_000 });
   const tiempoCheckinMs = Date.now() - inicioCheckin;
   console.log(`[HU-27] Check-in: ${tiempoCheckinMs} ms`);
@@ -105,7 +105,7 @@ test("HU-27: check-in, registro de consumo y cambio de estado funcionan sin cone
   await page.getByRole("button", { name: "Habitaciones" }).click();
   const inicioCheckout = Date.now();
   await page.getByRole("button", { name: /^#2 /, exact: false }).click();
-  await page.getByRole("button", { name: "Registrar salida (Check-out)" }).click();
+  await page.getByRole("button", { name: "Registrar salida" }).click();
   await expect(page.getByRole("button", { name: /^#2 En aseo/ })).toBeVisible({ timeout: 2_000 });
   const tiempoCheckoutMs = Date.now() - inicioCheckout;
   console.log(`[HU-27] Cambio de estado (check-out): ${tiempoCheckoutMs} ms`);
@@ -242,7 +242,7 @@ test("HU-28: un corte justo después de que Postgres recibe la operación (antes
   });
 
   await page.getByRole("button", { name: /^#8 /, exact: false }).click();
-  await page.getByRole("button", { name: "Registrar salida (Check-out)" }).click();
+  await page.getByRole("button", { name: "Registrar salida" }).click();
   // La UI ya muestra el cambio al instante (optimista, local) aunque la
   // primera subida real al servidor se vaya a cortar a continuación.
   await expect(page.getByRole("button", { name: /^#8 En aseo/ })).toBeVisible({ timeout: 2_000 });

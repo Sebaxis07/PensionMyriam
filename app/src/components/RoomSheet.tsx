@@ -1,3 +1,4 @@
+import { Dialogo } from "./Dialogo";
 import { useState } from "react";
 import { powersync } from "../lib/powersync";
 import { nuevoUuidIdempotente } from "../lib/idempotencia";
@@ -109,10 +110,7 @@ export function RoomSheet({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-30 flex items-end md:items-center justify-center bg-brand-ink/45 p-0 md:p-4 backdrop-blur-sm transition-all"
-      onClick={onClose}
-    >
+    <Dialogo titulo="Acciones de habitación" onCerrar={onClose} className="ui-operativa fixed inset-0 z-30 flex items-end md:items-center justify-center bg-brand-ink/45 p-0 md:p-4 backdrop-blur-sm transition-all">
       <div
         className="w-full max-w-md md:max-w-lg rounded-t-3xl md:rounded-3xl border border-brand-border/60 bg-brand-card p-5 md:p-7 pb-8 shadow-2xl animate-in slide-in-from-bottom-5 duration-200"
         onClick={(e) => e.stopPropagation()}
@@ -128,15 +126,15 @@ export function RoomSheet({
                 Mantención — Pieza #{pieza.numero}
               </h2>
             </div>
-            <p className="mt-1 text-sm text-brand-muted">
+            <p className="mt-1 text-sm text-brand-ink/80">
               Selecciona el motivo del bloqueo de la habitación:
             </p>
 
             <div className="mt-4">
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-muted">
+              <label htmlFor="motivo-mantencion" className="mb-1 block text-sm font-bold uppercase tracking-wider text-brand-ink/80">
                 Motivo
               </label>
-              <select
+              <select id="motivo-mantencion"
                 className="w-full rounded-xl border border-brand-border bg-white p-3.5 text-base font-medium text-brand-ink focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
@@ -149,12 +147,12 @@ export function RoomSheet({
 
             <BotonPrincipal disabled={guardando} onClick={confirmarMantencion}>
               <IconWrench className="h-5 w-5" />
-              <span>Confirmar mantención</span>
+              <span>{guardando ? "Guardando mantención…" : "Confirmar mantención"}</span>
             </BotonPrincipal>
 
             <button
               onClick={() => setMarcandoMantencion(false)}
-              className="mt-3 w-full py-2.5 text-center text-sm font-semibold text-brand-muted hover:text-brand-ink"
+              className="mt-3 w-full py-2.5 text-center text-sm font-semibold text-brand-ink/80 hover:text-brand-ink"
             >
               Volver atrás
             </button>
@@ -168,11 +166,11 @@ export function RoomSheet({
                   Pieza #{pieza.numero}
                 </h2>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-md border border-brand-border bg-brand-sand/40 px-2 py-0.5 text-xs font-bold text-brand-ink">
-                    <IconUsers className="h-3.5 w-3.5 text-brand-muted" />
+                  <span className="inline-flex items-center gap-1 rounded-md border border-brand-border bg-brand-sand/40 px-2 py-0.5 text-sm font-bold text-brand-ink">
+                    <IconUsers className="h-3.5 w-3.5 text-brand-ink/80" />
                     {pieza.capacidad} personas
                   </span>
-                  <span className="text-xs font-semibold text-brand-muted">
+                  <span className="text-sm font-semibold text-brand-ink/80">
                     {ESTADO_LABEL[pieza.estado] ?? pieza.estado}
                   </span>
                 </div>
@@ -192,32 +190,32 @@ export function RoomSheet({
                   <p className="font-semibold text-brand-ink">
                     Reserva para hoy: <strong className="text-brand-terracotta-deep">{pieza.reserva_nombre}</strong>
                   </p>
-                  <p className="text-xs text-brand-muted">
-                    Modalidad: {pieza.reserva_tipo === "empresa" ? "Contratista B2B" : "Turista independiente"}
+                  <p className="text-sm text-brand-ink/80">
+                    Modalidad: {pieza.reserva_tipo === "empresa" ? "Trabajador de empresa" : "Turista independiente"}
                   </p>
                 </div>
               )}
 
               {pieza.estado === "disponible" && !pieza.reserva_id && (
-                <p className="text-brand-muted">
+                <p className="text-brand-ink/80">
                   Habitación limpia y lista para recibir nuevos pasajeros.
                 </p>
               )}
 
               {pieza.estado === "ocupada" && (
-                <p className="text-brand-muted">
+                <p className="text-brand-ink/80">
                   Habitación actualmente en uso. Al registrar la salida pasará automáticamente a estado de aseo.
                 </p>
               )}
 
               {pieza.estado === "en_aseo" && (
-                <p className="text-brand-muted">
+                <p className="text-brand-ink/80">
                   Aseo de cambio de sábanas y desinfección pendiente tras la salida del huésped.
                 </p>
               )}
 
               {pieza.estado === "en_mantencion" && (
-                <p className="text-brand-muted">
+                <p className="text-brand-ink/80">
                   Fuera de servicio por motivo: <strong className="text-brand-ink">{pieza.motivo_mantencion}</strong>
                 </p>
               )}
@@ -227,7 +225,7 @@ export function RoomSheet({
             {pieza.estado === "disponible" && pieza.reserva_id && (
               <BotonPrincipal disabled={guardando} onClick={checkin}>
                 <IconBell className="h-5 w-5" />
-                <span>Registrar Check-in</span>
+                <span>{guardando ? "Guardando ingreso…" : "Registrar ingreso"}</span>
               </BotonPrincipal>
             )}
 
@@ -241,28 +239,28 @@ export function RoomSheet({
             {pieza.estado === "ocupada" && (
               <BotonPrincipal disabled={guardando} onClick={salio}>
                 <IconDoorExit className="h-5 w-5" />
-                <span>Registrar salida (Check-out)</span>
+                <span>{guardando ? "Guardando salida…" : "Registrar salida"}</span>
               </BotonPrincipal>
             )}
 
             {pieza.estado === "en_aseo" && (
               <BotonPrincipal disabled={guardando} onClick={aseoListo}>
                 <IconBroom className="h-5 w-5" />
-                <span>Completar aseo</span>
+                <span>{guardando ? "Guardando aseo…" : "Completar aseo"}</span>
               </BotonPrincipal>
             )}
 
             {pieza.estado === "en_mantencion" && (
               <BotonPrincipal disabled={guardando} onClick={liberarMantencion}>
                 <IconUnlock className="h-5 w-5" />
-                <span>Liberar pieza a disponible</span>
+                <span>{guardando ? "Guardando…" : "Liberar pieza a disponible"}</span>
               </BotonPrincipal>
             )}
 
             {/* Acción secundaria para marcar mantención */}
             {(pieza.estado === "disponible" || pieza.estado === "en_aseo") && (
               <button
-                className="mt-3 flex w-full items-center justify-center gap-1.5 py-2.5 text-xs font-bold uppercase tracking-wider text-brand-muted hover:text-brand-ink"
+                className="mt-3 flex w-full items-center justify-center gap-1.5 py-2.5 text-sm font-bold uppercase tracking-wider text-brand-ink/80 hover:text-brand-ink"
                 onClick={() => setMarcandoMantencion(true)}
               >
                 <IconWrench className="h-3.5 w-3.5" />
@@ -272,14 +270,14 @@ export function RoomSheet({
 
             <button
               onClick={onClose}
-              className="mt-2 w-full py-2.5 text-center text-sm font-semibold text-brand-muted hover:text-brand-ink"
+              className="mt-2 w-full py-2.5 text-center text-sm font-semibold text-brand-ink/80 hover:text-brand-ink"
             >
               Cerrar
             </button>
           </>
         )}
       </div>
-    </div>
+    </Dialogo>
   );
 }
 
@@ -303,7 +301,7 @@ function BotonPrincipal({
     <button
       disabled={disabled}
       onClick={onClick}
-      className="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-terracotta px-4 py-3.5 text-base font-bold text-white shadow-brand transition-all duration-150 hover:bg-brand-terracotta-deep active:scale-[0.98] disabled:opacity-50"
+      className="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-terracotta-deep px-4 py-3.5 text-base font-bold text-white shadow-brand transition-all duration-150 hover:bg-brand-terracotta-deep active:scale-[0.98] disabled:opacity-50"
     >
       {children}
     </button>

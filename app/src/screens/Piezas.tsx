@@ -122,7 +122,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
       {/* ========================================================= */}
       {/* SIDEBAR DESKTOP (visible solo en >= 768px / md:)           */}
       {/* ========================================================= */}
-      <aside className="hidden md:flex md:w-64 md:flex-col md:justify-between border-r border-brand-border/70 bg-brand-card p-5 shrink-0 shadow-sm">
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:justify-between border-r border-brand-border/70 bg-brand-card p-5 shrink-0 shadow-sm">
         <div>
           {/* Marca / Identidad */}
           <div id="tour-logo-identidad-desktop" className="flex items-center gap-3 pb-6 border-b border-brand-border/60">
@@ -236,7 +236,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
             <SyncStatusBadge onClick={() => setMostrarSyncModal(true)} />
           </div>
           <p className="text-[11px] text-brand-muted/80">
-            PWA Offline-first · Paposo
+            Paposo · Puedes trabajar sin internet
           </p>
         </div>
       </aside>
@@ -278,7 +278,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                   }}
                 />
               ) : (
-                <div className="space-y-6">
+                <div className="ui-operativa space-y-6">
                 {/* Métricas destacadas de estado (2 cols en mobile, 4 cols en md/desktop) */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                   <StatTile
@@ -297,7 +297,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                   />
                   <StatTile
                     n={stats.checkinPronto}
-                    label="Check-in hoy"
+                    label="Ingresos hoy"
                     dotColor="bg-brand-terracotta"
                     numColor="text-brand-terracotta-deep"
                     sublabel="Llegadas hoy"
@@ -321,16 +321,16 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                         <h2 className="font-display text-base md:text-lg font-bold text-brand-ink">
                           Habitaciones de la Pensión
                         </h2>
-                        <span className="rounded-full bg-brand-sand-light px-2.5 py-0.5 text-xs font-semibold text-brand-muted border border-brand-border/70">
+                        <span className="rounded-full bg-brand-sand-deep px-2.5 py-0.5 text-sm font-semibold text-brand-muted border border-brand-border/70">
                           {piezas?.length ?? 8} habitaciones
                         </span>
                       </div>
-                      <span className="hidden sm:inline text-xs text-brand-muted">
-                        Haz clic en una habitación para ver o editar su estado
+                      <span className="hidden sm:inline text-sm text-brand-muted">
+                        Toca una habitación para ver sus acciones
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    <div className="grid grid-cols-1 min-[480px]:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-4">
                       {piezas?.map((p) => (
                         <RoomCard key={p.id} pieza={p} onTap={() => setPiezaAbierta(p)} />
                       ))}
@@ -348,15 +348,15 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                     <div className="rounded-2xl border border-brand-border/80 bg-brand-card p-5 shadow-card">
                       <div className="flex items-center justify-between pb-3 border-b border-brand-border/60">
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-sand-light text-brand-terracotta">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-sand-deep text-brand-terracotta">
                             <IconBroom className="h-4 w-4" />
                           </div>
                           <div>
                             <h3 className="font-display text-sm font-bold text-brand-ink">Aseo Diario de Hoy</h3>
-                            <p className="text-[11px] text-brand-muted">Habitaciones ocupadas por revisar</p>
+                            <p className="text-xs text-brand-muted">Habitaciones ocupadas por revisar</p>
                           </div>
                         </div>
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                        <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold ${
                           piezasPendientesAseo.length > 0
                             ? "bg-red-100 text-red-700"
                             : "bg-emerald-100 text-emerald-800"
@@ -369,32 +369,32 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                         {piezasPendientesAseo.length === 0 ? (
                           <div className="py-6 text-center">
                             <IconCheckCircle className="mx-auto h-8 w-8 text-emerald-600 mb-2" />
-                            <p className="text-xs font-semibold text-emerald-800">¡Todo el aseo de hoy está al día!</p>
-                            <p className="text-[11px] text-brand-muted mt-0.5">No hay habitaciones ocupadas pendientes.</p>
+                            <p className="text-sm font-semibold text-emerald-800">¡Todo el aseo de hoy está al día!</p>
+                            <p className="text-xs text-brand-muted mt-0.5">No hay habitaciones ocupadas pendientes.</p>
                           </div>
                         ) : (
                           piezasPendientesAseo.map((p) => (
                             <div key={p.id} className="py-2.5 flex items-center justify-between gap-2">
                               <div className="min-w-0">
-                                <p className="text-xs font-bold text-brand-ink">
+                                <p className="text-sm font-bold text-brand-ink">
                                   Pieza {p.numero}
-                                  <span className="ml-1.5 font-normal text-brand-muted text-[11px]">
+                                  <span className="ml-1.5 font-normal text-brand-muted text-xs">
                                     ({p.capacidad} camas)
                                   </span>
                                   {p.estado === "en_aseo" && (
-                                    <span className="ml-1.5 rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-black text-rose-700 uppercase">
+                                    <span className="ml-1.5 rounded bg-rose-100 px-1.5 py-0.5 text-xs font-black text-rose-700 uppercase">
                                       Salida
                                     </span>
                                   )}
                                 </p>
-                                <p className="text-[11px] text-brand-muted truncate">
+                                <p className="text-xs text-brand-muted truncate">
                                   {p.huesped_actual ? `Huésped: ${p.huesped_actual}` : p.estado === "en_aseo" ? "Salida reciente · Recambio pendiente" : "Ocupada"}
                                 </p>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => handleMarcarAseoRapido(p.id)}
-                                className={`shrink-0 flex items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] font-bold text-white transition active:scale-95 shadow-xs ${
+                                className={`shrink-0 flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition active:scale-95 shadow-sm ${
                                   p.estado === "en_aseo"
                                     ? "bg-rose-700 hover:bg-rose-800"
                                     : "bg-emerald-600 hover:bg-emerald-700"
@@ -413,7 +413,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                           <button
                             type="button"
                             onClick={() => setTab("aseo")}
-                            className="w-full text-center text-xs font-semibold text-brand-terracotta hover:underline"
+                            className="w-full text-center text-sm font-semibold text-brand-terracotta hover:underline"
                           >
                             Ver módulo completo de Aseo →
                           </button>
@@ -427,27 +427,27 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                         Ocupación General
                       </h3>
                       <div className="flex items-end justify-between mb-1.5">
-                        <span className="text-xs font-medium text-brand-muted">Capacidad ocupada</span>
+                        <span className="text-sm font-medium text-brand-muted">Capacidad ocupada</span>
                         <span className="font-display text-lg font-black text-brand-ink">{porcentajeOcupacion}%</span>
                       </div>
-                      <div className="w-full h-2.5 bg-brand-sand-light rounded-full overflow-hidden border border-brand-border/60">
+                      <div className="w-full h-2.5 bg-brand-sand-deep rounded-full overflow-hidden border border-brand-border/60">
                         <div
                           className="h-full bg-brand-terracotta transition-all duration-500 rounded-full"
                           style={{ width: `${porcentajeOcupacion}%` }}
                         />
                       </div>
-                      <div className="mt-3.5 grid grid-cols-3 gap-2 text-center text-xs pt-3 border-t border-brand-border/50">
-                        <div className="rounded-xl bg-brand-sand-light p-2 border border-brand-border/40">
+                      <div className="mt-3.5 grid grid-cols-3 gap-2 text-center text-sm pt-3 border-t border-brand-border/50">
+                        <div className="rounded-xl bg-brand-sand-deep p-2 border border-brand-border/40">
                           <p className="font-bold text-emerald-800 text-sm">{stats.disponibles}</p>
-                          <p className="text-[10px] text-brand-muted font-medium">Libres</p>
+                          <p className="text-xs text-brand-muted font-medium">Libres</p>
                         </div>
-                        <div className="rounded-xl bg-brand-sand-light p-2 border border-brand-border/40">
+                        <div className="rounded-xl bg-brand-sand-deep p-2 border border-brand-border/40">
                           <p className="font-bold text-amber-900 text-sm">{stats.ocupadas}</p>
-                          <p className="text-[10px] text-brand-muted font-medium">Ocupadas</p>
+                          <p className="text-xs text-brand-muted font-medium">Ocupadas</p>
                         </div>
-                        <div className="rounded-xl bg-brand-sand-light p-2 border border-brand-border/40">
+                        <div className="rounded-xl bg-brand-sand-deep p-2 border border-brand-border/40">
                           <p className="font-bold text-brand-terracotta-deep text-sm">{stats.checkinPronto}</p>
-                          <p className="text-[10px] text-brand-muted font-medium">Reservas</p>
+                          <p className="text-xs text-brand-muted font-medium">Reservas</p>
                         </div>
                       </div>
                     </div>
@@ -461,23 +461,23 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
                         <button
                           type="button"
                           onClick={() => setTab("reservar")}
-                          className="flex items-center gap-2 rounded-xl border border-brand-border/80 bg-brand-sand-light p-3 text-left hover:border-brand-terracotta/40 hover:bg-brand-sand transition"
+                          className="flex items-center gap-2 rounded-xl border border-brand-border/80 bg-brand-sand-deep p-3 text-left hover:border-brand-terracotta/40 hover:bg-brand-sand transition"
                         >
                           <IconPlus className="h-4 w-4 text-brand-terracotta shrink-0" />
                           <div>
-                            <p className="text-xs font-bold text-brand-ink">Nueva Reserva</p>
-                            <p className="text-[10px] text-brand-muted">Asignar pasajero</p>
+                            <p className="text-sm font-bold text-brand-ink">Nueva Reserva</p>
+                            <p className="text-xs text-brand-muted">Asignar pasajero</p>
                           </div>
                         </button>
                         <button
                           type="button"
                           onClick={() => setTab("consumo")}
-                          className="flex items-center gap-2 rounded-xl border border-brand-border/80 bg-brand-sand-light p-3 text-left hover:border-brand-terracotta/40 hover:bg-brand-sand transition"
+                          className="flex items-center gap-2 rounded-xl border border-brand-border/80 bg-brand-sand-deep p-3 text-left hover:border-brand-terracotta/40 hover:bg-brand-sand transition"
                         >
                           <IconUtensils className="h-4 w-4 text-brand-terracotta shrink-0" />
                           <div>
-                            <p className="text-xs font-bold text-brand-ink">Consumos</p>
-                            <p className="text-[10px] text-brand-muted">Colaciones de hoy</p>
+                            <p className="text-sm font-bold text-brand-ink">Consumos</p>
+                            <p className="text-xs text-brand-muted">Colaciones de hoy</p>
                           </div>
                         </button>
                       </div>
@@ -527,8 +527,8 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
         </main>
 
         {/* Barra de navegación inferior (visible SOLO en mobile < md:) */}
-        <nav className="sticky bottom-0 z-10 flex md:hidden border-t border-brand-border/80 bg-brand-card/95 pb-safe pt-1 shadow-lg backdrop-blur-md">
-          <div className="flex w-full items-center justify-around px-1">
+        <nav aria-label="Navegación principal" className="ui-operativa sticky bottom-0 z-10 flex lg:hidden border-t border-brand-border/80 bg-brand-card/95 pb-safe pt-1 shadow-lg backdrop-blur-md">
+          <div className="flex w-full items-center gap-1 overflow-x-auto px-1">
             <NavButton
               id="tour-nav-habitaciones-mobile"
               activo={tab === "inicio"}
@@ -540,7 +540,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
               id="tour-nav-rack-mobile"
               activo={tab === "rack"}
               icon={<IconCalendar className="h-5 w-5" />}
-              label="Rack"
+              label="Calendario"
               onClick={() => setTab("rack")}
             />
             <NavButton
@@ -744,7 +744,7 @@ function NavButton({
     <button
       id={id}
       onClick={onClick}
-      className={`relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1 transition-all ${
+      className={`relative flex min-h-[52px] min-w-[64px] shrink-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1 transition-all ${
         activo
           ? "font-bold text-brand-terracotta"
           : "font-medium text-brand-muted hover:text-brand-ink"
