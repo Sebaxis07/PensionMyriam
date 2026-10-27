@@ -1,3 +1,5 @@
+import { AvisoInterfaz, describirErrorUi } from "../../components/MensajeInterfaz";
+import { Dialogo } from "../../components/Dialogo";
 import { useState } from "react";
 import { useCierreMensual } from "../../features/cierre/useCierreMensual";
 import { conciliarPeriodo } from "../../features/conciliacion/useConciliacion";
@@ -47,6 +49,15 @@ export function CierreMensualModal({
   const [descargandoExcel, setDescargandoExcel] = useState(false);
   const [procesandoPeriodo, setProcesandoPeriodo] = useState(false);
 
+  const [avisoReporte, setAvisoReporte] = useState<string | null>(null);
+  const [errorReporte, setErrorReporte] = useState<string | null>(null);
+
+  async function presentarDescarga(accion: () => Promise<void>, mensaje: string) {
+    setAvisoReporte(null); setErrorReporte(null);
+    try { await accion(); setAvisoReporte(mensaje); }
+    catch (error) { setErrorReporte(describirErrorUi(error instanceof Error ? error.message : "No se pudo preparar el archivo. Intenta nuevamente.")); }
+  }
+
   const cierre = useCierreMensual(contratoEmpresaId, anio, mes);
   const periodoTexto = `${NOMBRES_MESES[mes - 1]} ${anio}`;
 
@@ -61,6 +72,7 @@ export function CierreMensualModal({
       await conciliarPeriodo(contratoEmpresaId, primerDia, fin);
     } catch (e) {
       console.error(e);
+      setErrorReporte("No se pudieron revisar los días del mes. Revisa la conexión e intenta nuevamente.");
     } finally {
       setProcesandoPeriodo(false);
     }
@@ -153,12 +165,12 @@ export function CierreMensualModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <Dialogo titulo="Resumen mensual y reportes" onCerrar={onCerrar} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm">
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-3xl border border-brand-border bg-brand-card shadow-2xl overflow-hidden">
         {/* Cabecera */}
         <div className="flex items-center justify-between border-b border-brand-border/70 p-5 bg-brand-sand/30">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-terracotta">
+            <p className="text-xs font-bold uppercase tracking-widest text-brand-terracotta-deep">
               Cierre Mensual y Pre-facturación
             </p>
             <h3 className="font-display text-xl font-bold text-brand-ink">
@@ -167,7 +179,7 @@ export function CierreMensualModal({
           </div>
           <button
             onClick={onCerrar}
-            className="rounded-full p-2 text-brand-muted hover:bg-brand-sand hover:text-brand-ink"
+            aria-label="Cerrar diálogo" className="rounded-full p-2 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink"
           >
             <IconClose className="h-5 w-5" />
           </button>
@@ -177,13 +189,13 @@ export function CierreMensualModal({
         <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-5">
           {/* Selectores de Período */}
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand-border/70 bg-white p-3.5 shadow-sm">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+            <span className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
               Período a cerrar:
             </span>
-            <select
+            <select aria-label="Mes del resumen"
               value={mes}
               onChange={(e) => setMes(Number(e.target.value))}
-              className="rounded-xl border border-brand-border bg-brand-sand/20 px-3 py-1.5 text-xs font-bold text-brand-ink"
+              className="rounded-xl border border-brand-border bg-brand-sand/20 px-3 py-1.5 text-sm font-bold text-brand-ink"
             >
               {NOMBRES_MESES.map((nombre, idx) => (
                 <option key={idx + 1} value={idx + 1}>
@@ -191,10 +203,10 @@ export function CierreMensualModal({
                 </option>
               ))}
             </select>
-            <select
+            <select aria-label="Año del resumen"
               value={anio}
               onChange={(e) => setAnio(Number(e.target.value))}
-              className="rounded-xl border border-brand-border bg-brand-sand/20 px-3 py-1.5 text-xs font-bold text-brand-ink"
+              className="rounded-xl border border-brand-border bg-brand-sand/20 px-3 py-1.5 text-sm font-bold text-brand-ink"
             >
               {[2025, 2026, 2027].map((a) => (
                 <option key={a} value={a}>
@@ -204,27 +216,31 @@ export function CierreMensualModal({
             </select>
           </div>
 
+          {errorReporte && <AvisoInterfaz tono="error">{errorReporte}</AvisoInterfaz>}
+          {avisoReporte && <AvisoInterfaz tono="exito">{avisoReporte}</AvisoInterfaz>}
+          <p className="rounded-xl border border-brand-border bg-brand-sand-deep/40 p-3 text-sm text-brand-ink">Revisa empresa y periodo. El resumen indica si puedes preparar los reportes; no confirma un cierre definitivo guardado.</p>
           {cierre.isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-terracotta border-t-transparent" />
+            <div role="status" aria-label="Cargando resumen del periodo" className="flex flex-col items-center justify-center gap-3 py-12">
+              <p>Cargando resumen del periodo…</p>
+              <div className="h-8 w-8 motion-safe:animate-spin rounded-full border-4 border-brand-terracotta border-t-transparent" />
             </div>
           ) : !cierre.estaCerrable ? (
             /* Bloqueo: Existen días pendientes */
             <div className="rounded-2xl border border-amber-300 bg-amber-50/90 p-5 space-y-3">
               <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
                 <span>⚠️</span>
-                <span>Cierre mensual bloqueado: Días pendientes de conciliar</span>
+                <span>Requiere revisión: hay días pendientes</span>
               </div>
-              <p className="text-xs text-amber-800 leading-relaxed">
-                Para cerrar el mes y emitir la pre-factura oficial, todos los días con servicios pactados deben estar conciliados o tener sus diferencias justificadas.
+              <p className="text-sm text-amber-800 leading-relaxed">
+                Antes de preparar los reportes, revisa los servicios pendientes y justifica las diferencias. La tarifa del contrato se mantiene completa.
               </p>
 
               <div className="mt-2 max-h-48 overflow-y-auto rounded-xl border border-amber-200 bg-white p-3 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-950">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-950">
                   Días con diferencias pendientes ({cierre.diasPendientes.length}):
                 </p>
                 {cierre.diasPendientes.map((d) => (
-                  <div key={d.fecha} className="flex items-center justify-between text-xs py-1 border-b border-amber-100 last:border-0">
+                  <div key={d.fecha} className="flex flex-col sm:flex-row gap-1 sm:items-center justify-between text-sm py-1 border-b border-amber-100 last:border-0">
                     <span className="font-bold text-brand-ink">{d.fecha}</span>
                     <span className="text-amber-700">
                       Falta: {d.tiposPendientes.map((t) => ETIQUETAS_TIPO[t] || t).join(", ")}
@@ -238,7 +254,7 @@ export function CierreMensualModal({
                   type="button"
                   onClick={handleConciliarPendientes}
                   disabled={procesandoPeriodo}
-                  className="rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep px-4 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
+                  className="rounded-xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep px-4 py-2 text-sm font-bold text-white transition-colors disabled:opacity-50"
                 >
                   {procesandoPeriodo ? "Conciliando días…" : "Conciliar días del mes automáticamente"}
                 </button>
@@ -250,7 +266,7 @@ export function CierreMensualModal({
                       onCerrar();
                       onIrAConciliacion();
                     }}
-                    className="rounded-xl border border-amber-400 bg-white hover:bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900 transition-colors"
+                    className="rounded-xl border border-amber-400 bg-white hover:bg-amber-50 px-4 py-2 text-sm font-bold text-amber-900 transition-colors"
                   >
                     Justificar Diferencias →
                   </button>
@@ -266,9 +282,9 @@ export function CierreMensualModal({
                 </div>
                 <div>
                   <h4 className="font-display font-bold text-emerald-950 text-sm">
-                    Mes 100% Conciliado y Validado
+                    Listo para preparar los reportes
                   </h4>
-                  <p className="text-xs text-emerald-800">
+                  <p className="text-sm text-emerald-800">
                     Todos los {cierre.totalDiasContrato} días del período están conciliados y justificados conforme a la dotación pactada.
                   </p>
                 </div>
@@ -276,29 +292,29 @@ export function CierreMensualModal({
 
               {/* Resumen Económico */}
               <div className="rounded-2xl border border-brand-border bg-white p-4 space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-terracotta">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-brand-terracotta-deep">
                   Resumen de Facturación ({periodoTexto})
                 </h4>
 
-                <div className="grid grid-cols-2 gap-2 text-xs border-b border-brand-border/60 pb-3">
-                  <span className="text-brand-muted">Dotación pactada:</span>
+                <div className="grid grid-cols-2 gap-2 text-sm border-b border-brand-border/60 pb-3">
+                  <span className="text-brand-ink/80">Dotación pactada:</span>
                   <span className="font-bold text-brand-ink text-right">{cierre.headcountContratado} trabajadores</span>
 
-                  <span className="text-brand-muted">Días contratados:</span>
+                  <span className="text-brand-ink/80">Días contratados:</span>
                   <span className="font-bold text-brand-ink text-right">{cierre.totalDiasContrato} días</span>
 
-                  <span className="text-brand-muted">Tarifa diaria por persona:</span>
+                  <span className="text-brand-ink/80">Tarifa diaria por persona:</span>
                   <span className="font-bold text-brand-ink text-right">{formatearMonedaCLP(cierre.tarifaPactadaDiaria)}</span>
 
-                  <span className="text-brand-muted">Subtotal Contrato Completo:</span>
+                  <span className="text-brand-ink/80">Subtotal Contrato Completo:</span>
                   <span className="font-bold text-brand-ink text-right">{formatearMonedaCLP(cierre.totalContratoCompleto)}</span>
                 </div>
 
                 {cierre.colacionesDetalle.length > 0 && (
-                  <div className="text-xs border-b border-brand-border/60 pb-3 space-y-1">
-                    <span className="font-bold text-brand-terracotta block">Colaciones Extras (Consumo Real):</span>
+                  <div className="text-sm border-b border-brand-border/60 pb-3 space-y-1">
+                    <span className="font-bold text-brand-terracotta-deep block">Colaciones Extras (Consumo Real):</span>
                     {cierre.colacionesDetalle.map((col) => (
-                      <div key={col.nombre} className="flex justify-between text-brand-muted">
+                      <div key={col.nombre} className="flex justify-between text-brand-ink/80">
                         <span>{col.cantidad}x {col.nombre}</span>
                         <span className="font-semibold text-brand-ink">{formatearMonedaCLP(col.subtotal)}</span>
                       </div>
@@ -308,27 +324,31 @@ export function CierreMensualModal({
 
                 <div className="flex items-center justify-between pt-1">
                   <span className="font-display text-sm font-bold text-brand-ink">Total a Facturar:</span>
-                  <span className="font-display text-xl font-bold text-brand-terracotta">
+                  <span className="font-display text-xl font-bold text-brand-terracotta-deep">
                     {formatearMonedaCLP(cierre.granTotal)}
                   </span>
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-brand-ink/80">
+                <p><strong className="text-brand-ink">Prefactura PDF:</strong> resumen del periodo, consumos y justificaciones para revisar con la empresa.</p>
+                <p><strong className="text-brand-ink">Planilla Excel:</strong> dos hojas con el libro de consumos y las diferencias justificadas.</p>
+              </div>
               {/* Botones de Descarga */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <button
-                  onClick={handleDescargarPdf}
+                  onClick={() => presentarDescarga(handleDescargarPdf, "Se solicitó la prefactura PDF. Revisa las descargas del navegador; esto no confirma el cierre definitivo del periodo.")}
                   disabled={descargandoPdf}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta hover:bg-brand-terracotta-deep px-4 py-3 text-xs font-bold text-white shadow-brand transition-all disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep px-4 py-3 text-sm font-bold text-white shadow-brand transition-all disabled:opacity-50"
                 >
                   <IconFileText className="h-4 w-4" />
                   <span>{descargandoPdf ? "Generando PDF…" : "Descargar Pre-factura (PDF)"}</span>
                 </button>
 
                 <button
-                  onClick={handleDescargarExcel}
+                  onClick={() => presentarDescarga(handleDescargarExcel, "Se preparó la planilla de dos hojas. Revisa las descargas del navegador.")}
                   disabled={descargandoExcel}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-3 text-xs font-bold text-white shadow-sm transition-all disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-3 text-sm font-bold text-white shadow-sm transition-all disabled:opacity-50"
                 >
                   <IconClipboardCheck className="h-4 w-4" />
                   <span>{descargandoExcel ? "Generando Excel…" : "Descargar Planilla Contadora (Excel)"}</span>
@@ -342,12 +362,12 @@ export function CierreMensualModal({
         <div className="border-t border-brand-border/70 p-4 bg-brand-sand/20 flex justify-end">
           <button
             onClick={onCerrar}
-            className="rounded-xl px-4 py-2 text-xs font-bold text-brand-muted hover:text-brand-ink"
+            className="rounded-xl px-4 py-2 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
           >
             Cerrar ventana
           </button>
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }
