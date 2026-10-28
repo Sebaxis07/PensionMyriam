@@ -175,8 +175,8 @@ export function construirDocDefinicionVoucher(datos: DatosVoucherTurista): TDocu
       textoBanco: { fontSize: 9.5, color: "#1F2937", lineHeight: 1.4 },
       notaBanco: { fontSize: 8.5, italics: true, color: "#4B5563", margin: [0, 6, 0, 0] },
       cajaPrivacidad: { margin: [0, 5, 0, 5] },
-      tituloPrivacidad: { fontSize: 8, bold: true, color: "#4B5563", margin: [0, 0, 0, 2] },
-      textoPrivacidad: { fontSize: 7.5, color: "#6B7280", lineHeight: 1.35 },
+      tituloPrivacidad: { fontSize: 10, bold: true, color: "#731D0A", margin: [0, 0, 0, 5] },
+      textoPrivacidad: { fontSize: 9.5, color: "#2a2418", lineHeight: 1.4 },
       despedida: { fontSize: 10.5, italics: true, color: "#4B5563" }
     }
   };

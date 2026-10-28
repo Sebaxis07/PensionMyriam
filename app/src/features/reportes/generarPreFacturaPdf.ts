@@ -250,7 +250,7 @@ export function construirDocDefinicionPreFactura(datos: DatosPreFactura): TDocum
           }
         : { text: "Sin consumos registrados en este período.", style: "parrafoVacio" },
 
-      { text: "", margin: [0, 30, 0, 0] },
+      { text: "", margin: [0, 18, 0, 0] },
 
       // Firmas
       {
@@ -281,7 +281,7 @@ export function construirDocDefinicionPreFactura(datos: DatosPreFactura): TDocum
       // finalidad, plazo de conservación y canal ARCO corresponde acá
       // con más razón que en el comprobante de una noche.
       {
-        margin: [0, 14, 0, 0],
+        margin: [0, 10, 0, 0],
         table: {
           widths: ["*"],
           body: [
@@ -304,8 +304,8 @@ export function construirDocDefinicionPreFactura(datos: DatosPreFactura): TDocum
     ],
     styles: {
       headerMarca: { fontSize: 13, bold: true, color: "#92400E" },
-      tituloPrivacidad: { fontSize: 7.5, bold: true, color: "#4B5563", margin: [0, 0, 0, 2] },
-      textoPrivacidad: { fontSize: 7, color: "#6B7280", lineHeight: 1.3 },
+      tituloPrivacidad: { fontSize: 10, bold: true, color: "#731D0A", margin: [0, 0, 0, 5] },
+      textoPrivacidad: { fontSize: 9, color: "#2a2418", lineHeight: 1.3 },
       subMarca: { fontSize: 9, color: "#78350F" },
       metaMarca: { fontSize: 7.5, color: "#6B7280" },
       tituloDoc: { fontSize: 13, bold: true, color: "#1F2937" },
