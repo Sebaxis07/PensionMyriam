@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+// Estas pruebas puras no abren SQLite WASM ni conectan servicios.
+vi.mock("../../lib/powersync", () => ({ powersync: { execute: vi.fn(), getAll: vi.fn() } }));
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { sincronizarEspejoConfig, CONFIG_PENSION_DEFAULT } from "./useConfigPension";
 import { construirDocDefinicionVoucher } from "../reportes/generarVoucherTuristaPdf";
 import { construirDocDefinicionPreFactura } from "../reportes/generarPreFacturaPdf";

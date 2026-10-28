@@ -1,0 +1,34 @@
+import React, { useState } from "react";
+import ReactDOM from "react-dom/client";
+import "@fontsource/dm-sans/400.css";
+import "@fontsource/dm-sans/600.css";
+import "@fontsource/dm-sans/700.css";
+import "../src/index.css";
+import { PerfilConfigModal, type TabActivoPerfil } from "../src/features/perfil/PerfilConfigModal";
+import { ConsumoScreen } from "../src/screens/sprint2/ConsumoScreen";
+import { CierreMensualModal } from "../src/screens/sprint2/CierreMensualModal";
+import { CatalogoExtrasModal } from "../src/components/CatalogoExtrasModal";
+import { TourMenuModal } from "../src/features/tour/TourMenuModal";
+import { useTour } from "../src/features/tour/useTour";
+import { DashboardAdmin } from "../src/screens/sprint4/DashboardAdmin";
+import { ModalPlanAccionKpi } from "../src/screens/sprint4/ModalPlanAccionKpi";
+import { useDashboardAdminMetricas } from "./datos";
+import { usuarioId, contratoId, rol } from "./datos";
+const params = new URLSearchParams(location.search);
+function Revision() {
+  const [abierto, setAbierto] = useState(true);
+  const tour = useTour();
+  const metricas = useDashboardAdminMetricas();
+  const cerrar = () => setAbierto(false);
+  const vista = params.get("vista") ?? "raciones";
+  let contenido: React.ReactNode;
+  if (["perfil", "cuentas", "pension", "privacidad"].includes(vista)) contenido = abierto && <PerfilConfigModal tabInicial={vista as TabActivoPerfil} usuario={{ id: usuarioId, nombre: "Administradora de ejemplo", rol }} onCerrar={cerrar} onLogout={cerrar} onReiniciarTour={tour.iniciarTourGeneral}/>;
+  else if (vista === "extras") contenido = <CatalogoExtrasModal abierto={abierto} onCerrar={cerrar}/>;
+  else if (vista === "cierre") contenido = abierto && <CierreMensualModal contratoEmpresaId={contratoId} razonSocialEmpresa="Empresa de ejemplo" onCerrar={cerrar}/>;
+  else if (vista === "ayuda") contenido = abierto && <TourMenuModal esAdmin={rol === "administradora"} onCerrar={cerrar} onIniciarGeneral={tour.iniciarTourGeneral} onIniciarAdmin={tour.iniciarTourAdmin}/>;
+  else if (vista === "dashboard") contenido = <DashboardAdmin usuarioId={usuarioId}/>;
+  else if (vista === "conciliacion-ayuda") contenido = <ModalPlanAccionKpi abierto={abierto} tipoKpi="conciliacion" onCerrar={cerrar} {...metricas} onIrAConciliacion={cerrar} onAbrirRegistrarCompra={cerrar}/>;
+  else contenido = <ConsumoScreen usuarioId={usuarioId} contratoEmpresaId={contratoId} usuarioRol={rol} empresaNombre="Empresa de ejemplo" headcount={3}/>;
+  return <main className="ui-operativa min-h-screen bg-brand-sand p-3 sm:p-6"><header id="tour-header-title" className="mb-4 rounded-2xl border border-brand-border bg-brand-card p-4"><h1 className="font-display text-xl">Pensión Señora Miriam</h1><p className="text-sm">Revisión visual · datos ficticios</p></header><button className="mb-4 rounded-xl border border-brand-border bg-brand-card px-4" onClick={() => setAbierto(true)}>Abrir pantalla</button>{contenido}<nav className="mt-4 flex flex-wrap gap-2">{["habitaciones", "rack", "aseo", "consumos", "empresas"].map(id => <button key={id} id={`tour-nav-${id}`} className="rounded-xl border border-brand-border bg-brand-card p-3">{id}</button>)}</nav></main>;
+}
+ReactDOM.createRoot(document.getElementById("root")!).render(<Revision/>);

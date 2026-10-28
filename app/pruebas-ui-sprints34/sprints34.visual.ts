@@ -64,7 +64,7 @@ test("consumos: registro individual, masivo y opciones conservan los datos selec
   await page.getByLabel(/Seleccionar a Patricia/).check();
   await page.getByRole("button",{name:/Registrar 2/}).click();
   await expect(page.getByRole("status")).toContainText("Se registraron 2");
-  await page.getByRole("button",{name:/Ya comieron/}).click();
+  await page.getByRole("button",{name:/Registrados/}).click();
   await expect(page.getByText("Manuel Rojas (ejemplo)",{exact:true})).toBeVisible();
   await page.getByRole("button",{name:"Detalle",exact:true}).first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -77,7 +77,7 @@ test("consumos: registro individual, masivo y opciones conservan los datos selec
 
 test("consumos: error legible y búsqueda vacía",async({page})=>{
   await page.goto(ruta("consumos","error"));
-  await page.getByRole("button",{name:"Servir",exact:true}).first().click();
+  await page.getByRole("button",{name:/Servir desayuno|Servir almuerzo|Servir cena|Entregar colación|Registrar pernocta/}).first().click();
   await expect(page.getByRole("alert")).not.toContainText("PGRST");
   await page.getByLabel("Buscar trabajador",{exact:true}).fill("Nombre que no existe");
   await expect(page.getByText(/No se encontró ningún trabajador/)).toBeVisible();
