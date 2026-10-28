@@ -634,7 +634,7 @@ export function ConsumoScreen({
           {busquedaTrabajador && (
             <button
               aria-label="Limpiar búsqueda" onClick={() => setBusquedaTrabajador("")}
-              className="absolute right-2.5 top-2 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
+              className="absolute right-0 top-0 min-w-11 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
             >
               ✕
             </button>
@@ -846,7 +846,7 @@ export function ConsumoScreen({
                     }}
                     aria-label={`Opciones de consumo de ${f.nombre}`}
                     title="Opciones adicionales (colación extra, correcciones)"
-                    className="rounded-xl border border-brand-border/60 bg-white p-2 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink transition"
+                    className="min-w-11 rounded-xl border border-brand-border/60 bg-white p-2 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink transition"
                   >
                     ⋯
                   </button>

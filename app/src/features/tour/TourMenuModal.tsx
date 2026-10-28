@@ -35,7 +35,7 @@ export function TourMenuModal({
           <button
             onClick={onCerrar}
             className="rounded-full p-1.5 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink transition-colors"
-            title="Cerrar ventana"
+            aria-label="Cerrar ayuda" title="Cerrar ayuda"
           >
             <IconDoorExit className="h-5 w-5" />
           </button>

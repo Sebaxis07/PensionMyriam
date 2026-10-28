@@ -18,7 +18,7 @@ export function TourWelcomeModal({
           <button
             onClick={onDescartar}
             className="rounded-full p-1.5 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink transition-colors"
-            title="Cerrar invitación"
+            aria-label="Cerrar bienvenida" title="Cerrar bienvenida"
           >
             <IconDoorExit className="h-5 w-5" />
           </button>
