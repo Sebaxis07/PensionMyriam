@@ -5,7 +5,6 @@ import { useCierreMensual } from "../../features/cierre/useCierreMensual";
 import {
   registrarCierreFacturacion,
   buscarCierrePeriodo,
-  fechaAnonimizacionPrevista,
   type CierreFacturacionRow
 } from "../../features/cierre/registrarCierreFacturacion";
 import { useConfigPension } from "../../features/perfil/useConfigPension";
@@ -76,12 +75,15 @@ export function CierreMensualModal({
   const usuarioActual = useUsuarioActual();
   const { config } = useConfigPension();
   const [cierreRegistrado, setCierreRegistrado] = useState<CierreFacturacionRow | null>(null);
+  const [confirmarCierre, setConfirmarCierre] = useState(false);
   const [registrandoCierre, setRegistrandoCierre] = useState(false);
   const [errorCierre, setErrorCierre] = useState<string | null>(null);
 
   useEffect(() => {
     let vigente = true;
     setCierreRegistrado(null);
+    setConfirmarCierre(false);
+    setErrorCierre(null);
     buscarCierrePeriodo(contratoEmpresaId, anio, mes)
       .then((fila) => {
         if (vigente) setCierreRegistrado(fila);
@@ -108,6 +110,7 @@ export function CierreMensualModal({
         cerradoPor: usuarioActual.id
       });
       setCierreRegistrado(fila);
+      setConfirmarCierre(false);
     } catch (err: any) {
       setErrorCierre(err?.message || "No se pudo registrar el cierre del período.");
     } finally {
@@ -219,7 +222,7 @@ export function CierreMensualModal({
   }
 
   return (
-    <Dialogo titulo="Resumen mensual y reportes" onCerrar={onCerrar} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm">
+    <Dialogo titulo="Resumen mensual y reportes" onCerrar={() => { if (!registrandoCierre) onCerrar(); }} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm">
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-3xl border border-brand-border bg-brand-card shadow-2xl overflow-hidden">
         {/* Cabecera */}
         <div className="flex items-center justify-between border-b border-brand-border/70 p-5 bg-brand-sand/30">
@@ -232,7 +235,7 @@ export function CierreMensualModal({
             </h3>
           </div>
           <button
-            onClick={onCerrar}
+            disabled={registrandoCierre} onClick={onCerrar}
             aria-label="Cerrar diálogo" className="rounded-full p-2 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink"
           >
             <IconClose className="h-5 w-5" />
@@ -409,48 +412,32 @@ export function CierreMensualModal({
                 </button>
               </div>
 
-              {/* HU-33: marcar el período como facturado y cerrado. Es lo
-                  que arranca el plazo tras el cual se borran los nombres
-                  de la nómina. Diseño definitivo de este bloque: Codex
-                  (ver docs/sprint-5-handoff-codex.md). */}
-              <div className="rounded-2xl border border-brand-border/70 bg-white p-4 space-y-2">
-                {cierreRegistrado ? (
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-emerald-900">
-                      ✓ Facturación de {periodoTexto} cerrada
-                    </p>
-                    <p className="text-[11px] text-brand-muted leading-relaxed">
-                      Desde el{" "}
-                      {fechaAnonimizacionPrevista(
-                        cierreRegistrado.cerrado_at,
-                        config.diasGraciaAnonimizacion
-                      ).toLocaleDateString("es-CL")}{" "}
-                      el sistema reemplaza los nombres y RUT de esta nómina. Las raciones, las
-                      fechas y los montos quedan intactos.
-                    </p>
+              {usuarioActual?.rol === "administradora" && <section className="space-y-3 rounded-2xl border border-brand-border bg-brand-card p-4" aria-busy={registrandoCierre}>
+                <h4 className="font-display text-lg font-bold">Cierre de facturación</h4>
+                {cierreRegistrado ? <AvisoInterfaz tono="exito">
+                  <p className="font-bold">Cierre registrado en este teléfono</p>
+                  <p>Período: {periodoTexto}. Fecha de registro: {new Date(cierreRegistrado.cerrado_at).toLocaleDateString("es-CL")}.</p>
+                  <p>Revisa el indicador de sincronización para conocer el estado del envío al servidor.</p>
+                </AvisoInterfaz> : <>
+                  <p className="text-sm">El período está listo para cerrar. Revisa el resumen antes de confirmar.</p>
+                  <button onClick={() => setConfirmarCierre(true)} disabled={registrandoCierre} className="w-full rounded-xl bg-brand-terracotta-deep px-4 py-3 text-sm font-bold text-white">Cerrar facturación de {periodoTexto}</button>
+                </>}
+                <p className="text-sm">Cerrar facturación no elimina los datos inmediatamente. Las raciones, las fechas y los montos quedan intactos.</p>
+                <p className="text-sm">El plazo configurado es de {config.diasGraciaAnonimizacion} días. El plazo y su aplicación al término del contrato están pendientes de validación con la Administradora.</p>
+                {errorCierre && <AvisoInterfaz tono="error">{describirErrorUi(errorCierre)}</AvisoInterfaz>}
+                {confirmarCierre && <Dialogo titulo="Confirmar cierre de facturación" onCerrar={() => { if (!registrandoCierre) setConfirmarCierre(false); }} className="ui-operativa fixed inset-0 z-[70] flex items-center justify-center bg-brand-ink/70 p-3">
+                  <div className="w-full max-w-lg space-y-4 rounded-3xl border border-brand-border bg-brand-card p-5 shadow-2xl">
+                    <h3 className="font-display text-xl font-bold">Confirmar cierre de {periodoTexto}</h3>
+                    <p>{razonSocialEmpresa}</p><p className="text-lg font-bold">Total: {formatearMonedaCLP(cierre.granTotal)}</p>
+                    <p className="text-sm">El cierre se guardará en este teléfono y se enviará al servidor al sincronizar. No elimina los datos de inmediato.</p>
+                    {errorCierre && <AvisoInterfaz tono="error">{describirErrorUi(errorCierre)}</AvisoInterfaz>}
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <button disabled={registrandoCierre} onClick={() => setConfirmarCierre(false)} className="rounded-xl border border-brand-border bg-white px-4 py-3 font-bold">Volver a revisar</button>
+                      <button disabled={registrandoCierre} onClick={handleRegistrarCierre} className="rounded-xl bg-brand-terracotta-deep px-4 py-3 font-bold text-white">{registrandoCierre ? "Guardando cierre…" : "Confirmar cierre"}</button>
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    <p className="text-[11px] text-brand-muted leading-relaxed">
-                      Al cerrar la facturación queda el respaldo del período y empieza a correr
-                      el plazo de {config.diasGraciaAnonimizacion} días para borrar los nombres
-                      de la nómina (Ley 21.719).
-                    </p>
-                    <button
-                      onClick={handleRegistrarCierre}
-                      disabled={registrandoCierre || !usuarioActual}
-                      className="w-full rounded-xl border border-brand-terracotta/40 bg-brand-sand/40 px-4 py-3 text-xs font-bold text-brand-terracotta hover:bg-brand-sand transition disabled:opacity-50"
-                    >
-                      {registrandoCierre
-                        ? "Cerrando facturación…"
-                        : `Cerrar facturación de ${periodoTexto}`}
-                    </button>
-                  </>
-                )}
-                {errorCierre && (
-                  <p className="text-[11px] font-medium text-rose-700">{errorCierre}</p>
-                )}
-              </div>
+                </Dialogo>}
+              </section>}
             </div>
           )}
         </div>
@@ -458,7 +445,7 @@ export function CierreMensualModal({
         {/* Pie */}
         <div className="border-t border-brand-border/70 p-4 bg-brand-sand/20 flex justify-end">
           <button
-            onClick={onCerrar}
+            disabled={registrandoCierre} onClick={onCerrar}
             className="rounded-xl px-4 py-2 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
           >
             Cerrar ventana

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Dialogo } from "../../components/Dialogo";
+import { AvisoInterfaz, describirErrorUi } from "../../components/MensajeInterfaz";
+import { useConexionInterfaz } from "../../components/useConexionInterfaz";
 import {
   IconUser,
   IconClose,
   IconDoorExit,
-  IconCheck,
   IconCheckCircle,
   IconCompass,
   IconDollarSign,
@@ -55,11 +57,14 @@ export function PerfilConfigModal({
   onAbrirSyncModal,
   tabInicial = "perfil"
 }: PerfilConfigModalProps) {
+  const barraSecciones = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<TabActivoPerfil>(tabInicial);
-  const { config, actualizarConfig, restaurarDefectos } = useConfigPension();
+  const { config, isLoading: cargandoConfig, actualizarConfig } = useConfigPension();
 
   // Estados locales para edición de pensión
   const [formPension, setFormPension] = useState<ConfigPension>(config);
+  const [editandoConfig, setEditandoConfig] = useState(false);
+  const [guardandoConfig, setGuardandoConfig] = useState(false);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
   const [errorPension, setErrorPension] = useState<string | null>(null);
 
@@ -83,8 +88,14 @@ export function PerfilConfigModal({
   const [motivoSupresion, setMotivoSupresion] = useState("");
   const [suprimiendo, setSuprimiendo] = useState(false);
 
+  useEffect(() => { barraSecciones.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" }); }, [tab]);
+
   const esAdmin = usuario.rol === "administradora";
-  const estaOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
+  const estaOnline = useConexionInterfaz();
+  const configSerializada = JSON.stringify(config);
+  useEffect(() => {
+    if (!editandoConfig) setFormPension(JSON.parse(configSerializada));
+  }, [configSerializada, editandoConfig]);
 
   // La configuración ahora se valida (Zod, con los mismos límites que los
   // CHECK de la tabla) y se escribe en la réplica local, que PowerSync
@@ -92,7 +103,9 @@ export function PerfilConfigModal({
   // era un setItem en localStorage que no podía rechazar nada.
   const handleGuardarPension = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!esAdmin || cargandoConfig || guardandoConfig) return;
     setErrorPension(null);
+    setGuardandoConfig(true);
     try {
       await actualizarConfig(formPension);
       setGuardadoExitoso(true);
@@ -101,8 +114,8 @@ export function PerfilConfigModal({
       // Zod devuelve el primer mensaje en lenguaje cercano; si viene otra
       // cosa, se muestra tal cual antes que un "error" sin explicación.
       const primerMensaje = err?.errors?.[0]?.message ?? err?.message;
-      setErrorPension(primerMensaje || "No se pudieron guardar los datos.");
-    }
+      setErrorPension(describirErrorUi(primerMensaje || "No se pudieron guardar los datos."));
+    } finally { setGuardandoConfig(false); }
   };
 
   const handleCambiarPassword = async (e: React.FormEvent) => {
@@ -196,7 +209,7 @@ export function PerfilConfigModal({
     } catch (err: any) {
       setMensajePrivacidad({
         tipo: "error",
-        texto: "Error al consultar la base de datos local: " + (err.message || String(err))
+        texto: "No se pudo buscar en este teléfono. Intenta nuevamente."
       });
     } finally {
       setBuscandoTitular(false);
@@ -268,7 +281,7 @@ export function PerfilConfigModal({
     } catch (err: any) {
       setMensajePrivacidad({
         tipo: "error",
-        texto: "No se pudo generar la ficha: " + (err.message || String(err))
+        texto: "No se pudo generar la ficha. Intenta nuevamente."
       });
     }
   };
@@ -295,20 +308,21 @@ export function PerfilConfigModal({
         motivo: motivoSupresion
       });
 
+      if (!resultado.ok) throw new Error("No se confirmó la eliminación. Intenta nuevamente.");
       setTitularAAnonimizar(null);
       setMotivoSupresion("");
       setMensajePrivacidad({
         tipo: "exito",
         texto: resultado.ya_estaba_anonimizado
-          ? `Los datos de "${t.nombre}" ya estaban eliminados. Se registró igualmente la solicitud en la bitácora.`
-          : `Se eliminaron los datos personales de "${t.nombre}" y quedó constancia en la bitácora. Los movimientos del libro contable permanecen íntegros y cuadrados, sin datos identificables.`
+          ? "Los datos ya estaban eliminados en el servidor. La solicitud quedó registrada igualmente. Los teléfonos sin conexión se actualizarán cuando recuperen la señal."
+          : "El servidor confirmó la eliminación de los datos personales y registró la solicitud. Las raciones, las fechas y los montos quedan intactos. Los teléfonos sin conexión se actualizarán cuando recuperen la señal."
       });
 
-      await handleBuscarTitulares();
+      setResultadosTitulares([]);
     } catch (err: any) {
       setMensajePrivacidad({
         tipo: "error",
-        texto: err?.message || "No se pudo completar la eliminación de datos."
+        texto: describirErrorUi(err?.message || "No se pudo completar la eliminación de datos.")
       });
     } finally {
       setSuprimiendo(false);
@@ -316,7 +330,7 @@ export function PerfilConfigModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/60 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-200">
+    <Dialogo titulo="Mi perfil y configuración" onCerrar={() => { if (!suprimiendo && !guardandoConfig && !guardandoPassword) onCerrar(); }} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/60 p-3 sm:p-4 backdrop-blur-xs">
       <div className="w-full max-w-xl max-h-[92vh] flex flex-col rounded-3xl border border-brand-border bg-brand-card shadow-2xl overflow-hidden">
         {/* Encabezado del Modal */}
         <div className="flex items-center justify-between border-b border-brand-border/60 px-5 py-4 bg-brand-sand-light/60 shrink-0">
@@ -332,29 +346,29 @@ export function PerfilConfigModal({
               <h2 className="font-display text-base sm:text-lg font-black text-brand-ink leading-tight">
                 Mi Perfil y Configuración
               </h2>
-              <p className="text-[11px] font-semibold text-brand-muted">
+              <p className="text-sm font-semibold text-brand-ink/80">
                 {usuario.nombre} · {esAdmin ? "Administradora General" : "Encargada de Turno"}
               </p>
             </div>
           </div>
           <button
-            onClick={onCerrar}
-            className="rounded-full p-2 text-brand-muted hover:bg-brand-sand hover:text-brand-ink transition-colors"
-            title="Cerrar ventana"
+            disabled={suprimiendo || guardandoConfig || guardandoPassword} onClick={onCerrar}
+            className="rounded-full p-2 text-brand-ink/80 hover:bg-brand-sand hover:text-brand-ink transition-colors"
+            aria-label="Cerrar perfil" title="Cerrar ventana"
           >
             <IconClose className="h-5 w-5" />
           </button>
         </div>
 
         {/* Barra de Pestañas Navegables */}
-        <div className="flex border-b border-brand-border/60 bg-white/70 px-4 pt-2 gap-1 overflow-x-auto shrink-0 scrollbar-none">
+        <div ref={barraSecciones} aria-label="Secciones del perfil" className="flex border-b border-brand-border/60 bg-white/70 px-4 pt-2 gap-1 overflow-x-auto shrink-0">
           <button
             type="button"
-            onClick={() => setTab("perfil")}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            aria-pressed={tab === "perfil"} onClick={() => setTab("perfil")}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-sm font-bold transition-all border-b-2 whitespace-nowrap ${
               tab === "perfil"
-                ? "border-brand-terracotta text-brand-terracotta bg-brand-sand-light/50 font-extrabold"
-                : "border-transparent text-brand-muted hover:text-brand-ink"
+                ? "border-brand-terracotta text-brand-terracotta-deep bg-brand-sand-light/50 font-extrabold"
+                : "border-transparent text-brand-ink/80 hover:text-brand-ink"
             }`}
           >
             <IconUser className="h-3.5 w-3.5" />
@@ -364,11 +378,11 @@ export function PerfilConfigModal({
           {esAdmin && (
             <button
               type="button"
-              onClick={() => setTab("cuentas")}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+              aria-pressed={tab === "cuentas"} onClick={() => setTab("cuentas")}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-sm font-bold transition-all border-b-2 whitespace-nowrap ${
                 tab === "cuentas"
-                  ? "border-brand-terracotta text-brand-terracotta bg-brand-sand-light/50 font-extrabold"
-                  : "border-transparent text-brand-muted hover:text-brand-ink"
+                  ? "border-brand-terracotta text-brand-terracotta-deep bg-brand-sand-light/50 font-extrabold"
+                  : "border-transparent text-brand-ink/80 hover:text-brand-ink"
               }`}
             >
               <IconUsers className="h-3.5 w-3.5 text-brand-terracotta" />
@@ -378,11 +392,11 @@ export function PerfilConfigModal({
 
           <button
             type="button"
-            onClick={() => setTab("pension")}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            aria-pressed={tab === "pension"} onClick={() => setTab("pension")}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-sm font-bold transition-all border-b-2 whitespace-nowrap ${
               tab === "pension"
-                ? "border-brand-terracotta text-brand-terracotta bg-brand-sand-light/50 font-extrabold"
-                : "border-transparent text-brand-muted hover:text-brand-ink"
+                ? "border-brand-terracotta text-brand-terracotta-deep bg-brand-sand-light/50 font-extrabold"
+                : "border-transparent text-brand-ink/80 hover:text-brand-ink"
             }`}
           >
             <IconDollarSign className="h-3.5 w-3.5" />
@@ -392,25 +406,25 @@ export function PerfilConfigModal({
           {esAdmin && (
             <button
               type="button"
-              onClick={() => setTab("privacidad")}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+              aria-pressed={tab === "privacidad"} onClick={() => setTab("privacidad")}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-sm font-bold transition-all border-b-2 whitespace-nowrap ${
                 tab === "privacidad"
-                  ? "border-brand-terracotta text-brand-terracotta bg-brand-sand-light/50 font-extrabold"
-                  : "border-transparent text-brand-muted hover:text-brand-ink"
+                  ? "border-brand-terracotta text-brand-terracotta-deep bg-brand-sand-light/50 font-extrabold"
+                  : "border-transparent text-brand-ink/80 hover:text-brand-ink"
               }`}
             >
               <IconClipboardCheck className="h-3.5 w-3.5 text-brand-terracotta" />
-              <span>Ley 21.719 (Datos)</span>
+              <span>Datos personales</span>
             </button>
           )}
 
           <button
             type="button"
-            onClick={() => setTab("preferencias")}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            aria-pressed={tab === "preferencias"} onClick={() => setTab("preferencias")}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-sm font-bold transition-all border-b-2 whitespace-nowrap ${
               tab === "preferencias"
-                ? "border-brand-terracotta text-brand-terracotta bg-brand-sand-light/50 font-extrabold"
-                : "border-transparent text-brand-muted hover:text-brand-ink"
+                ? "border-brand-terracotta text-brand-terracotta-deep bg-brand-sand-light/50 font-extrabold"
+                : "border-transparent text-brand-ink/80 hover:text-brand-ink"
             }`}
           >
             <IconCompass className="h-3.5 w-3.5" />
@@ -419,11 +433,11 @@ export function PerfilConfigModal({
 
           <button
             type="button"
-            onClick={() => setTab("sistema")}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            aria-pressed={tab === "sistema"} onClick={() => setTab("sistema")}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-sm font-bold transition-all border-b-2 whitespace-nowrap ${
               tab === "sistema"
-                ? "border-brand-terracotta text-brand-terracotta bg-brand-sand-light/50 font-extrabold"
-                : "border-transparent text-brand-muted hover:text-brand-ink"
+                ? "border-brand-terracotta text-brand-terracotta-deep bg-brand-sand-light/50 font-extrabold"
+                : "border-transparent text-brand-ink/80 hover:text-brand-ink"
             }`}
           >
             <IconWifi className="h-3.5 w-3.5" />
@@ -439,25 +453,25 @@ export function PerfilConfigModal({
           {tab === "perfil" && (
             <div className="space-y-4">
               <div className="rounded-2xl border border-brand-border/70 bg-brand-sand-light/40 p-4 space-y-3">
-                <span className="text-[10px] font-black uppercase tracking-wider text-brand-terracotta">
+                <span className="text-sm font-black uppercase tracking-wider text-brand-terracotta">
                   Datos de Sesión Activa
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label className="text-[11px] font-bold text-brand-muted block">Nombre Completo</label>
+                    <label htmlFor="perfil-campo-1" className="text-sm font-bold text-brand-ink/80 block">Nombre Completo</label>
                     <p className="text-sm font-extrabold text-brand-ink mt-0.5">{usuario.nombre}</p>
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-brand-muted block">Rol Asignado</label>
+                    <label className="text-sm font-bold text-brand-ink/80 block">Rol Asignado</label>
                     <span
-                      className={`inline-block mt-0.5 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                      className={`inline-block mt-0.5 rounded-full px-2.5 py-0.5 text-sm font-black uppercase tracking-wider ${
                         esAdmin ? "bg-brand-terracotta/15 text-brand-terracotta" : "bg-emerald-100 text-emerald-800"
                       }`}
                     >
                       {esAdmin ? "Administradora" : "Encargada"}
                     </span>
                   </div>
-                  <div className="sm:col-span-2 border-t border-brand-border/50 pt-2 text-[11px] text-brand-muted leading-relaxed">
+                  <div className="sm:col-span-2 border-t border-brand-border/50 pt-2 text-sm text-brand-ink/80 leading-relaxed">
                     📍 Turno activo en Caleta Paposo. Todas las operaciones de reservas, aseo y compras quedarán firmadas con tu usuario.
                   </div>
                 </div>
@@ -471,13 +485,13 @@ export function PerfilConfigModal({
                     Cambiar Contraseña
                   </h3>
                 </div>
-                <p className="text-xs text-brand-muted leading-relaxed">
+                <p className="text-sm text-brand-ink/80 leading-relaxed">
                   Si deseas cambiar tu clave de acceso al sistema, puedes hacerlo aquí cuando tengas conexión a Internet:
                 </p>
 
                 {mensajePassword && (
                   <div
-                    className={`rounded-xl p-3 text-xs flex items-start gap-2 ${
+                    className={`rounded-xl p-3 text-sm flex items-start gap-2 ${
                       mensajePassword.tipo === "exito"
                         ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                         : "bg-rose-50 text-rose-800 border border-rose-200"
@@ -494,28 +508,28 @@ export function PerfilConfigModal({
 
                 <form onSubmit={handleCambiarPassword} className="space-y-3 pt-1">
                   <div>
-                    <label className="text-[11px] font-bold text-brand-ink block mb-1">
+                    <label className="text-sm font-bold text-brand-ink block mb-1">
                       Nueva Contraseña
                     </label>
-                    <input
+                    <input id="perfil-campo-1"
                       type="password"
                       placeholder={`Mínimo ${LARGO_MINIMO_PASSWORD} caracteres`}
                       value={nuevaPassword}
                       onChange={(e) => setNuevaPassword(e.target.value)}
-                      className="w-full rounded-xl border border-brand-border bg-brand-sand-light/30 px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                      className="w-full rounded-xl border border-brand-border bg-brand-sand-light/30 px-3 py-2 text-sm text-brand-ink focus:border-brand-terracotta focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-brand-ink block mb-1">
+                    <label htmlFor="perfil-campo-2" className="text-sm font-bold text-brand-ink block mb-1">
                       Confirmar Nueva Contraseña
                     </label>
-                    <input
+                    <input id="perfil-campo-2"
                       type="password"
                       placeholder="Repite la contraseña"
                       value={confirmarPassword}
                       onChange={(e) => setConfirmarPassword(e.target.value)}
-                      className="w-full rounded-xl border border-brand-border bg-brand-sand-light/30 px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                      className="w-full rounded-xl border border-brand-border bg-brand-sand-light/30 px-3 py-2 text-sm text-brand-ink focus:border-brand-terracotta focus:outline-none"
                     />
                   </div>
 
@@ -523,7 +537,7 @@ export function PerfilConfigModal({
                     <button
                       type="submit"
                       disabled={guardandoPassword || !nuevaPassword}
-                      className="rounded-xl bg-brand-terracotta px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-brand-terracotta-deep transition active:scale-95 disabled:opacity-50"
+                      className="rounded-xl bg-brand-terracotta-deep px-4 py-2 text-sm font-bold text-white shadow-xs hover:bg-brand-terracotta-deep transition active:scale-95 disabled:opacity-50"
                     >
                       {guardandoPassword ? "Guardando..." : "Actualizar Contraseña"}
                     </button>
@@ -544,200 +558,38 @@ export function PerfilConfigModal({
           {/* PESTAÑA 2: PENSIÓN Y BANCO                                 */}
           {/* ========================================================= */}
           {tab === "pension" && (
-            <form onSubmit={handleGuardarPension} className="space-y-4">
-              <div className="rounded-2xl border border-brand-border/70 bg-brand-sand-light/40 p-4 space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-brand-terracotta">
-                  Datos Comerciales de la Pensión
-                </span>
-                <p className="text-xs text-brand-muted leading-relaxed">
-                  Estos datos aparecen en los comprobantes de reserva y mensajes automáticos de WhatsApp que se le envían a los turistas:
-                </p>
-              </div>
-
-              {guardadoExitoso && (
-                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 font-medium flex items-center gap-2 animate-in fade-in">
-                  <IconCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>¡Datos guardados con éxito! Los próximos vouchers y WhatsApp usarán esta información.</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="text-[11px] font-bold text-brand-ink block mb-1">
-                    Nombre del Negocio
-                  </label>
-                  <input
-                    type="text"
-                    value={formPension.nombrePension}
-                    onChange={(e) => setFormPension({ ...formPension, nombrePension: e.target.value })}
-                    className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink font-semibold focus:border-brand-terracotta focus:outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-brand-ink block mb-1">
-                    WhatsApp de Atención
-                  </label>
-                  <input
-                    type="text"
-                    value={formPension.whatsappContacto}
-                    onChange={(e) => setFormPension({ ...formPension, whatsappContacto: e.target.value })}
-                    className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
-                    placeholder="+56 9 8765 4321"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-brand-ink block mb-1">
-                    Correo Electrónico
-                  </label>
-                  <input
-                    type="email"
-                    value={formPension.correoContacto}
-                    onChange={(e) => setFormPension({ ...formPension, correoContacto: e.target.value })}
-                    className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
-                    placeholder="pension.paposo@gmail.com"
-                  />
-                </div>
-              </div>
-
-              {/* Datos Bancarios para transferencias */}
-              <div className="rounded-2xl border border-brand-border/70 bg-white p-4 space-y-3">
-                <div className="flex items-center justify-between border-b border-brand-border/40 pb-2">
-                  <div className="flex items-center gap-2">
-                    <IconDollarSign className="h-4 w-4 text-brand-terracotta" />
-                    <h3 className="font-display text-sm font-bold text-brand-ink">
-                      Cuenta Bancaria para Transferencias
-                    </h3>
-                  </div>
-                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                    Pago de Turistas
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-bold text-brand-ink block mb-1">
-                      Banco
-                    </label>
-                    <input
-                      type="text"
-                      value={formPension.bancoNombre}
-                      onChange={(e) => setFormPension({ ...formPension, bancoNombre: e.target.value })}
-                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
-                      placeholder="BancoEstado"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-brand-ink block mb-1">
-                      Tipo de Cuenta
-                    </label>
-                    <input
-                      type="text"
-                      value={formPension.tipoCuenta}
-                      onChange={(e) => setFormPension({ ...formPension, tipoCuenta: e.target.value })}
-                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
-                      placeholder="CuentaRUT / Cuenta Vista"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-brand-ink block mb-1">
-                      Nombre del Titular
-                    </label>
-                    <input
-                      type="text"
-                      value={formPension.titularNombre}
-                      onChange={(e) => setFormPension({ ...formPension, titularNombre: e.target.value })}
-                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
-                      placeholder="María (Pensión Señora Miriam)"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-brand-ink block mb-1">
-                      RUT del Titular
-                    </label>
-                    <input
-                      type="text"
-                      value={formPension.rutTitular}
-                      onChange={(e) => setFormPension({ ...formPension, rutTitular: e.target.value })}
-                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
-                      placeholder="12.345.678-9"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* HU-33: el plazo de gracia antes de anonimizar la nómina
-                  ya facturada. El criterio oficial lo marca como
-                  "propuesto: 7 días, POR VALIDAR con la Administradora",
-                  así que es un parámetro y no una constante del código.
-                  Lo aplica el job de pg_cron en el servidor. Ubicación y
-                  diseño definitivos de este bloque: Codex. */}
-              <div className="rounded-2xl border border-brand-border/70 bg-white p-4 space-y-3">
-                <div className="flex items-center gap-2 border-b border-brand-border/40 pb-2">
-                  <IconClipboardCheck className="h-4 w-4 text-brand-terracotta" />
-                  <h3 className="font-display text-sm font-bold text-brand-ink">
-                    Borrado de nóminas (Ley 21.719)
-                  </h3>
-                </div>
-                <div>
-                  <label className="text-[11px] font-bold text-brand-ink block mb-1">
-                    Días de espera después de cerrar la facturación del mes
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={90}
-                    value={formPension.diasGraciaAnonimizacion}
-                    onChange={(e) =>
-                      setFormPension({
-                        ...formPension,
-                        diasGraciaAnonimizacion: Number(e.target.value)
-                      })
-                    }
-                    className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
-                  />
-                  <p className="mt-1 text-[10px] text-brand-muted leading-relaxed">
-                    Pasados estos días desde que cierras la facturación de una empresa, el
-                    sistema reemplaza solo los nombres y RUT de su nómina. Las raciones, las
-                    fechas y los montos quedan intactos.
-                  </p>
-                </div>
-              </div>
-
-              {errorPension && (
-                <div className="rounded-2xl border border-rose-300 bg-rose-50 p-3 flex items-start gap-2">
-                  <IconAlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
-                  <span className="text-xs font-medium text-rose-900 leading-relaxed">
-                    {errorPension}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setErrorPension(null);
-                    await restaurarDefectos();
-                    setFormPension(config);
-                  }}
-                  className="text-xs font-bold text-brand-muted hover:text-brand-ink transition"
-                >
-                  Restaurar valores de Paposo
-                </button>
-
-                <button
-                  type="submit"
-                  className="rounded-xl bg-brand-terracotta px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-terracotta-deep transition active:scale-95"
-                >
-                  Guardar Datos de la Pensión
-                </button>
-              </div>
+            <form onSubmit={handleGuardarPension} noValidate aria-busy={guardandoConfig || cargandoConfig} className="space-y-4">
+              <div><h3 className="font-display text-xl font-bold">Datos de la pensión</h3><p className="mt-2 text-sm">Estos datos se usan en los próximos comprobantes y mensajes de WhatsApp.</p></div>
+              {!esAdmin && <AvisoInterfaz>Solo lectura. La Administradora puede cambiar estos datos.</AvisoInterfaz>}
+              {cargandoConfig && <p role="status">Cargando la configuración del teléfono…</p>}
+              {guardadoExitoso && <AvisoInterfaz tono="exito">Datos guardados en este teléfono, pendientes de sincronización. Revisa el indicador de sincronización para conocer el estado del envío.</AvisoInterfaz>}
+              {errorPension && <AvisoInterfaz tono="error">{errorPension}</AvisoInterfaz>}
+              <fieldset disabled={!esAdmin || cargandoConfig || guardandoConfig} className="min-w-0 space-y-4">
+                {([
+                  { titulo: "Contacto y tarifa", campos: [
+                    ["nombrePension", "Nombre de la pensión", "text"],
+                    ["whatsappContacto", "Teléfono de contacto", "tel"],
+                    ["correoContacto", "Correo para contacto y solicitudes de datos", "email"],
+                    ["tarifaBaseNoche", "Tarifa por noche ($ CLP)", "number"]
+                  ] },
+                  { titulo: "Datos para transferencias", campos: [
+                    ["bancoNombre", "Banco", "text"], ["tipoCuenta", "Tipo de cuenta", "text"],
+                    ["titularNombre", "Nombre del titular", "text"], ["rutTitular", "RUT del titular", "text"]
+                  ] }
+                ]).map(grupo => <section key={grupo.titulo} className="space-y-4 rounded-2xl border border-brand-border bg-white p-4">
+                  <h4 className="font-display text-lg font-bold">{grupo.titulo}</h4>
+                  {grupo.campos.map(([clave, etiqueta, tipo]) => <div key={clave}>
+                    <label htmlFor={"config-" + clave} className="mb-1 block text-sm font-bold">{etiqueta}</label>
+                    <input id={"config-" + clave} type={tipo} required min={tipo === "number" ? 1 : undefined} max={tipo === "number" ? 1000000 : undefined} step={tipo === "number" ? 1 : undefined}
+                      value={formPension[clave as keyof ConfigPension]} onChange={e => { setEditandoConfig(true); setGuardadoExitoso(false); setFormPension({ ...formPension, [clave]: tipo === "number" ? Number(e.target.value) : e.target.value }); }}
+                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-base text-brand-ink disabled:bg-brand-sand/20 disabled:text-brand-ink"
+                      aria-describedby={clave === "correoContacto" ? "config-correo-ayuda" : undefined}/>
+                    {clave === "correoContacto" && <p id="config-correo-ayuda" className="mt-2 text-sm">Este correo aparece en los comprobantes. Verifica que puedas recibir allí las solicitudes sobre datos personales.</p>}
+                  </div>)}
+                </section>)}
+              </fieldset>
+              <AvisoInterfaz>Plazo configurado para proteger las nóminas: {config.diasGraciaAnonimizacion} días. El plazo y las condiciones de aplicación están pendientes de validación con la Administradora. Cerrar facturación no elimina los datos de inmediato.</AvisoInterfaz>
+              {esAdmin && <button type="submit" disabled={cargandoConfig || guardandoConfig} className="w-full rounded-xl bg-brand-terracotta-deep px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{guardandoConfig ? "Guardando en este teléfono…" : "Guardar datos de la pensión"}</button>}
             </form>
           )}
 
@@ -752,22 +604,22 @@ export function PerfilConfigModal({
                   <div className="flex items-center gap-2">
                     <IconClipboardCheck className="h-5 w-5 text-emerald-700" />
                     <h3 className="font-display text-sm font-black text-emerald-950">
-                      Cumplimiento Ley N° 21.719 (Protección de Datos)
+                      Solicitudes sobre datos personales
                     </h3>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-200/80 text-emerald-800 px-2.5 py-0.5 rounded-full">
+                  <span className="text-sm font-black uppercase tracking-wider bg-emerald-200/80 text-emerald-800 px-2.5 py-0.5 rounded-full">
                     Plazo: 30 Días
                   </span>
                 </div>
-                <p className="text-xs text-emerald-800 leading-relaxed">
-                  La plataforma opera bajo el principio de <strong>minimización de datos</strong>, <strong>purga automática con pg_cron (7 días post-facturación)</strong> y <strong>seudonimización del Ledger</strong>. La ley exige responder las solicitudes de titulares en un plazo máximo de 30 días corridos.
+                <p className="text-sm text-emerald-800 leading-relaxed">
+                  Aquí puedes atender una solicitud para consultar o eliminar datos personales. Registra solo lo necesario y evita información médica o sensible. El plazo de respuesta es de 30 días corridos.
                 </p>
               </div>
 
               {/* Alerta de feedback */}
               {mensajePrivacidad && (
                 <div
-                  className={`rounded-xl p-3 text-xs flex items-start gap-2 animate-in fade-in ${
+                  role={mensajePrivacidad.tipo === "error" ? "alert" : "status"} className={`rounded-xl p-3 text-sm flex items-start gap-2 animate-in fade-in ${
                     mensajePrivacidad.tipo === "exito"
                       ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                       : "bg-rose-50 text-rose-800 border border-rose-200"
@@ -782,33 +634,34 @@ export function PerfilConfigModal({
                 </div>
               )}
 
+              {!estaOnline && <AvisoInterfaz>Sin conexión. Puedes buscar datos guardados en el teléfono. Para eliminar datos personales necesitas Internet; puedes hacerlo cuando vuelva la señal.</AvisoInterfaz>}
               {/* Herramienta de Derechos de Titulares (ARCO) */}
               <div className="rounded-2xl border border-brand-border/70 bg-white p-4 space-y-3">
                 <div className="flex items-center justify-between border-b border-brand-border/50 pb-2">
                   <div className="flex items-center gap-2">
                     <IconSearch className="h-4 w-4 text-brand-terracotta" />
-                    <h4 className="font-display text-xs font-black text-brand-ink uppercase tracking-wider">
-                      Atención de Derechos de Titulares (Acceso, Rectificación, Supresión)
+                    <h4 className="font-display text-sm font-black text-brand-ink uppercase tracking-wider">
+                      Buscar a la persona
                     </h4>
                   </div>
                 </div>
 
-                <p className="text-xs text-brand-muted leading-relaxed">
-                  Busca un trabajador o huésped para emitir su ficha de portabilidad o procesar su solicitud de borrado conforme a la normativa:
+                <p className="text-sm text-brand-ink/80 leading-relaxed">
+                  Busca a la persona para entregar una copia de sus datos o atender su solicitud de eliminación. La búsqueda consulta los datos guardados en este teléfono.
                 </p>
 
-                <form onSubmit={handleBuscarTitulares} className="flex gap-2">
+                <form onSubmit={handleBuscarTitulares} className="flex flex-col gap-2 sm:flex-row"><label htmlFor="privacidad-busqueda" className="sr-only">Nombre o RUT de la persona</label>
                   <input
                     type="text"
-                    placeholder="Nombre o RUT del titular..."
+                    id="privacidad-busqueda" placeholder="Nombre o RUT de la persona"
                     value={busquedaTitular}
                     onChange={(e) => setBusquedaTitular(e.target.value)}
-                    className="flex-1 rounded-xl border border-brand-border bg-brand-sand-light/30 px-3 py-2 text-xs text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                    className="flex-1 rounded-xl border border-brand-border bg-brand-sand-light/30 px-3 py-2 text-sm text-brand-ink focus:border-brand-terracotta focus:outline-none"
                   />
                   <button
                     type="submit"
                     disabled={buscandoTitular || !busquedaTitular.trim()}
-                    className="rounded-xl bg-brand-terracotta px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-brand-terracotta-deep transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                    className="rounded-xl bg-brand-terracotta-deep px-4 py-2 text-sm font-bold text-white shadow-xs hover:bg-brand-terracotta-deep transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
                   >
                     <IconSearch className="h-3.5 w-3.5" />
                     <span>{buscandoTitular ? "Buscando..." : "Buscar"}</span>
@@ -818,7 +671,7 @@ export function PerfilConfigModal({
                 {/* Lista de Resultados Encontrados */}
                 {resultadosTitulares.length > 0 && (
                   <div className="mt-3 space-y-2 pt-2 border-t border-brand-border/40">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted block">
+                    <span className="text-sm font-bold uppercase tracking-wider text-brand-ink/80 block">
                       Titulares Encontrados ({resultadosTitulares.length}):
                     </span>
 
@@ -839,7 +692,7 @@ export function PerfilConfigModal({
                           >
                             <div>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-extrabold text-brand-ink">
+                                <span className="text-sm font-extrabold text-brand-ink">
                                   {titular.nombre}
                                 </span>
                                 {yaAnonimizado && (
@@ -848,7 +701,7 @@ export function PerfilConfigModal({
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[11px] text-brand-muted mt-0.5">
+                              <p className="text-sm text-brand-ink/80 mt-0.5">
                                 {titular.rut ? `RUT: ${titular.rut}` : "Sin RUT"} · Tipo: {titular.tipo === "trabajador" ? "Nómina Contratista" : "Huésped Turista"}
                               </p>
                             </div>
@@ -857,7 +710,7 @@ export function PerfilConfigModal({
                               <button
                                 type="button"
                                 onClick={() => handleExportarFichaTitular(titular)}
-                                className="flex items-center gap-1 rounded-lg border border-brand-border/80 bg-white px-2.5 py-1.5 text-[11px] font-bold text-brand-ink hover:bg-brand-sand transition"
+                                className="flex items-center gap-1 rounded-lg border border-brand-border/80 bg-white px-2.5 py-1.5 text-sm font-bold text-brand-ink hover:bg-brand-sand transition"
                                 title="Exportar ficha de datos (Portabilidad Art. 14)"
                               >
                                 <IconFileText className="h-3.5 w-3.5 text-brand-terracotta" />
@@ -867,11 +720,11 @@ export function PerfilConfigModal({
                               {!yaAnonimizado && (
                                 <button
                                   type="button"
-                                  onClick={() => setTitularAAnonimizar(titular)}
-                                  className="flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-100 transition"
+                                  disabled={!estaOnline || suprimiendo} onClick={() => { setMotivoSupresion(""); setMensajePrivacidad(null); setTitularAAnonimizar(titular); }}
+                                  className="flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-sm font-bold text-rose-700 hover:bg-rose-100 transition"
                                   title="Anonimizar datos personales (Derecho al Olvido)"
                                 >
-                                  <span>Anonimizar</span>
+                                  <span>Eliminar datos personales</span>
                                 </button>
                               )}
                             </div>
@@ -885,95 +738,29 @@ export function PerfilConfigModal({
 
               {/* Modal de confirmación de anonimización */}
               {titularAAnonimizar && (
-                <div className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4 space-y-3 animate-in fade-in">
-                  <div className="flex items-center gap-2 text-rose-900">
-                    <IconAlertTriangle className="h-5 w-5 text-rose-600 shrink-0" />
-                    <h4 className="font-display text-xs font-black">
-                      Confirmar Derecho de Supresión (Ley 21.719)
-                    </h4>
+                <Dialogo titulo="Confirmar eliminación de datos personales" onCerrar={() => { if (!suprimiendo) { setTitularAAnonimizar(null); setMotivoSupresion(""); } }} className="ui-operativa fixed inset-0 z-[70] flex items-center justify-center bg-brand-ink/70 p-3">
+                  <div className="w-full max-w-lg space-y-4 rounded-3xl border border-rose-300 bg-brand-card p-5 shadow-2xl" aria-busy={suprimiendo}>
+                    <h3 className="font-display text-xl font-bold text-rose-900">Eliminar datos personales</h3>
+                    <p className="text-base">Persona seleccionada: <strong>{titularAAnonimizar.nombre}</strong></p>
+                    <p className="text-sm">Se reemplazará su nombre y se quitarán sus datos de identificación del registro seleccionado. Esta acción es irreversible.</p>
+                    <p className="text-sm font-bold">Las raciones, las fechas y los montos del libro de cuentas quedan intactos.</p>
+                    <p className="text-sm">Los teléfonos sin conexión conservarán su copia hasta que vuelvan a sincronizar.</p>
+                    <div><label htmlFor="supresion-motivo" className="mb-2 block text-sm font-bold">¿Por qué se eliminan estos datos?</label>
+                      <textarea id="supresion-motivo" autoFocus rows={3} minLength={5} maxLength={500} disabled={suprimiendo} value={motivoSupresion} onChange={e => setMotivoSupresion(e.target.value)} aria-describedby="supresion-ayuda" className="w-full rounded-xl border border-brand-border bg-white p-3"/>
+                      <p id="supresion-ayuda" className="mt-2 text-sm">Escribe entre 5 y 500 caracteres, sin información médica ni sensible. El motivo y la fecha quedan como respaldo de la solicitud.</p>
+                    </div>
+                    {!estaOnline && <AvisoInterfaz>Necesitas conexión para confirmar esta operación.</AvisoInterfaz>}
+                    {mensajePrivacidad?.tipo === "error" && <AvisoInterfaz tono="error">{mensajePrivacidad.texto}</AvisoInterfaz>}
+                    {suprimiendo && <p role="status">Esperando confirmación del servidor…</p>}
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <button type="button" disabled={suprimiendo} onClick={() => { setTitularAAnonimizar(null); setMotivoSupresion(""); }} className="rounded-xl border border-brand-border bg-white px-4 py-3 text-sm font-bold">Cancelar</button>
+                      <button type="button" onClick={handleConfirmarAnonimizacion} disabled={suprimiendo || !estaOnline || motivoSupresion.trim().length < 5} className="rounded-xl bg-rose-800 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{suprimiendo ? "Eliminando…" : "Confirmar eliminación"}</button>
+                    </div>
                   </div>
-                  <p className="text-xs text-rose-800 leading-relaxed">
-                    ¿Estás segura de anonimizar los datos de <strong>{titularAAnonimizar.nombre}</strong>?
-                    <br />
-                    El nombre se reemplazará por <em>"TRABAJADOR ANONIMIZADO"</em> y se eliminará el RUT.
-                    <strong> Los consumos y raciones registradas se conservarán 100% intactas</strong> para respaldar la facturación y la trazabilidad fiscal del negocio.
-                  </p>
-                  {/* HU-34: "se deja constancia en la bitácora con motivo
-                      y fecha". El motivo es obligatorio y lo valida
-                      también el servidor; sin él no se puede confirmar.
-                      El diseño definitivo de este campo y del diálogo
-                      queda para Codex (docs/sprint-5-handoff-codex.md). */}
-                  <div>
-                    <label className="text-[11px] font-bold text-rose-900 block mb-1">
-                      ¿Por qué se eliminan estos datos?
-                    </label>
-                    <input
-                      type="text"
-                      value={motivoSupresion}
-                      onChange={(e) => setMotivoSupresion(e.target.value)}
-                      maxLength={500}
-                      className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs text-brand-ink focus:border-rose-500 focus:outline-none"
-                      placeholder="Ej: la persona pidió por escrito que borremos sus datos"
-                    />
-                    <p className="mt-1 text-[10px] text-rose-700">
-                      Queda guardado junto a la fecha como respaldo de la solicitud.
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-end gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTitularAAnonimizar(null);
-                        setMotivoSupresion("");
-                      }}
-                      className="rounded-xl border border-rose-200 bg-white px-3 py-1.5 text-xs font-bold text-brand-ink hover:bg-rose-100/50 transition"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleConfirmarAnonimizacion}
-                      disabled={suprimiendo || motivoSupresion.trim().length < 5}
-                      className="rounded-xl bg-rose-700 px-4 py-1.5 text-xs font-black text-white hover:bg-rose-800 transition shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {suprimiendo ? "Eliminando…" : "Sí, Anonimizar Definitivamente"}
-                    </button>
-                  </div>
-                </div>
+                </Dialogo>
               )}
 
-              {/* Resumen de los 6 controles implementados */}
-              <div className="rounded-2xl border border-brand-border/70 bg-brand-sand-light/30 p-4 space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-brand-terracotta block">
-                  Controles Técnicos y Operativos en Paposo
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px] text-brand-muted">
-                  <div className="p-2 rounded-xl bg-white border border-brand-border/60">
-                    <p className="font-bold text-brand-ink">1. Minimización</p>
-                    <p className="mt-0.5">Sin datos sensibles ni médicos en justificaciones.</p>
-                  </div>
-                  <div className="p-2 rounded-xl bg-white border border-brand-border/60">
-                    <p className="font-bold text-brand-ink">2. Transparencia</p>
-                    <p className="mt-0.5">Cláusula legal Art. 14 en PDF y WhatsApp.</p>
-                  </div>
-                  <div className="p-2 rounded-xl bg-white border border-brand-border/60">
-                    <p className="font-bold text-brand-ink">3. Purga Automática</p>
-                    <p className="mt-0.5">pg_cron anonimiza nóminas a los 7 días post-cierre.</p>
-                  </div>
-                  <div className="p-2 rounded-xl bg-white border border-brand-border/60">
-                    <p className="font-bold text-brand-ink">4. Seudonimización Ledger</p>
-                    <p className="mt-0.5">Libro contable inmutable asociado a IDs seguros.</p>
-                  </div>
-                  <div className="p-2 rounded-xl bg-white border border-brand-border/60">
-                    <p className="font-bold text-brand-ink">5. Seguridad RLS</p>
-                    <p className="mt-0.5">Encargada solo ingresa; solo Admin gestiona datos.</p>
-                  </div>
-                  <div className="p-2 rounded-xl bg-white border border-brand-border/60">
-                    <p className="font-bold text-brand-ink">6. Bitácora de Auditoría</p>
-                    <p className="mt-0.5">Registro inmutable ante fiscalizaciones de la Agencia.</p>
-                  </div>
-                </div>
-              </div>
+              <AvisoInterfaz>La eliminación automática de nombres y RUT espera al término del contrato y al cierre del período correspondiente. El plazo configurado de {config.diasGraciaAnonimizacion} días y estas condiciones requieren validación con la Administradora.</AvisoInterfaz>
             </div>
           )}
 
@@ -989,7 +776,7 @@ export function PerfilConfigModal({
                     Recorrido Guiado del Sistema
                   </h3>
                 </div>
-                <p className="text-xs text-brand-muted leading-relaxed">
+                <p className="text-sm text-brand-ink/80 leading-relaxed">
                   ¿Tienes dudas de cómo funciona el sistema o entró una nueva encargada a trabajar? Puedes volver a iniciar el tour interactivo paso a paso cuando quieras:
                 </p>
 
@@ -1000,7 +787,7 @@ export function PerfilConfigModal({
                       onCerrar();
                       onReiniciarTour();
                     }}
-                    className="w-full py-3 px-4 rounded-xl bg-brand-terracotta text-white text-xs font-black shadow-md hover:bg-brand-terracotta-deep active:scale-98 transition flex items-center justify-center gap-2"
+                    className="w-full py-3 px-4 rounded-xl bg-brand-terracotta-deep text-white text-sm font-black shadow-md hover:bg-brand-terracotta-deep active:scale-98 transition flex items-center justify-center gap-2"
                   >
                     <IconCompass className="h-4 w-4" />
                     <span>Reiniciar y ver Tour Guiado ahora →</span>
@@ -1010,10 +797,10 @@ export function PerfilConfigModal({
 
               {/* Consejos de Operación Offline */}
               <div className="rounded-2xl border border-brand-border/70 bg-white p-4 space-y-3">
-                <h4 className="font-display text-xs font-extrabold text-brand-ink flex items-center gap-1.5">
+                <h4 className="font-display text-sm font-extrabold text-brand-ink flex items-center gap-1.5">
                   <span>💡 Consejos para trabajar en Paposo:</span>
                 </h4>
-                <ul className="text-xs text-brand-muted space-y-2 leading-relaxed list-disc pl-4">
+                <ul className="text-sm text-brand-ink/80 space-y-2 leading-relaxed list-disc pl-4">
                   <li>
                     <strong>Incluso sin señal de Entel o Movistar:</strong> Puedes registrar check-ins, aseos, consumos del comedor y compras de mercadería sin parar.
                   </li>
@@ -1034,7 +821,7 @@ export function PerfilConfigModal({
           {tab === "sistema" && (
             <div className="space-y-4">
               <div className="rounded-2xl border border-brand-border/70 bg-brand-sand-light/40 p-4 space-y-3">
-                <span className="text-[10px] font-black uppercase tracking-wider text-brand-terracotta">
+                <span className="text-sm font-black uppercase tracking-wider text-brand-terracotta">
                   Estado Técnico y Red
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -1045,38 +832,38 @@ export function PerfilConfigModal({
                       }`}
                     />
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                      <p className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
                         Conexión Internet
                       </p>
-                      <p className="text-xs font-extrabold text-brand-ink">
+                      <p className="text-sm font-extrabold text-brand-ink">
                         {estaOnline ? "Conectado a Internet" : "Sin Internet (Modo Offline)"}
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                    <p className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
                       Base de Datos
                     </p>
-                    <p className="text-xs font-extrabold text-brand-ink">
+                    <p className="text-sm font-extrabold text-brand-ink">
                       PowerSync SQLite Local
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                    <p className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
                       Versión Aplicación
                     </p>
-                    <p className="text-xs font-semibold text-brand-muted">
+                    <p className="text-sm font-semibold text-brand-ink/80">
                       v1.2.0 · PWA Offline-first
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                    <p className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
                       Localización
                     </p>
-                    <p className="text-xs font-semibold text-brand-muted">
+                    <p className="text-sm font-semibold text-brand-ink/80">
                       Caleta Paposo, Taltal
                     </p>
                   </div>
@@ -1090,7 +877,7 @@ export function PerfilConfigModal({
                         onCerrar();
                         onAbrirSyncModal();
                       }}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-brand-border bg-white px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand-light transition"
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand-light transition"
                     >
                       <IconRefresh className="h-4 w-4 text-brand-terracotta" />
                       <span>Ver Detalles de Sincronización PowerSync</span>
@@ -1107,7 +894,7 @@ export function PerfilConfigModal({
                     Finalizar Turno / Cerrar Sesión
                   </h3>
                 </div>
-                <p className="text-xs text-rose-800 leading-relaxed">
+                <p className="text-sm text-rose-800 leading-relaxed">
                   Cierra la sesión actual cuando entregues el teléfono o computador a la siguiente encargada:
                 </p>
 
@@ -1119,14 +906,14 @@ export function PerfilConfigModal({
                         onCerrar();
                         onLogout();
                       }}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-rose-700 text-white text-xs font-extrabold shadow-sm hover:bg-rose-800 transition active:scale-95"
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-rose-700 text-white text-sm font-extrabold shadow-sm hover:bg-rose-800 transition active:scale-95"
                     >
                       Sí, cerrar sesión ahora
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmarSalida(false)}
-                      className="py-2.5 px-4 rounded-xl bg-white border border-rose-200 text-xs font-bold text-brand-ink hover:bg-rose-50 transition"
+                      className="py-2.5 px-4 rounded-xl bg-white border border-rose-200 text-sm font-bold text-brand-ink hover:bg-rose-50 transition"
                     >
                       Cancelar
                     </button>
@@ -1135,7 +922,7 @@ export function PerfilConfigModal({
                   <button
                     type="button"
                     onClick={() => setConfirmarSalida(true)}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition active:scale-95"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2.5 text-sm font-bold text-rose-700 hover:bg-rose-100 transition active:scale-95"
                   >
                     <IconDoorExit className="h-4 w-4" />
                     <span>Cerrar Sesión</span>
@@ -1148,18 +935,18 @@ export function PerfilConfigModal({
 
         {/* Pie del Modal */}
         <div className="border-t border-brand-border/60 bg-brand-sand-light/50 px-5 py-3 flex items-center justify-between shrink-0">
-          <span className="text-[11px] font-semibold text-brand-muted">
+          <span className="text-sm font-semibold text-brand-ink/80">
             Pensión Señora Miriam · Paposo
           </span>
           <button
             type="button"
-            onClick={onCerrar}
-            className="rounded-xl bg-brand-sand px-4 py-2 text-xs font-bold text-brand-ink hover:bg-brand-sand-light transition"
+            disabled={suprimiendo || guardandoConfig || guardandoPassword} onClick={onCerrar}
+            className="rounded-xl bg-brand-sand px-4 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand-light transition"
           >
             Listo
           </button>
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }
