@@ -40,10 +40,12 @@ function identificarRegistro(registro: OperacionRechazadaRow) {
   return nombre;
 }
 
-export function RegistroRechazado({ registro, resolviendo, onResolver }: {
+export function RegistroRechazado({ registro, resolviendo, onResolver, onReintentar, sinConexion = false }: {
   registro: OperacionRechazadaRow;
   resolviendo: boolean;
   onResolver: (id: string) => void;
+  onReintentar?: () => void;
+  sinConexion?: boolean;
 }) {
   const fecha = new Date(registro.fecha_hora);
   const fechaTexto = Number.isNaN(fecha.getTime()) ? "Fecha no disponible" : fecha.toLocaleString("es-CL", {
@@ -60,6 +62,10 @@ export function RegistroRechazado({ registro, resolviendo, onResolver }: {
         </div>
       </div>
       <p className="text-sm leading-relaxed text-brand-ink">{describirRechazo(registro)}</p>
+      {onReintentar && <div className="space-y-2">
+        <p className="text-sm">Reenvía los datos del contrato sin volver a llenar el formulario ni duplicar un contrato ya guardado. Requiere conexión.</p>
+        <button type="button" disabled={resolviendo || sinConexion} onClick={onReintentar} className="min-h-11 w-full rounded-xl bg-brand-terracotta-deep px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{resolviendo ? "Reintentando…" : "Reintentar guardado del contrato"}</button>
+      </div>}
       <details className="rounded-xl bg-brand-sand/40 p-3 text-sm text-brand-ink">
         <summary className="cursor-pointer font-semibold">Cómo revisar este registro</summary>
         <p className="mt-2">Comprueba los datos y, si hace falta, corrígelos desde su pantalla. Este botón solo confirma que revisaste el problema: no corrige ni vuelve a enviar el registro.</p>

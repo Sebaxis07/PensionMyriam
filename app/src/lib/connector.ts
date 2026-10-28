@@ -125,7 +125,11 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
             case UpdateType.PUT:
               await table
                 .upsert(pk === "id" ? { ...(op.opData ?? {}), id: op.id } : { ...(op.opData ?? {}) }, {
-                  onConflict: pk
+                  onConflict: pk,
+                  // Los contratos se versionan: reenviar un alta no debe
+                  // sobrescribir headcount/tarifa. DO NOTHING evita además
+                  // exigir SELECT de tarifa_convenida en la tabla base.
+                  ...(op.table === "contrato_empresa" ? { ignoreDuplicates: true } : {})
                 })
                 .throwOnError();
               break;
@@ -193,7 +197,7 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
                 op.table,
                 op.op,
                 String(opError?.message ?? opError),
-                JSON.stringify(op.opData ?? {}),
+                JSON.stringify(op.table === "contrato_empresa" ? { ...(op.opData ?? {}), id: op.id } : (op.opData ?? {})),
                 new Date().toISOString()
               ]
             );

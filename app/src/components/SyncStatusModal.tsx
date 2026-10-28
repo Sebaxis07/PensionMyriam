@@ -1,4 +1,6 @@
-import { AvisoInterfaz } from "./MensajeInterfaz";
+import { AvisoInterfaz, describirErrorUi } from "./MensajeInterfaz";
+import { useConexionInterfaz } from "./useConexionInterfaz";
+import { reintentarContratoRechazado } from "../features/reservaEmpresa/reintentarContratoRechazado";
 import { RegistroRechazado } from "./RegistroRechazado";
 import { SyncStatusBadge } from "./SyncStatusBadge";
 import { Dialogo } from "./Dialogo";
@@ -27,6 +29,8 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
   const rechazos = useOperacionesRechazadas();
   const [errorRevision, setErrorRevision] = useState<string | null>(null);
   const [resolviendoId, setResolviendoId] = useState<string | null>(null);
+  const [mensajeRecuperacion, setMensajeRecuperacion] = useState<string | null>(null);
+  const online = useConexionInterfaz();
 
   async function handleResolver(id: string) {
     setResolviendoId(id);
@@ -240,8 +244,18 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
           </h4>
           {rechazos.length > 0 && <p className="text-sm leading-relaxed text-brand-ink/80">Estos registros no fueron aceptados. No están sincronizados, aunque no queden cambios por enviar.</p>}
           {errorRevision && <AvisoInterfaz tono="error">{errorRevision}</AvisoInterfaz>}
+          {mensajeRecuperacion && <AvisoInterfaz tono="exito">{mensajeRecuperacion}</AvisoInterfaz>}
           {rechazos.map((r) => (
             <RegistroRechazado key={r.id} registro={r} resolviendo={resolviendoId === r.id}
+              sinConexion={!online}
+              onReintentar={r.tabla === "contrato_empresa" && r.operacion === "PUT" && usuarios?.find(u => u.id === usuarioId)?.rol === "administradora" ? async () => {
+                setErrorRevision(null); setMensajeRecuperacion(null); setResolviendoId(r.id);
+                try {
+                  await reintentarContratoRechazado(r, usuarioId);
+                  setMensajeRecuperacion("Contrato confirmado en el servidor. El aviso queda conservado como resuelto.");
+                } catch (err) { setErrorRevision(describirErrorUi(err instanceof Error ? err.message : "No se pudo reintentar el contrato.")); }
+                finally { setResolviendoId(null); }
+              } : undefined}
               onResolver={(id) => {
                 setErrorRevision(null);
                 handleResolver(id).catch(() => setErrorRevision("No se pudo guardar la revisión. El registro sigue pendiente; intenta nuevamente."));

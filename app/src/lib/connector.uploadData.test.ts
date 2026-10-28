@@ -86,6 +86,18 @@ describe("SupabaseConnector.uploadData — reversión local en rechazo 23P01 (HU
     expect(complete).toHaveBeenCalledTimes(1);
   });
 
+  it("el alta de contrato ignora duplicados sin sobrescribir tarifa ni cambiar otros upserts", async () => {
+    throwOnError.mockResolvedValue(undefined);
+    const { database, complete } = crearDatabaseFake([
+      { table: "contrato_empresa", op: UpdateType.PUT, id: "contrato-1", opData: { tarifa_convenida: 25000 } },
+      { table: "empresa", op: UpdateType.PUT, id: "empresa-1", opData: { razon_social: "Empresa de prueba" } }
+    ]);
+    await new SupabaseConnector().uploadData(database as any);
+    expect(upsert).toHaveBeenCalledWith({ id:"contrato-1", tarifa_convenida:25000 }, {onConflict:"id",ignoreDuplicates:true});
+    expect(upsert).toHaveBeenCalledWith({ id:"empresa-1", razon_social:"Empresa de prueba" }, {onConflict:"id"});
+    expect(complete).toHaveBeenCalledOnce();
+  });
+
   it("NO revierte nada para un rechazo permanente que no es el EXCLUDE de reserva (ej. check constraint en consumo)", async () => {
     throwOnError.mockRejectedValueOnce({ code: "23514", message: "check constraint violated" });
 
