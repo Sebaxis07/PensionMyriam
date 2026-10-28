@@ -97,9 +97,11 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
     //       costo_promedio=0, para que el trigger arranque desde cero y
     //       calcule él solo el valor correcto a partir de la compra.
     const haySuCompraEnEstaTransaccion = transaction.crud.some((o) => o.table === "compra_insumo");
+    let ingresoRechazadoPorCancelacion = false;
 
     try {
       for (const op of transaction.crud) {
+        if (ingresoRechazadoPorCancelacion && op.table === "habitacion" && op.op === UpdateType.PATCH) continue;
         // (a) insumo EXISTENTE: el PATCH con el PMP ya recalculado nunca
         // es una escritura legítima para sincronizar — el trigger es la
         // única fuente de verdad, así que se omite siempre, sin importar
@@ -148,6 +150,32 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
             // mitad de sincronización); no es un rechazo, es el caso
             // exitoso de la idempotencia. No se avisa a la usuaria.
             continue;
+          }
+
+          // Un segundo teléfono pudo registrar la llegada mientras este
+          // cancelaba sin señal. Se recupera el estado autorizado antes
+          // de completar la cola; si falla la lectura, se reintenta.
+          if (op.table === "reserva" && op.op === UpdateType.PATCH && op.opData?.estado === "cancelada") {
+            const { data, error } = await supabase.from("reserva")
+              .select("estado,motivo_cancelacion,cancelada_por,cancelada_en,uuid_cancelacion")
+              .eq("id", op.id).single();
+            if (error || !data) throw error ?? new Error("No se pudo recuperar la reserva.");
+            await database.execute(
+              "update reserva set estado = ?, motivo_cancelacion = ?, cancelada_por = ?, cancelada_en = ?, uuid_cancelacion = ? where id = ?",
+              [data.estado, data.motivo_cancelacion, data.cancelada_por, data.cancelada_en, data.uuid_cancelacion, op.id]
+            );
+          }
+          if (op.table === "checkin" && /reserva no está confirmada/i.test(String(opError?.message))) {
+            ingresoRechazadoPorCancelacion = true;
+            const reservaId = String(op.opData?.reserva_id ?? "");
+            const { data: reserva, error: errorReserva } = await supabase.from("reserva").select("cama_id").eq("id", reservaId).single();
+            if (errorReserva) throw errorReserva;
+            const { data: cama, error: errorCama } = await supabase.from("cama").select("habitacion_id").eq("id", reserva!.cama_id).single();
+            if (errorCama) throw errorCama;
+            const { data: habitacion, error: errorHabitacion } = await supabase.from("habitacion").select("estado").eq("id", cama!.habitacion_id).single();
+            if (errorHabitacion) throw errorHabitacion;
+            await database.execute("delete from checkin where id = ?", [op.id]);
+            await database.execute("update habitacion set estado = ? where id = ?", [habitacion!.estado, cama!.habitacion_id]);
           }
 
           // Rechazo permanente genuino (HU-42): no queda solo en consola.

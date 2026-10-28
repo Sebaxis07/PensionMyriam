@@ -489,7 +489,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
         )}
 
             {tab === "rack" && (
-              <RackHotelero
+              <RackHotelero usuarioId={usuario.id}
                 onSeleccionarParaReservar={(habitacionId, fecha) => {
                   setPreseleccionReserva(habitacionId);
                   setFechaPreseleccionadaReserva(fecha);

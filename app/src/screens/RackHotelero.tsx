@@ -1,3 +1,5 @@
+import { CancelarReservaModal } from "../features/reservas/CancelarReservaModal";
+import { AvisoInterfaz } from "../components/MensajeInterfaz";
 import { Dialogo } from "../components/Dialogo";
 import { useState, useMemo } from "react";
 import { useQuery } from "@powersync/react";
@@ -25,6 +27,7 @@ interface HabitacionRow {
 }
 
 interface ReservaRow {
+  ingreso: number;
   id: string;
   cama_id: string;
   habitacion_id: string;
@@ -36,14 +39,18 @@ interface ReservaRow {
 }
 
 interface RackHoteleroProps {
+  usuarioId?: string;
   onSeleccionarParaReservar: (habitacionId: string, fecha: string) => void;
   onVolver?: () => void;
 }
 
 export function RackHotelero({
+  usuarioId,
   onSeleccionarParaReservar,
   onVolver
 }: RackHoteleroProps) {
+  const [cancelando, setCancelando] = useState(false);
+  const [cancelada, setCancelada] = useState(false);
   const hoyStr = fechaHoySantiago();
   const [anioHoy, mesHoy] = hoyStr.split("-").map(Number);
   const [anio, setAnio] = useState(anioHoy);
@@ -54,6 +61,7 @@ export function RackHotelero({
     estado: "disponible" | "ocupada" | "en_mantencion";
     huesped?: string;
     habitacionId: string;
+    reserva?: ReservaRow;
   } | null>(null);
 
   // Consultar las 8 piezas
@@ -71,7 +79,8 @@ export function RackHotelero({
   // Consultar reservas del mes
   const { data: reservasRaw } = useQuery<ReservaRow>(
     `select r.id, r.cama_id, c.habitacion_id, r.huesped_nombre, r.tipo_cliente,
-            r.fecha_inicio, r.fecha_fin, r.estado
+            r.fecha_inicio, r.fecha_fin, r.estado,
+            exists(select 1 from checkin ci where ci.reserva_id = r.id) as ingreso
      from reserva r
      join cama c on c.id = r.cama_id
      where r.estado in ('confirmada', 'en_curso')
@@ -155,6 +164,7 @@ export function RackHotelero({
 
   return (
     <div className="ui-operativa mx-auto flex w-full max-w-7xl flex-col gap-4">
+      {cancelada && <AvisoInterfaz tono="exito">Reserva cancelada en este teléfono. Sus fechas quedan disponibles; la cancelación está pendiente de sincronización.</AvisoInterfaz>}
       {onVolver && (
         <button
           onClick={onVolver}
@@ -301,7 +311,8 @@ export function RackHotelero({
                                 fecha: d.fechaStr,
                                 estado: mantencion ? "en_mantencion" : "ocupada",
                                 huesped: res?.huesped_nombre || "Ocupada",
-                                habitacionId: h.id
+                                habitacionId: h.id,
+                                reserva: res
                               });
                             }
                           }}
@@ -326,6 +337,8 @@ export function RackHotelero({
           </table>
         </div>
       </div>
+
+
 
       {/* Modal / Popover de detalle si toca una celda ocupada */}
       {celdaDetalle && (
@@ -368,6 +381,7 @@ export function RackHotelero({
               )}
             </div>
 
+            {celdaDetalle.reserva?.tipo_cliente === "turista" && !celdaDetalle.reserva.ingreso && usuarioId && <button onClick={() => setCancelando(true)} className="w-full rounded-xl border border-brand-terracotta-deep bg-white px-4 py-3 text-sm font-bold text-brand-terracotta-deep">Cancelar reserva</button>}
             <div className="flex justify-end pt-1">
               <button
                 onClick={() => setCeldaDetalle(null)}
@@ -379,6 +393,7 @@ export function RackHotelero({
           </div>
         </Dialogo>
       )}
+      {cancelando && celdaDetalle?.reserva && usuarioId && <CancelarReservaModal reservaId={celdaDetalle.reserva.id} nombre={celdaDetalle.reserva.huesped_nombre} usuarioId={usuarioId} onCerrar={() => setCancelando(false)} onCancelada={() => { setCancelando(false); setCeldaDetalle(null); setCancelada(true); }}/>}
     </div>
   );
 }

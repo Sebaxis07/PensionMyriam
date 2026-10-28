@@ -1,3 +1,4 @@
+import { CancelarReservaModal } from "../features/reservas/CancelarReservaModal";
 import { Dialogo } from "./Dialogo";
 import { useState } from "react";
 import { powersync } from "../lib/powersync";
@@ -33,6 +34,7 @@ export function RoomSheet({
   onClose: () => void;
   onIrAReservar: (habitacionId: string) => void;
 }) {
+  const [cancelando, setCancelando] = useState(false);
   const [marcandoMantencion, setMarcandoMantencion] = useState(false);
   const [motivo, setMotivo] = useState(MOTIVOS_MANTENCION[0]);
   const [guardando, setGuardando] = useState(false);
@@ -268,6 +270,7 @@ export function RoomSheet({
               </button>
             )}
 
+      {!pieza.checkin_activo_id && pieza.reserva_id && pieza.reserva_tipo === "turista" && <button onClick={() => setCancelando(true)} className="mt-3 w-full rounded-xl border border-brand-terracotta-deep bg-brand-card px-4 py-3 text-sm font-bold text-brand-terracotta-deep">Cancelar reserva</button>}
             <button
               onClick={onClose}
               className="mt-2 w-full py-2.5 text-center text-sm font-semibold text-brand-ink/80 hover:text-brand-ink"
@@ -276,7 +279,10 @@ export function RoomSheet({
             </button>
           </>
         )}
+
       </div>
+
+      {cancelando && pieza.reserva_id && <CancelarReservaModal reservaId={pieza.reserva_id} nombre={pieza.reserva_nombre ?? "Huésped"} usuarioId={usuarioId} onCerrar={() => setCancelando(false)} onCancelada={onClose}/>}
     </Dialogo>
   );
 }

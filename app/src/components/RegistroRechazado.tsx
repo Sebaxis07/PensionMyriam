@@ -10,6 +10,9 @@ const NOMBRES: Record<string, string> = {
 const COMIDAS: Record<string, string> = { desayuno: "desayuno", almuerzo: "almuerzo", cena: "cena", colacion: "colación", cama_noche: "alojamiento" };
 
 export function describirRechazo(registro: Pick<OperacionRechazadaRow, "tabla" | "motivo">) {
+  if (/huésped ya ingresó|reserva no está confirmada|cancelación ya fue registrada/i.test(registro.motivo)) {
+    return "La reserva cambió en otro teléfono. Revisa en Habitaciones si el huésped ya llegó o si la reserva fue cancelada. La operación no fue aceptada.";
+  }
   if (/23P01|overlap|solap|conflicting key/.test(registro.motivo)) {
     return "La cama o las fechas coinciden con otra reserva. Revisa la asignación antes de volver a registrarla.";
   }
