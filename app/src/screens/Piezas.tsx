@@ -589,7 +589,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
 
       {/* Modal / Bottom Sheet de Habitación */}
       {piezaAbierta && (
-        <RoomSheet
+        <RoomSheet onIrAEmpresas={() => { setPiezaAbierta(null); setTab("empresas"); }}
           pieza={piezaAbierta}
           usuarioId={usuario.id}
           onClose={() => setPiezaAbierta(null)}

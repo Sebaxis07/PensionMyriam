@@ -167,7 +167,7 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
             </div>
 
             {subTab === "nomina" && (
-              <NominaScreen
+              <NominaScreen empresaNombre={razonSocialEmpresa ?? undefined}
                 usuarioId={usuarioId}
                 contratoEmpresaId={contratoActivo.id}
                 onVolver={() => setVista("lista")}

@@ -54,6 +54,7 @@ export async function crearContratoEmpresa(usuarioId: string, input: ContratoEmp
           `update contrato_empresa set vigencia_hasta = ? where id = ?`,
           [ayerStr, c.id]
         );
+        await powersync.execute("update reserva set fecha_fin = ? where contrato_empresa_id = ? and cupo_numero is not null and estado = 'confirmada'", [ayerStr,c.id]);
       } else {
         // El nuevo contrato intenta iniciar en o antes de la fecha de inicio del contrato existente
         throw new ContratoSolapadoError();

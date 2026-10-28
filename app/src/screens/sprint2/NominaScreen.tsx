@@ -1,3 +1,6 @@
+import { useQuery } from "@powersync/react";
+import { CuposEmpresaPanel } from "../../features/nomina/CuposEmpresaPanel";
+import type { ContratoCupos } from "../../features/nomina/cuposEmpresa";
 import { Dialogo } from "../../components/Dialogo";
 import { useEffect, useState, useMemo } from "react";
 import { useNomina, type TrabajadorRow } from "../../features/nomina/useNomina";
@@ -24,6 +27,7 @@ interface NominaScreenProps {
   usuarioId: string;
   contratoEmpresaId: string;
   onVolver?: () => void;
+  empresaNombre?: string;
 }
 
 type FiltroNomina = "todos" | "pendientes" | "asignados";
@@ -31,9 +35,12 @@ type FiltroNomina = "todos" | "pendientes" | "asignados";
 export function NominaScreen({
   usuarioId,
   contratoEmpresaId,
+  empresaNombre,
   onVolver
 }: NominaScreenProps) {
   const nomina = useNomina(contratoEmpresaId);
+  const {data: contratosCupos} = useQuery<ContratoCupos>("select id, headcount, vigencia_desde, vigencia_hasta from contrato_empresa where id = ?", [contratoEmpresaId]);
+  const contrato = contratosCupos?.[0];
 
   // Estados de carga de trabajadores
   const [nombreIndividual, setNombreIndividual] = useState("");
@@ -56,10 +63,10 @@ export function NominaScreen({
 
   // Consultar camas libres
   useEffect(() => {
-    camasLibresParaContrato(fechaHoySantiago(), null)
+    camasLibresParaContrato(contrato?.vigencia_desde ?? fechaHoySantiago(), contrato?.vigencia_hasta ?? null)
       .then(setCamasLibres)
       .catch(() => setCamasLibres([]));
-  }, [nomina.length, conCama.length]);
+  }, [nomina.length, conCama.length, contrato?.vigencia_desde, contrato?.vigencia_hasta, trabajadorSeleccionado]);
 
   // Agrupar camas libres por habitación para que sea muy fácil de entender
   const habitacionesDisponibles = useMemo(() => {
@@ -126,7 +133,7 @@ export function NominaScreen({
 
   // Asignar una pieza con un solo toque
   async function handleElegirCama(camaId: string, habitacionNumero: number) {
-    if (!trabajadorSeleccionado) return;
+    if (!trabajadorSeleccionado || !contrato) return;
     setAsignandoCama(true);
     setError(null);
     try {
@@ -134,7 +141,8 @@ export function NominaScreen({
         trabajadorId: trabajadorSeleccionado.id,
         camaId,
         contratoEmpresaId,
-        fechaInicio: fechaHoySantiago()
+        fechaInicio: contrato.vigencia_desde,
+        fechaFin: contrato.vigencia_hasta ?? undefined
       });
       setMensajeExito(`¡Listo! ${trabajadorSeleccionado.nombre} quedó en la Pieza #${habitacionNumero}.`);
       setTrabajadorSeleccionado(null);
@@ -173,7 +181,6 @@ export function NominaScreen({
     }
   }
 
-  const porcentajeListos = nomina.length > 0 ? Math.round((conCama.length / nomina.length) * 100) : 0;
 
   return (
     <div className="ui-operativa mx-auto flex w-full max-w-4xl flex-col gap-5">
@@ -200,7 +207,7 @@ export function NominaScreen({
                 Lista de Trabajadores
               </h2>
               <p className="text-sm text-brand-ink/80">
-                Personas que se quedan en la pensión por este contrato.
+                {contrato ? `${empresaNombre ?? "Este contrato"} · ${contrato.headcount} personas contratadas` : "Cargando contrato…"}
               </p>
             </div>
           </div>
@@ -210,51 +217,8 @@ export function NominaScreen({
           </span>
         </div>
 
-        {/* Barra de Progreso Visual de Piezas Asignadas */}
-        <div className="rounded-2xl border border-brand-border/60 bg-white p-4 space-y-2.5">
-          <div className="flex items-center justify-between text-sm font-bold">
-            <span className="text-brand-ink">
-              {conCama.length} de {nomina.length} trabajadores tienen su pieza lista
-            </span>
-            <span className="text-brand-terracotta-deep font-black text-sm">
-              {porcentajeListos}%
-            </span>
-          </div>
-
-          <div className="w-full h-3 rounded-full bg-brand-sand-deep border border-brand-border/60 overflow-hidden">
-            <div
-              className="h-full bg-emerald-600 transition-all duration-500 rounded-full"
-              style={{ width: `${porcentajeListos}%` }}
-            />
-          </div>
-
-          {/* 3 Tarjetas de Resumen */}
-          <div className="grid grid-cols-3 gap-2 pt-1 text-center text-sm">
-            <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200">
-              <p className="font-display text-xl font-black text-emerald-800">{conCama.length}</p>
-              <p className="text-xs font-bold text-emerald-900 uppercase">Con Pieza Asignada</p>
-            </div>
-
-            <div className={`p-2 rounded-xl border ${sinCama.length > 0 ? "bg-amber-50 border-amber-300" : "bg-brand-sand-deep/50 border-brand-border/40"}`}>
-              <p className={`font-display text-xl font-black ${sinCama.length > 0 ? "text-amber-800" : "text-brand-ink/80"}`}>
-                {sinCama.length}
-              </p>
-              <p className="text-xs font-bold text-amber-950 uppercase">Faltan por Pieza</p>
-            </div>
-
-            <div className="p-2 rounded-xl bg-brand-sand-deep border border-brand-border/60">
-              <p className="font-display text-xl font-black text-brand-terracotta-deep">{camasLibres.length}</p>
-              <p className="text-xs font-bold text-brand-ink/80 uppercase">Camas Libres Hoy</p>
-            </div>
-          </div>
-        </div>
-
-        {sinCama.length > 0 && camasLibres.length === 0 && (
-          <div role="alert" className="rounded-2xl border border-red-300 bg-red-50 p-3.5 text-sm font-semibold text-red-800">
-            ⚠️ No quedan camas libres en la pensión en este momento para los {sinCama.length} trabajadores que faltan por pieza.
-          </div>
-        )}
       </div>
+      <CuposEmpresaPanel contrato={contrato} usuarioId={usuarioId} nomina={nomina}/>
 
       {/* Mensajes de Éxito / Error */}
       {mensajeExito && (
@@ -282,7 +246,7 @@ export function NominaScreen({
       {/* 2. Agregar Trabajadores: Método Fácil Paso a Paso */}
       <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card space-y-4">
         <h3 className="font-display text-lg font-bold text-brand-ink">
-          Agregar una Persona a la Nómina
+          Agregar trabajadores identificados
         </h3>
 
         {/* Formulario 1 por 1 (fácil y directo) */}

@@ -109,7 +109,7 @@ export function RoomCard({ pieza, onTap }: { pieza: PiezaRow; onTap: () => void 
               </p>
             </div>
             <span className="text-xs font-semibold text-brand-terracotta-deep">
-              Ingreso pendiente ({pieza.reserva_tipo === "empresa" ? "Empresa" : "Turista"})
+              {pieza.reserva_sin_identificar ? "Cama reservada · Falta nombre" : `Ingreso pendiente (${pieza.reserva_tipo === "empresa" ? "Empresa" : "Turista"})`}
             </span>
           </>
         )}

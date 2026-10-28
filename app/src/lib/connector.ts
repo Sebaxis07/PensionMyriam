@@ -1,6 +1,7 @@
 import type { AbstractPowerSyncDatabase, PowerSyncBackendConnector } from "@powersync/web";
 import { UpdateType } from "@powersync/web";
 import { supabase } from "./supabase";
+import { subirCuposEmpresa } from "../features/nomina/subirCuposEmpresa";
 import { POWERSYNC_URL } from "./env";
 
 // Tablas cuya PK real en Postgres no se llama "id" (ver comentario en
@@ -100,6 +101,7 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
     let ingresoRechazadoPorCancelacion = false;
 
     try {
+      if (await subirCuposEmpresa(database, transaction.crud, error => clasificarErrorSync(error) === "transitorio")) { await transaction.complete(); return; }
       for (const op of transaction.crud) {
         if (ingresoRechazadoPorCancelacion && op.table === "habitacion" && op.op === UpdateType.PATCH) continue;
         // (a) insumo EXISTENTE: el PATCH con el PMP ya recalculado nunca
@@ -118,6 +120,11 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
           op.opData = { ...(op.opData ?? {}), cantidad_total: 0, costo_promedio: 0 };
         }
 
+        if (op.op === UpdateType.DELETE && ["reserva", "trabajador", "checkin"].includes(op.table)) {
+          const {data,error} = await supabase.from(op.table).select("id").eq("id",op.id).maybeSingle();
+          if(error) throw error;
+          if(!data) continue; // Limpieza idempotente de una escritura local rechazada.
+        }
         const table = supabase.from(op.table);
         const pk = PK_POR_TABLA[op.table] ?? "id";
         try {

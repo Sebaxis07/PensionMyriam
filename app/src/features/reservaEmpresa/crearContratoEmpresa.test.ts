@@ -51,10 +51,11 @@ describe("crearContratoEmpresa (HU-02)", () => {
       headcount: 25,
       tarifaConvenida: 22000
     });
-    expect(execute).toHaveBeenCalledTimes(2);
+    expect(execute).toHaveBeenCalledTimes(3);
     expect(execute.mock.calls[0][0]).toMatch(/update contrato_empresa set vigencia_hasta = \? where id = \?/i);
     expect(execute.mock.calls[0][1]).toEqual(["2026-01-31", "contrato-previo"]);
-    expect(execute.mock.calls[1][0]).toMatch(/insert into contrato_empresa/i);
+    expect(execute.mock.calls[1][0]).toContain("update reserva set fecha_fin");
+    expect(execute.mock.calls[2][0]).toMatch(/insert into contrato_empresa/i);
   });
 
   it("avisa temprano si el nuevo contrato intenta iniciar en o antes del inicio del contrato existente", async () => {

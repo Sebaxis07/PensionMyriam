@@ -17,10 +17,12 @@ import { fechaHoySantiago, rangoHoySantiagoUTC } from "./fechaNegocio";
 export const QUERY_PIEZAS = `
 with reserva_hoy as (
   select * from (
-    select c.habitacion_id, r.id, r.huesped_nombre, r.tipo_cliente,
+    select c.habitacion_id, r.id, coalesce(r.huesped_nombre,t.nombre,'Cupo ' || r.cupo_numero || ' — Pendiente de nombre') as huesped_nombre, r.tipo_cliente,
+           case when r.cupo_numero is not null and r.trabajador_id is null then 1 else 0 end as sin_identificar,
            row_number() over (partition by c.habitacion_id order by r.created_at) as rn
     from reserva r
     join cama c on c.id = r.cama_id
+    left join trabajador t on t.id = r.trabajador_id
     where r.estado = 'confirmada'
       and date(r.fecha_inicio) <= date(?)
       and (r.fecha_fin is null or date(r.fecha_fin) >= date(?))
@@ -29,11 +31,12 @@ with reserva_hoy as (
 ),
 active_checkin as (
   select * from (
-    select c.habitacion_id, ci.id as checkin_id, r.huesped_nombre,
+    select c.habitacion_id, ci.id as checkin_id, coalesce(r.huesped_nombre,t.nombre) as huesped_nombre,
            row_number() over (partition by c.habitacion_id order by ci.fecha_hora desc) as rn
     from checkin ci
     join reserva r on r.id = ci.reserva_id
     join cama c on c.id = r.cama_id
+    left join trabajador t on t.id = r.trabajador_id
     left join checkout co on co.checkin_id = ci.id
     where co.checkin_id is null
   ) where rn = 1
@@ -47,6 +50,7 @@ aseo_hoy as (
 select
   h.id, h.numero, h.capacidad, h.estado, h.motivo_mantencion,
   rh.id as reserva_id, rh.huesped_nombre as reserva_nombre, rh.tipo_cliente as reserva_tipo,
+  coalesce(rh.sin_identificar,0) as reserva_sin_identificar,
   ac.checkin_id as checkin_activo_id, ac.huesped_nombre as huesped_actual,
   coalesce(ah.n, 0) as aseo_hoy_count
 from habitacion h
@@ -72,6 +76,7 @@ export type PiezaRow = {
   reserva_id: string | null;
   reserva_nombre: string | null;
   reserva_tipo: string | null;
+  reserva_sin_identificar?: number;
   checkin_activo_id: string | null;
   huesped_actual: string | null;
   aseo_hoy_count: number;

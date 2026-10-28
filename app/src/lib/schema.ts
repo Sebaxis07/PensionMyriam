@@ -36,6 +36,8 @@ const cama = new Table({
 });
 
 const reserva = new Table({
+  cupo_numero: column.integer,
+  uuid_identificacion: column.text,
   motivo_cancelacion: column.text,
   cancelada_por: column.text,
   cancelada_en: column.text,

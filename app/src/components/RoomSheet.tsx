@@ -27,12 +27,14 @@ export function RoomSheet({
   pieza,
   usuarioId,
   onClose,
-  onIrAReservar
+  onIrAReservar,
+  onIrAEmpresas
 }: {
   pieza: PiezaRow;
   usuarioId: string;
   onClose: () => void;
   onIrAReservar: (habitacionId: string) => void;
+  onIrAEmpresas?: () => void;
 }) {
   const [cancelando, setCancelando] = useState(false);
   const [marcandoMantencion, setMarcandoMantencion] = useState(false);
@@ -40,7 +42,7 @@ export function RoomSheet({
   const [guardando, setGuardando] = useState(false);
 
   async function checkin() {
-    if (!pieza.reserva_id) return;
+    if (!pieza.reserva_id || pieza.reserva_sin_identificar) return;
     setGuardando(true);
     // El cambio de color/estado de la pieza (Disponible -> Ocupada) lo
     // hace un trigger en Postgres (app.checkin_ocupa_habitacion) — eso
@@ -187,7 +189,7 @@ export function RoomSheet({
                 </p>
               )}
 
-              {pieza.estado === "disponible" && pieza.reserva_id && (
+              {pieza.estado === "disponible" && pieza.reserva_id && !pieza.reserva_sin_identificar && (
                 <div className="space-y-1">
                   <p className="font-semibold text-brand-ink">
                     Reserva para hoy: <strong className="text-brand-terracotta-deep">{pieza.reserva_nombre}</strong>
@@ -223,6 +225,7 @@ export function RoomSheet({
               )}
             </div>
 
+            {!!pieza.reserva_sin_identificar && <div className="mt-4 space-y-2 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-bold">Cama reservada · Falta identificar a la persona</p><p>Completa el nombre en Nómina y Camas antes de registrar la llegada.</p>{onIrAEmpresas && <button onClick={onIrAEmpresas} className="min-h-11 rounded-xl border border-brand-border bg-white px-4 py-2 font-bold">Ir a Empresas</button>}</div>}
             {/* Acción Primaria según Divulgación Progresiva */}
             {pieza.estado === "disponible" && pieza.reserva_id && (
               <BotonPrincipal disabled={guardando} onClick={checkin}>

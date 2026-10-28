@@ -20,7 +20,7 @@ export async function crearTrabajadores(contratoEmpresaId: string, nombres: stri
   return ids;
 }
 
-export type CamaLibreRow = { cama_id: string; habitacion_id: string; numero: number; capacidad: number };
+export type CamaLibreRow = { cama_id: string; habitacion_id: string; numero: number; capacidad: number; cama_numero?: number };
 
 /**
  * HU-12: camas libres para el rango de vigencia del contrato — mismo
@@ -32,7 +32,7 @@ export type CamaLibreRow = { cama_id: string; habitacion_id: string; numero: num
 export async function camasLibresParaContrato(fechaInicio: string, fechaFin: string | null): Promise<CamaLibreRow[]> {
   const hastaOInfinito = fechaFin || "9999-12-31";
   return powersync.getAll<CamaLibreRow>(
-    `select c.id as cama_id, h.id as habitacion_id, h.numero, h.capacidad
+    `select c.id as cama_id, h.id as habitacion_id, h.numero, h.capacidad, c.numero as cama_numero
      from cama c
      join habitacion h on h.id = c.habitacion_id
      where h.estado <> 'en_mantencion'
@@ -92,7 +92,7 @@ export async function asignarTrabajador(usuarioId: string, input: AsignacionInpu
     `select id from reserva
      where cama_id = ?
        and estado = 'confirmada'
-       and trabajador_id <> ?
+       and (trabajador_id is null or trabajador_id <> ?)
        and date(fecha_inicio) <= date(?)
        and (fecha_fin is null or date(fecha_fin) >= date(?))`,
     [datos.camaId, datos.trabajadorId, hastaOInfinito, datos.fechaInicio]

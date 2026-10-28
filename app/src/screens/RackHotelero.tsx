@@ -78,11 +78,12 @@ export function RackHotelero({
 
   // Consultar reservas del mes
   const { data: reservasRaw } = useQuery<ReservaRow>(
-    `select r.id, r.cama_id, c.habitacion_id, r.huesped_nombre, r.tipo_cliente,
+    `select r.id, r.cama_id, c.habitacion_id, coalesce(r.huesped_nombre,t.nombre,'Cupo ' || r.cupo_numero || ' — Pendiente de nombre') as huesped_nombre, r.tipo_cliente,
             r.fecha_inicio, r.fecha_fin, r.estado,
             exists(select 1 from checkin ci where ci.reserva_id = r.id) as ingreso
      from reserva r
      join cama c on c.id = r.cama_id
+     left join trabajador t on t.id = r.trabajador_id
      where r.estado in ('confirmada', 'en_curso')
        and date(r.fecha_inicio) <= date(?)
        and (r.fecha_fin is null or date(r.fecha_fin) >= date(?))`,
