@@ -20,6 +20,7 @@ export function CatalogoExtrasModal({
   const [nombre, setNombre] = useState("");
   const [precioUnitario, setPrecioUnitario] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [exito, setExito] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!abierto) return null;
@@ -27,6 +28,7 @@ export function CatalogoExtrasModal({
   async function handleCrear(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setExito(false);
     const precio = Number(precioUnitario);
     if (!nombre.trim()) {
       setError("Ingresa el nombre del producto o colación.");
@@ -43,6 +45,7 @@ export function CatalogoExtrasModal({
         nombre: nombre.trim(),
         precioUnitario: precio
       });
+      setExito(true);
       setNombre("");
       setPrecioUnitario("");
       if (onProductoCreado) {
@@ -56,7 +59,7 @@ export function CatalogoExtrasModal({
   }
 
   return (
-    <Dialogo titulo="Catálogo de colaciones" onCerrar={onCerrar} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
+    <Dialogo titulo="Catálogo de colaciones" onCerrar={() => { if (!guardando) onCerrar(); }} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
       <div className="relative w-full max-w-lg rounded-3xl border border-brand-border/80 bg-brand-card p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
         {/* Cabecera del modal */}
         <div className="flex items-start justify-between border-b border-brand-border/60 pb-3">
@@ -69,22 +72,23 @@ export function CatalogoExtrasModal({
                 Catálogo de Colaciones y Extras
               </h3>
               <p className="text-sm text-brand-ink/80">
-                Precios unitarios para colaciones de terreno y platos especiales
+                Cada producto se registra por separado, con su precio. Los consumos anteriores conservan su precio original.
               </p>
             </div>
           </div>
           <button
-            onClick={onCerrar}
+            disabled={guardando} onClick={onCerrar}
             aria-label="Cerrar diálogo" className="rounded-full p-1.5 text-brand-ink/80 hover:bg-brand-sand/50 hover:text-brand-ink transition"
           >
             ✕
           </button>
         </div>
 
+        {exito && <div role="status" className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-950">Producto guardado en este teléfono, pendiente de sincronización. Ya puedes seleccionarlo al anotar un extra.</div>}
         {/* Lista de productos actuales */}
         <div className="space-y-2">
           <h4 className="text-sm font-bold uppercase tracking-wider text-brand-ink/80">
-            Lista de precios vigente ({productos.length})
+            Productos registrados ({productos.length})
           </h4>
 
           {productos.length === 0 ? (
@@ -101,7 +105,7 @@ export function CatalogoExtrasModal({
               {productos.map((prod: ProductoExtraRow) => (
                 <div
                   key={prod.id}
-                  className="flex items-center justify-between rounded-xl border border-brand-border/60 bg-white p-3 shadow-sm"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-border/60 bg-white p-3 shadow-sm"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-base">🥪</span>
@@ -123,7 +127,7 @@ export function CatalogoExtrasModal({
           </h4>
 
           {error && (
-            <div className="rounded-xl border border-red-500/30 bg-red-50 p-2.5 text-sm text-red-700">
+            <div role="alert" className="rounded-xl border border-red-500/30 bg-red-50 p-2.5 text-sm text-red-700">
               {describirErrorUi(error)}
             </div>
           )}
@@ -146,9 +150,9 @@ export function CatalogoExtrasModal({
                 Precio unitario ($ CLP)
               </label>
               <input id="catalogoextrasmodal-preciounitario-1"
-                type="number"
+                inputMode="numeric" type="number"
                 min="0"
-                step="100"
+                step="1"
                 placeholder="Ej: 3500"
                 value={precioUnitario}
                 onChange={(e) => setPrecioUnitario(e.target.value)}
@@ -171,7 +175,7 @@ export function CatalogoExtrasModal({
         <div className="flex justify-end pt-1">
           <button
             type="button"
-            onClick={onCerrar}
+            disabled={guardando} onClick={onCerrar}
             className="rounded-xl border border-brand-border bg-brand-sand/40 px-5 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand transition"
           >
             Listo / Cerrar

@@ -263,7 +263,7 @@ export function ConsumoScreen({
   const infoServicio = SERVICIOS_INFO[tipoRacion];
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="ui-operativa flex w-full min-w-0 flex-col gap-4">
       {/* Toast flotante de éxito */}
       {toastExito && (
         <div role="status" aria-live="polite" className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950">
@@ -281,7 +281,7 @@ export function ConsumoScreen({
                 <IconUtensils className="h-4 w-4" />
               </div>
               <h2 className="font-display text-lg sm:text-xl font-bold text-brand-ink">
-                Control de Comedor y Raciones
+                Raciones del día
               </h2>
               <BotonExplicacion
                 titulo="Control de Comedor y Raciones"
@@ -295,21 +295,21 @@ export function ConsumoScreen({
             </p>
           </div>
 
-          {esAdmin && (
+          {(esAdmin || usuarioRol === "encargada") && (
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
               <button
                 onClick={() => setMostrarModalCatalogo(true)}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand transition shadow-sm"
               >
                 <IconPlus className="h-3.5 w-3.5 text-brand-terracotta-deep" />
-                <span>Lista de Colaciones ({productosExtra.length})</span>
+                <span>Productos extra ({productosExtra.length})</span>
               </button>
 
-              <button type="button" onClick={() => setMostrarResumen(!mostrarResumen)}
+              {esAdmin && <button type="button" onClick={() => setMostrarResumen(!mostrarResumen)}
                 aria-expanded={mostrarResumen}
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-terracotta-deep px-4 py-3 text-sm font-bold text-white">
                 {mostrarResumen ? "Ocultar resumen del día" : "Ver resumen del día"}
-              </button>
+              </button>}
             </div>
           )}
         </div>
@@ -333,6 +333,7 @@ export function ConsumoScreen({
                 <button
                   key={tipo}
                   type="button"
+                  aria-pressed={activo}
                   onClick={() => {
                     setTipoRacion(tipo);
                     setSeleccionados([]);
@@ -358,7 +359,7 @@ export function ConsumoScreen({
                   )}
 
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-xl sm:text-2xl">{info.icon}</span>
+                    <span aria-hidden="true" className="text-xl sm:text-2xl">{info.icon}</span>
                     <span className="font-bold text-sm sm:text-sm">{info.nombreCorto}</span>
                   </div>
 
@@ -412,13 +413,13 @@ export function ConsumoScreen({
                   Selecciona la colación o plato especial que vas a entregar:
                 </span>
               </div>
-              {esAdmin && (
+              {(esAdmin || usuarioRol === "encargada") && (
                 <button
                   type="button"
                   onClick={() => setMostrarModalCatalogo(true)}
                   className="text-sm font-semibold text-brand-terracotta-deep hover:underline self-start sm:self-auto"
                 >
-                  + Administrar precios
+                  + Agregar producto extra
                 </button>
               )}
             </div>
@@ -607,7 +608,7 @@ export function ConsumoScreen({
           <span className="text-base">💡</span>
           {pendientes.length > 0 ? (
             <span>
-              Quedan <strong>{pendientes.length} trabajadores</strong> por registrar en este turno. Toca el botón verde <strong>"{infoServicio.verbo}"</strong> al lado de cada nombre cuando bajen al mesón.
+              Quedan <strong>{pendientes.length} trabajadores</strong> por registrar en este turno. Toca el botón <strong>"{infoServicio.verbo}"</strong> al lado de cada nombre cuando bajen al mesón.
             </span>
           ) : (
             <span className="text-emerald-900 font-semibold">
@@ -632,7 +633,7 @@ export function ConsumoScreen({
           />
           {busquedaTrabajador && (
             <button
-              onClick={() => setBusquedaTrabajador("")}
+              aria-label="Limpiar búsqueda" onClick={() => setBusquedaTrabajador("")}
               className="absolute right-2.5 top-2 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
             >
               ✕
@@ -641,32 +642,32 @@ export function ConsumoScreen({
         </div>
 
         {/* Chips de filtro de estado */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setFiltroEstado("pendientes")}
+            aria-pressed={filtroEstado === "pendientes"} onClick={() => setFiltroEstado("pendientes")}
             className={`rounded-xl px-3 py-1.5 text-sm font-bold transition-all ${
               filtroEstado === "pendientes"
-                ? "bg-amber-600 text-white shadow-sm"
+                ? "bg-amber-800 text-white shadow-sm"
                 : "bg-brand-sand/50 text-brand-ink/80 hover:text-brand-ink border border-transparent"
             }`}
           >
-            Faltan por comer ({pendientes.length})
+            Pendientes ({pendientes.length})
           </button>
           <button
             type="button"
-            onClick={() => setFiltroEstado("servidos")}
+            aria-pressed={filtroEstado === "servidos"} onClick={() => setFiltroEstado("servidos")}
             className={`rounded-xl px-3 py-1.5 text-sm font-bold transition-all ${
               filtroEstado === "servidos"
                 ? "bg-emerald-700 text-white shadow-sm"
                 : "bg-brand-sand/50 text-brand-ink/80 hover:text-brand-ink border border-transparent"
             }`}
           >
-            Ya comieron ({servidos.length})
+            Registrados ({servidos.length})
           </button>
           <button
             type="button"
-            onClick={() => setFiltroEstado("todos")}
+            aria-pressed={filtroEstado === "todos"} onClick={() => setFiltroEstado("todos")}
             className={`rounded-xl px-3 py-1.5 text-sm font-bold transition-all ${
               filtroEstado === "todos"
                 ? "bg-brand-terracotta-deep text-white shadow-sm"
@@ -749,7 +750,7 @@ export function ConsumoScreen({
           return (
             <div
               key={f.id}
-              className={`flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all shadow-sm ${
+              className={`flex flex-col items-stretch justify-between gap-3 rounded-2xl border p-3.5 transition-all shadow-sm ${
                 yaRegistrado
                   ? "border-emerald-300/80 bg-emerald-50/60"
                   : seleccionado
@@ -776,7 +777,7 @@ export function ConsumoScreen({
                 <div
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-bold text-sm ${
                     yaRegistrado
-                      ? "bg-emerald-600 text-white"
+                      ? "bg-emerald-800 text-white"
                       : "bg-brand-sand text-brand-ink"
                   }`}
                 >
@@ -784,13 +785,13 @@ export function ConsumoScreen({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h4 className="break-words font-bold text-sm sm:text-base text-brand-ink">
+                  <h4 className="break-words font-bold text-lg text-brand-ink">
                     {f.nombre}
                   </h4>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {yaRegistrado ? (
                       <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
-                        <span>✓ Ya comió</span>
+                        <span>✓ {infoServicio.nombreCorto} registrado</span>
                         {horaLegible && (
                           <span className="text-emerald-800/80 font-normal">
                             ({horaLegible} hrs)
@@ -807,17 +808,17 @@ export function ConsumoScreen({
               </div>
 
               {/* Botón de Acción Principal (1 Toque) */}
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {!yaRegistrado ? (
                   <button
                     type="button"
                     onClick={() => handleMarcarIndividual(f)}
                     disabled={estaGuardando || (tipoRacion === "colacion" && !productoExtraId)}
                     title={`Marcar ${infoServicio.nombreCorto} para ${f.nombre}`}
-                    className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                    className="inline-flex min-h-[48px] items-center gap-1.5 rounded-xl bg-emerald-800 px-3.5 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     <span aria-hidden="true">{infoServicio.icon}</span>
-                    <span>{estaGuardando ? "Marcando…" : "Servir"}</span>
+                    <span>{estaGuardando ? "Guardando…" : infoServicio.verbo}</span>
                   </button>
                 ) : (
                   <button
