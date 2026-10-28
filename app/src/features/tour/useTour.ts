@@ -161,9 +161,10 @@ export function useTour() {
       driverInstanceRef.current.destroy();
     }
 
+    const reducirMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const d = driver({
       showProgress: true,
-      animate: true,
+      animate: !reducirMovimiento,
       overlayColor: "rgba(15, 23, 42, 0.78)",
       nextBtnText: "Siguiente →",
       prevBtnText: "← Anterior",
@@ -174,7 +175,7 @@ export function useTour() {
       stageRadius: esMobile ? 10 : 14,
       popoverOffset: esMobile ? 10 : 14,
       popoverClass: "pension-tour-popover",
-      smoothScroll: true,
+      smoothScroll: !reducirMovimiento,
       steps: pasosValidos,
       onHighlightStarted: (element, step) => {
         // En móvil, si la pantalla se desplazó al elemento, confirmar orientación óptima

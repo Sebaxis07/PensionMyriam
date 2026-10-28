@@ -6,14 +6,14 @@
    ========================================================================== */
 
 .driver-popover.pension-tour-popover {
-  background-color: #fdfbf7;
-  color: #0f172a;
-  border: 1.5px solid #e2d9cd;
+  background-color: #fffaf1;
+  color: #2a2418;
+  border: 1.5px solid #ddd0b3;
   border-radius: 1.25rem; /* rounded-2xl */
   box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.2), 0 8px 10px -6px rgba(15, 23, 42, 0.12);
   padding: 1.25rem;
   max-width: 360px;
-  font-family: inherit;
+  font-family: "DM Sans", system-ui, sans-serif;
   z-index: 10000000 !important;
   box-sizing: border-box;
 }
@@ -37,10 +37,10 @@
 
 /* Título cálido y claro con espacio para no colisionar con el botón cerrar */
 .driver-popover.pension-tour-popover .driver-popover-title {
-  font-family: inherit;
+  font-family: Georgia, serif;
   font-size: 1rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #2a2418;
   line-height: 1.3;
   margin-bottom: 0.45rem;
   padding-right: 2rem;
@@ -55,9 +55,9 @@
 
 /* Descripción en lenguaje directo y accesible */
 .driver-popover.pension-tour-popover .driver-popover-description {
-  font-family: inherit;
+  font-family: "DM Sans", system-ui, sans-serif;
   font-size: 0.8125rem;
-  color: #334155;
+  color: #2a2418;
   line-height: 1.5;
   margin-bottom: 0.75rem;
 }
@@ -78,7 +78,7 @@
   gap: 0.5rem;
   margin-top: 0.4rem;
   padding-top: 0.65rem;
-  border-top: 1px solid #f1e9de;
+  border-top: 1px solid #ebdcbe;
 }
 
 /* Agrupador de botones Siguiente / Anterior */
@@ -92,7 +92,7 @@
 .driver-popover.pension-tour-popover .driver-popover-progress-text {
   font-size: 0.725rem;
   font-weight: 700;
-  color: #8c7e72;
+  color: #731D0A;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -100,7 +100,7 @@
 
 /* Botón Siguiente (Terracota) */
 .driver-popover.pension-tour-popover .driver-popover-next-btn {
-  background-color: #c85a32 !important;
+  background-color: #731D0A !important;
   color: #ffffff !important;
   border: none !important;
   border-radius: 0.75rem !important;
@@ -113,7 +113,7 @@
   text-shadow: none !important;
   white-space: nowrap !important;
   touch-action: manipulation;
-  min-height: 34px;
+  min-height: 44px;
 }
 
 @media (min-width: 640px) {
@@ -124,7 +124,7 @@
 }
 
 .driver-popover.pension-tour-popover .driver-popover-next-btn:hover {
-  background-color: #a84724 !important;
+  background-color: #731D0A !important;
   transform: translateY(-1px) !important;
 }
 
@@ -134,9 +134,9 @@
 
 /* Botón Anterior (Arena neutro) */
 .driver-popover.pension-tour-popover .driver-popover-prev-btn {
-  background-color: #f1e9de !important;
-  color: #475569 !important;
-  border: 1px solid #e2d9cd !important;
+  background-color: #ebdcbe !important;
+  color: #2a2418 !important;
+  border: 1px solid #ddd0b3 !important;
   border-radius: 0.75rem !important;
   padding: 0.45rem 0.75rem !important;
   font-size: 0.775rem !important;
@@ -157,8 +157,8 @@
 }
 
 .driver-popover.pension-tour-popover .driver-popover-prev-btn:hover {
-  background-color: #e5dacd !important;
-  color: #0f172a !important;
+  background-color: #e1dcd2 !important;
+  color: #2a2418 !important;
 }
 
 .driver-popover.pension-tour-popover .driver-popover-prev-btn:active {
@@ -167,15 +167,15 @@
 
 /* Botón de Cerrar (Equis táctil y visible) */
 .driver-popover.pension-tour-popover .driver-popover-close-btn {
-  color: #94a3b8 !important;
+  color: #731D0A !important;
   font-size: 1.35rem !important;
   line-height: 1 !important;
   transition: color 0.15s ease !important;
   top: 0.75rem !important;
   right: 0.75rem !important;
   padding: 0.35rem !important;
-  width: 2rem !important;
-  height: 2rem !important;
+  width: 44px !important;
+  height: 44px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -184,20 +184,30 @@
 }
 
 .driver-popover.pension-tour-popover .driver-popover-close-btn:hover {
-  color: #c85a32 !important;
-  background-color: #f1e9de !important;
+  color: #731D0A !important;
+  background-color: #ebdcbe !important;
 }
 
 /* Flechas del popover con bordes coordinados */
 .driver-popover.pension-tour-popover .driver-popover-arrow-side-top {
-  border-top-color: #e2d9cd !important;
+  border-top-color: #ddd0b3 !important;
 }
 .driver-popover.pension-tour-popover .driver-popover-arrow-side-bottom {
-  border-bottom-color: #e2d9cd !important;
+  border-bottom-color: #ddd0b3 !important;
 }
 .driver-popover.pension-tour-popover .driver-popover-arrow-side-left {
-  border-left-color: #e2d9cd !important;
+  border-left-color: #ddd0b3 !important;
 }
 .driver-popover.pension-tour-popover .driver-popover-arrow-side-right {
-  border-right-color: #e2d9cd !important;
+  border-right-color: #ddd0b3 !important;
 }
+
+/* Legibilidad y navegación táctil sin cambiar el recorrido. */
+.driver-popover.pension-tour-popover { max-height: calc(100dvh - 24px); overflow-y: auto; }
+.driver-popover.pension-tour-popover .driver-popover-title { font-size: 1.25rem; padding-right: 2.5rem; }
+.driver-popover.pension-tour-popover .driver-popover-description { font-size: 1rem; line-height: 1.6; }
+.driver-popover.pension-tour-popover .driver-popover-footer { flex-wrap: wrap; }
+.driver-popover.pension-tour-popover button:focus-visible { outline: 3px solid #731D0A; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .driver-popover, .driver-popover *, .driver-overlay, .driver-active-element { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+.driver-popover.pension-tour-popover .driver-popover-prev-btn { min-height: 44px; }
