@@ -237,7 +237,11 @@ export function useDashboardAdminMetricas() {
 
   // Métricas de Ocupación actual
   const metricasOcupacion = useMemo(() => {
-    const totalHabitaciones = piezas?.length || 8;
+    // No asumir una cantidad fija: la pensión puede tener cualquier
+    // número de habitaciones (ver db/migrations — habitacion no tiene
+    // un conteo fijo en el esquema). Mientras no hay datos, 0 en vez
+    // de un "8" que podría ser falso.
+    const totalHabitaciones = piezas?.length ?? 0;
     const ocupadas = piezas?.filter((p) => p.estado === "ocupada").length ?? 0;
     const disponibles = piezas?.filter((p) => p.estado === "disponible").length ?? 0;
     const enMantencion = piezas?.filter((p) => p.estado === "mantencion").length ?? 0;

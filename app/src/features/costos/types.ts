@@ -6,6 +6,13 @@ export type CategoriaCompra =
   | "aseo"
   | "otro";
 
+export type MedioPagoCompra =
+  | "efectivo"
+  | "transferencia"
+  | "tarjeta_debito"
+  | "tarjeta_credito"
+  | "otro";
+
 export interface InsumoRow {
   id: string;
   nombre: string;
@@ -27,6 +34,13 @@ export interface CompraInsumoRow {
   registrado_por: string;
   uuid_idempotente: string;
   created_at: string;
+  proveedor?: string | null;
+  descripcion?: string | null;
+  medio_pago?: MedioPagoCompra | null;
+  referencia_comprobante?: string | null;
+  monto_neto?: number | null;
+  monto_iva?: number | null;
+  observaciones?: string | null;
 }
 
 export type EstadoSemaforoMargen = "verde" | "amarillo" | "rojo";

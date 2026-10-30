@@ -19,7 +19,7 @@ interface HeaderProps {
 const META_VISTAS: Record<TabType, { titulo: string; descripcion: string }> = {
   inicio: {
     titulo: "Habitaciones",
-    descripcion: "Disponibilidad y estado de las 8 habitaciones"
+    descripcion: "Disponibilidad y estado de las habitaciones"
   },
   aseo: {
     titulo: "Aseo de hoy",
@@ -39,7 +39,7 @@ const META_VISTAS: Record<TabType, { titulo: string; descripcion: string }> = {
   },
   rack: {
     titulo: "Calendario de Ocupación",
-    descripcion: "Disponibilidad mensual de las 8 habitaciones"
+    descripcion: "Disponibilidad mensual de las habitaciones"
   },
   reservar: {
     titulo: "Nueva reserva",
