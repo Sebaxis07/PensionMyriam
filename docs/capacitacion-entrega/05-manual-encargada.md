@@ -93,7 +93,11 @@ Si alguien pide algo fuera de lo normal —una bebida, por ejemplo— regístrel
 **Qué botón presionar:** **Completar aseo** en cada pieza pendiente, o **Marcar N diarios listos** si hay varias a la vez.
 **Cómo saber si funcionó:** la pieza queda verde (si venía de una salida) o registrada como aseada hoy (si sigue ocupada y solo necesitaba el aseo diario).
 
-Recuerde: el aseo diario es obligatorio para toda pieza ocupada, todos los días, no cada 2 o 3 días.
+Recuerde: la limpieza diaria de toda pieza ocupada es una práctica obligatoria de la pensión, todos los días, no cada 2 o 3 días — pero **anotarla en el sistema es opcional**. Si un día no alcanza a registrarla, la pieza no se bloquea ni se muestra como "sucia": el sistema nunca inventa ese dato, solo muestra lo que usted anotó.
+
+### Registro con detalle (opcional)
+
+Si quiere dejar más información que un simple "listo" — por ejemplo qué tareas hizo, en qué cama, o una observación como "falta cambiar sábana de la cama 2" — toque la pieza y luego **Registrar aseo → Agregar detalles**. Ninguno de esos campos es obligatorio: puede marcar una tarea, varias, o ninguna y dejar solo la observación. Puede también anotar si fue otra persona (su cuñada, su sobrina) quien limpió, distinto de quién lo está registrando. Para revisar lo anotado antes, use **Historial de aseo** dentro de la misma pieza.
 
 ---
 
