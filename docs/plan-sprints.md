@@ -1,99 +1,157 @@
 # Plan de sprints
 
-Hoy: 28/09/2026. Cierre y defensa: 12/12/2026. Reunión 3 con la Administradora:
-semana del 9–15 nov 2026 (confirmado). Objetivo intermedio: **~75% (23 de 30 HU)
-funcionando antes de la reunión 3.**
+Cronograma vigente: el del informe ES2 (`Evtitu/PruebaS2.docx`, sección VII «Ajustes del
+Cronograma»), revisado contra el estado real del proyecto al 6 de octubre de 2026.
+Reemplaza la planificación de 30 HU de la ES1. Cierre y defensa: 12/12/2026.
 
-Reordenado respecto de la propuesta inicial para que las 23 HU más valiosas
-(las 17 Must-Have completas + 6 Should-Have baratas de agregar en el mismo
-trabajo) estén listas para ese checkpoint, y no al cierre de un sprint
-posterior.
+**Alcance vigente: 42 historias de usuario (HU-01 a HU-42)**, numeradas y agrupadas en
+10 épicas (EP-01 a EP-10) según `docs/historia_v2/historias_usuario.csv` y
+`docs/Historia_de_usuarios_v2.md`. El alcance creció de 30 a 42 HU tras la segunda
+reunión de seguimiento con la Administradora (HU-31 a HU-42: protección de datos
+personales Ley N.º 21.719, gestión de cuentas, guía contextual, configuración del
+negocio y aviso de operaciones rechazadas al sincronizar).
 
-## Sprint 0 — Fundaciones · 29 sep – 5 oct
-Sin HU de negocio. Repo, Docker Compose, esquema SQL v1 + RLS + pgTAP,
-PWA vacía que sincroniza offline de punta a punta, Droplet + respaldo diario.
-Ver `CLAUDE.md` §Cómo trabajar y `db/migrations/0001_init.sql`.
+Las fechas de cada Sprint son **planificación académica**, comprometida en el Sprint
+Planning respectivo junto con las historias que lo componen, el incremento a entregar
+y la instancia de validación con la Administradora (Schwaber & Sutherland, 2020). No
+representan, por sí solas, cuándo una historia comenzó o terminó realmente: el avance
+real reportado en cada sección usa evidencia técnica (commits, Pull Requests) tomada
+de `docs/auditoria/tabla-hu-github-projects.csv`, que distingue explícitamente
+planificación de ejecución y marca «Sin evidencia suficiente» donde no hay registro.
+Una historia con avance real documentado no implica que esté aceptada por la
+Administradora: esa aceptación, si existe, vive fuera del repositorio (actas de
+reunión) y no se da por hecha aquí.
 
-## Sprint 1 — Habitaciones y ciclo de vida · 6 – 19 oct (9 HU)
-HU-01, 05, 06, 07, 08, 09, 10, 27, 28.
-HU-10 (mantención) se agrega aquí porque es la misma máquina de estados que
-HU-05/07/09; no representa trabajo adicional relevante.
-**Cierre:** despliegue a producción, arranca la marcha blanca con el módulo
-de habitaciones. Primera medición de usabilidad (KPI-3).
+## Sprint 1 — Base técnica y sincronización · 01–21/09/2026 (3 semanas)
+**Objetivo:** la app guarda los datos en el celular y los sincroniza al volver la
+señal, con acceso autenticado.
+**Historias:** HU-27, HU-28 (EP-05).
+**Entregable:** base desplegada y sincronización inicial.
+**Dependencias:** ninguna (primer incremento).
+**Criterio de finalización:** operación offline con reintentos idempotentes verificada
+end to end.
+**Sprint Review:** Reunión 2 con la Administradora (21/09).
+**Avance real documentado:** ambas HU están "Hecho" en GitHub Projects; hay evidencia
+de commits de sincronización offline/online hasta el 27/10/2026, es decir, posterior
+al cierre planificado de este Sprint — desarrollo iterativo continuado, no un
+incumplimiento de la fecha de cierre original.
 
-## Sprint 2 — Empresas y ledger de consumos · 20 oct – 2 nov (6 HU)
-HU-02, 11, 12, 13, 14, 15.
-HU-15 (colación extra / plato especial) se agrega aquí porque es una
-extensión directa del registro de consumo (HU-13/14), no una pantalla nueva.
-**Cierre:** la clienta registra consumos reales en paralelo al cuaderno.
-Este es el sprint que ataca el dolor central del negocio.
+## Sprint 2 — Reservas, habitaciones y aseo · 22/09–12/10/2026 (3 semanas)
+**Objetivo:** la Administradora registra reservas y controla el estado de las ocho
+habitaciones.
+**Historias:** HU-01 a HU-04 (EP-01), HU-05 a HU-10 (EP-02).
+**Entregable:** reservas, check-in, check-out y aseo diario.
+**Dependencias:** Sprint 1 (sincronización y modelo de datos base).
+**Criterio de finalización:** Sprint finalizado el 12/10.
+**Sprint Review:** cierre de Sprint (sin reunión formal intermedia).
+**Avance real documentado:** HU-01, HU-03 a HU-10 en "Hecho"; HU-02 y HU-06 en
+"En curso" en GitHub Projects. Evidencia de commits entre el 29/09 y el 25/10/2026.
 
-## Sprint 3 — Conciliación, cierre y reportes · 3 – 16 nov (8 HU)
-HU-16, 17, 18, 04, 03, 19, 20, 29.
-**Checkpoint de reunión 3 dentro de este sprint** (semana del 9–15 nov, hacia
-el final de las dos semanas). Al llegar a esa fecha deberían estar cerradas
-las 23 HU acumuladas (Sprints 1+2+3 = 9+6+8).
+## Sprint 3 — Conciliación diaria y sincronización avanzada · 13–26/10/2026 (2 semanas)
+**Objetivo:** los consumos diarios de las empresas quedan registrados y conciliados
+contra la nómina, aun sin señal.
+**Historias:** HU-11 a HU-17 (EP-03), HU-29 y HU-42 (EP-05).
+**Entregable:** conciliación diaria y prueba de desconexión de 72 horas (KPI-02).
+**Dependencias:** Sprint 2 (empresas y habitaciones ya operativas).
+**Criterio de finalización:** prueba de desconexión de 72 horas superada; conciliación
+recalculable sin pérdida ni duplicación de registros.
+**Sprint Review:** Reunión 3, prototipo y capacitación.
+**Avance real documentado:** las 9 HU están "Hecho" en GitHub Projects. Varias
+(HU-11 a HU-16) tienen evidencia de commits ya desde el 29/09/2026, antes del inicio
+planificado de este Sprint — desarrollo adelantado respecto del ES2, no un error de
+fecha: se mantiene su Sprint planificado y solo se documenta el adelanto.
 
-⚠️ **Riesgo declarado:** este sprint concentra la lógica más difícil del
-proyecto (conciliación diaria recalculable, cierre mensual que bloquea, dos
-exportaciones auditadas) en el mismo tramo que el checkpoint de la clienta.
-Si algo no llega, el orden de recorte antes de sacrificar Must-Have es:
-HU-29 → HU-20 → HU-19 → HU-03, en ese orden, dejando siempre HU-16/17/18/04
-(Must-Have) intactas. Lo aviso apenas se vea venir, no al final del sprint.
+## Sprint 4 — Cierre mensual, costos y doble modo · 27/10–09/11/2026 (2 semanas)
+**Objetivo:** la Administradora cierra el mes con una pre-factura y conoce su margen.
+**Historias:** HU-18 a HU-21 (EP-03), HU-22 a HU-26 (EP-04), HU-30 (EP-06).
+**Entregable:** cierre mensual, reportes, costos y dashboard de doble modo.
+**Dependencias:** Sprint 3 (conciliación diaria ya operativa — el cierre mensual
+agrega los días conciliados).
+**Criterio de finalización:** verificación de KPI-06 (margen proyectado actualizado en
+menos de 24 horas tras cada compra de insumos).
+**Sprint Review:** Reunión 4.
+**Avance real documentado:** todas estas HU siguen en "Backlog" en GitHub Projects,
+pero hay commits del 25/10/2026 (`feat(sprint-4): Control de costos PMP, margen
+proyectado, tarifa sugerida y doble modo`, entre otros) que implementan HU-18 a HU-26
+y HU-30. Esto es un adelanto de ejecución respecto del Status del Project — que no se
+actualizó — y no una historia nueva ni un cambio de Sprint planificado.
 
-## Sprint 4 — Costos, margen y doble modo · 17 – 23 nov (6 HU)
-EP-04 (Costos y Margen) y EP-06 (Dashboard doble modo).
-- HU-22: Registrar compra de insumos con costeo por Promedio Móvil Ponderado (PMP).
-- HU-23: Categorizar compras y estimar rendimiento de insumos.
-- HU-24: Proyectar margen de ganancia del mes en curso.
-- HU-25: Calcular costo diario real por trabajador y tarifa mínima sugerida.
-- HU-26: Recibir recomendación ante margen bajo (integrada desde backlog Could-Have).
-- HU-30: Doble modo: cambiar entre modo operativo (Encargada) y administrativo (Administradora con PIN).
-**Cierre:** verificación de KPI-06 (actualización del margen proyectado en menos de 24 horas tras cada compra de insumos).
+## Sprint 5 — Ley N.º 21.719, cuentas y experiencia de uso · 10–16/11/2026 (1 semana)
+**Objetivo:** el sistema cumple la Ley 21.719 y queda listo para operar en la pensión.
+**Historias:** HU-31 a HU-34 (EP-07), HU-35 y HU-36 (EP-08), HU-37 (EP-09), HU-38 a
+HU-41 (EP-10).
+**Entregable:** prueba de aceptación con la Administradora y verificación de controles
+de seguridad.
+**Dependencias:** modelo de datos, sincronización y conciliación ya en funcionamiento
+(por eso EP-07 a EP-10 se ubican después del Sprint 3).
+**Criterio de finalización:** 5 HU Must-Have completas (HU-31, HU-32, HU-33, HU-35,
+HU-36); si el burnup muestra atraso, se recortan primero las Could-Have (HU-37,
+HU-38, HU-41) y luego las Should-Have, sin mover la marcha blanca ni la defensa.
+**Sprint Review:** prueba de aceptación con la Administradora.
+**Avance real documentado:** todas estas HU siguen en "Backlog" en GitHub Projects,
+pero hay commits del 27 y 28/10/2026 que implementan la mayoría (protección de datos
+personales, gestión de cuentas, configuración del negocio). Mismo caso que el Sprint 4:
+adelanto de ejecución no reflejado en el Status del Project.
+**Riesgo declarado en ES2:** HU-31 a HU-42 aún no han sido validadas con la
+Administradora y podrían cambiar de alcance.
 
-## Sprint 5 — Protección de datos (Ley 21.719), seguridad y reportes externos · 24 – 30 nov (1 HU + cumplimiento normativo)
-Transversal y extensión de EP-03.
-- HU-21: Enviar reporte diario por WhatsApp al supervisor de faena (integrada desde backlog Could-Have).
-- Cumplimiento estricto Ley N° 21.719 (Protección de Datos Personales):
-  - Job de purga automática programada en `pg_cron`: eliminación y anonimización de nóminas y RUTs de trabajadores a los 7 días de cerrado el mes de facturación.
-  - Minimización de datos y reforzamiento de políticas RLS en Postgres.
-  - Bitácora de accesos y auditoría de eventos de datos personales.
-- Verificación de seguridad OWASP ASVS Nivel 2 y auditoría Lighthouse PWA.
-**Cierre:** verificación completa del KPI-08 (100% de controles de protección de datos verificados y 0 nóminas vigentes tras 7 días del cierre).
+## Sprint 6 — Marcha blanca y verificación de KPIs · 17–30/11/2026 (2 semanas)
+**Objetivo:** la pensión opera con el sistema y se miden los indicadores de gestión.
+**Historias:** ninguna nueva; corrección de hallazgos de la marcha blanca sobre las
+42 HU ya desarrolladas.
+**Entregable:** marcha blanca supervisada; medición de los 8 KPI SMART (KPI-01 a
+KPI-08) y de los 4 SLA del proyecto.
+**Dependencias:** Sprints 1 a 5 completos y desplegados en el entorno de producción.
+**Criterio de finalización:** indicadores medidos y comparados contra su línea base.
+**Sprint Review:** Reunión 5, cierre de marcha blanca.
+**Avance real documentado:** sin evidencia suficiente — la marcha blanca no ha
+comenzado a la fecha de este documento.
 
-## Sprint 6 — Marcha blanca, verificación de KPIs y defensa final · 1 – 12 dic
-Operación real, estabilidad y cierre del proyecto.
-- Marcha blanca en producción: operación en paralelo en Pensión Señora Miriam (Paposo).
-- Medición y validación de los 8 KPI SMART del proyecto:
-  - KPI-01: Conciliación automática de consumos B2B (meta ≥ 98%).
-  - KPI-02: Integridad ante desconexión (0 registros perdidos, 0 duplicados).
-  - KPI-03: Tiempo de registro diario (< 2 minutos por jornada).
-  - KPI-04: Tasa de adopción efectiva en el sistema (meta ≥ 85%).
-  - KPI-05: Reducción de horas de auditoría manual (reducción ≥ 75%, ≤ 1 hora/mes).
-  - KPI-06: Oportunidad de proyección de margen (< 24 h tras compra).
-  - KPI-07: Sincronización offline en reconexión (≥ 95% en ≤ 5 minutos).
-  - KPI-08: Cumplimiento de protección de datos Ley 21.719 (100% controles, 0 fugas).
-- Monitoreo de los 4 SLAs (SLA-01 Disponibilidad, SLA-02 RTO/RPO, SLA-03 Sincronización, SLA-04 Tasa de Error).
-- Capacitación presencial de la Sra. Miriam y entrega de manuales en lenguaje de baja alfabetización digital.
-- Cierre del informe final de titulación y defensa del proyecto (12/12/2026).
+## Cierre · 01–09/12/2026
+Entregar el informe final con los resultados medidos durante la marcha blanca.
+
+## Defensa · 12/12/2026
+Hito académico.
 
 ---
 
-## Cobertura Total del Backlog
+## Qué cambió respecto de la ES1 y por qué
+El alcance creció de 30 a 42 HU tras la segunda reunión de seguimiento (HU-31 a HU-42).
+Las HU-31 a HU-41 (EP-07 a EP-10) se ubicaron en el Sprint 5 porque dependen de que el
+modelo de datos, la sincronización y la conciliación ya estén en funcionamiento. La
+HU-42 pertenece a la épica EP-05 (operación sin conexión), por lo que se ubicó en el
+Sprint 3 junto con las demás historias de sincronización. También se agregaron las
+pruebas de desconexión de 72 horas al final del Sprint 3 y la prueba de aceptación
+antes de la marcha blanca. La planificación pasó de una Carta Gantt de tareas a este
+detalle de fases por Sprint, coherente con la metodología Scrum declarada.
 
-**100% de las 30 Historias de Usuario (HU-01 a HU-30) quedan implementadas y calendarizadas en los 6 Sprints:**
+## Duración de los Sprints
+Scrum recomienda Sprints de duración fija. Los Sprints 1 y 2 se ejecutaron con tres
+semanas cada uno; desde el Sprint 3 el equipo trabaja en Sprints de dos semanas. La
+excepción es el Sprint 5, de una semana, porque la marcha blanca debe comenzar el
+17 de noviembre para medir los indicadores durante dos semanas completas antes del
+informe final y la defensa.
 
-| Sprint | Enfoque Principal | HUs Asignadas | Total HU |
-|--------|-------------------|---------------|----------|
-| Sprint 1 | Habitaciones y Ciclo de Vida | HU-01, 05, 06, 07, 08, 09, 10, 27, 28 | 9 HU |
-| Sprint 2 | Empresas y Ledger de Consumos | HU-02, 11, 12, 13, 14, 15 | 6 HU |
-| Sprint 3 | Conciliación, Cierre Mensual y Reportes | HU-03, 04, 16, 17, 18, 19, 20, 29 | 8 HU |
-| Sprint 4 | Costos, Margen PMP y Modo Administrativo | HU-22, 23, 24, 25, 26, 30 | 6 HU |
-| Sprint 5 | Ley 21.719 (Purga), Auditoría y Supervisor | HU-21 + Controles Ley 21.719 | 1 HU |
-| Sprint 6 | Marcha Blanca, 8 KPIs SMART y Defensa | Monitoreo 8 KPIs, SLAs y Cierre | Validación |
-| **Total** | **Proyecto Completo** | **HU-01 a HU-30** | **30 HU (100%)** |
+## Ruta crítica
+El modelo de datos, la sincronización sin conexión y la conciliación diaria son la
+ruta crítica: todo lo posterior (cierre mensual, reportes, costos) depende de que los
+registros se guarden y concilien correctamente. Este orden resuelve primero el
+problema central del negocio — el descuadre entre lo consumido y lo facturado —, que
+queda operativo al cierre del Sprint 3, antes de las funciones de cierre mensual,
+costos y cumplimiento normativo.
 
-**Ninguna HU queda descartada:**
-- **HU-21** (WhatsApp a supervisores) se incorpora en el **Sprint 5**.
-- **HU-26** (Recomendación ante margen bajo) se incorpora en el **Sprint 4**.
-- La reunión 3 con la Administradora mantiene su checkpoint intermedio de 23 HU completas (~75% de avance funcional).
+## Seguimiento del avance
+El avance se controla con un gráfico burnup del release: la línea roja muestra las
+historias que deberían estar terminadas al cierre de cada Sprint y la línea gris el
+alcance total (30 → 42 HU tras la segunda reunión). Si el avance real queda bajo lo
+planificado, el ajuste se hace recortando alcance según MoSCoW, no moviendo la marcha
+blanca ni la defensa.
+
+## Trazabilidad y estado real
+El detalle HU por HU — Sprint ES2, estado actual en GitHub Projects, fechas
+planificadas, evidencia de commits y acción propuesta — vive en
+[`docs/auditoria/tabla-hu-github-projects.csv`](auditoria/tabla-hu-github-projects.csv),
+para no duplicar esa información aquí y evitar que ambas fuentes se desalineen de
+nuevo. Ese archivo es la referencia a actualizar cuando cambie el estado real de una
+historia; este documento describe la planificación por Sprint y no debe usarse para
+registrar fechas reales de ejecución.
