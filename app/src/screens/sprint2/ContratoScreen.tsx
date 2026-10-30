@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useEmpresas } from "../../features/empresas/useEmpresas";
 import { crearContratoEmpresa, ContratoSolapadoError } from "../../features/reservaEmpresa/crearContratoEmpresa";
+import {
+  calcularEstimacionContrato,
+  RangoVigenciaInvalidoError,
+  type CondicionTributariaContrato
+} from "../../features/reservaEmpresa/estimacionContrato";
+import { EstimacionContratoCard } from "../../features/reservaEmpresa/EstimacionContratoCard";
 import { IconCalendar, IconCheck, IconChevronLeft, IconUser, IconUsers } from "../../components/Icons";
 import { fechaHoySantiago } from "../../lib/fechaNegocio";
 
@@ -23,13 +29,35 @@ export function ContratoScreen({
   const [vigenciaHasta, setVigenciaHasta] = useState("");
   const [headcount, setHeadcount] = useState(10);
   const [tarifaConvenida, setTarifaConvenida] = useState(25000);
+  const [incluyeDesayuno, setIncluyeDesayuno] = useState(true);
+  const [incluyeAlmuerzo, setIncluyeAlmuerzo] = useState(true);
+  const [incluyeCena, setIncluyeCena] = useState(true);
+  const [condicionTributaria, setCondicionTributaria] = useState<CondicionTributariaContrato>(null);
+  const [mostrarDetalles, setMostrarDetalles] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [contratoIdCreado, setContratoIdCreado] = useState<string | null>(null);
 
+  let estimacion: ReturnType<typeof calcularEstimacionContrato> | null = null;
+  let errorFechas: string | null = null;
+  try {
+    estimacion = calcularEstimacionContrato({
+      headcount: Number(headcount) || 0,
+      tarifaConvenida: Number(tarifaConvenida) || 0,
+      vigenciaDesde,
+      vigenciaHasta: vigenciaHasta || null
+    });
+  } catch (e) {
+    errorFechas = e instanceof RangoVigenciaInvalidoError ? e.message : null;
+  }
+
   async function handleGuardar(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (errorFechas) {
+      setError(errorFechas);
+      return;
+    }
     setGuardando(true);
     try {
       const id = await crearContratoEmpresa(usuarioId, {
@@ -37,7 +65,11 @@ export function ContratoScreen({
         vigenciaDesde,
         vigenciaHasta: vigenciaHasta || undefined,
         headcount: Number(headcount),
-        tarifaConvenida: Number(tarifaConvenida)
+        tarifaConvenida: Number(tarifaConvenida),
+        incluyeDesayuno,
+        incluyeAlmuerzo,
+        incluyeCena,
+        condicionTributaria
       });
       setContratoIdCreado(id);
       if (onContratoCreado) {
@@ -187,7 +219,7 @@ export function ContratoScreen({
               <div>
                 <label htmlFor="contrato-tarifa" className="mb-1.5 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wider text-brand-ink/80">
                   <IconUser className="h-3.5 w-3.5 text-brand-terracotta-deep" />
-                  <span>Tarifa convenida ($ / persona)</span>
+                  <span>Tarifa convenida por persona y día ($)</span>
                 </label>
                 <input id="contrato-tarifa"
                   type="number"
@@ -204,15 +236,86 @@ export function ContratoScreen({
               </div>
             </div>
 
-            {error && (
+            {/* Divulgación progresiva: detalles adicionales del contrato */}
+            <button
+              type="button"
+              onClick={() => setMostrarDetalles((v) => !v)}
+              aria-expanded={mostrarDetalles}
+              className="flex min-h-[44px] w-fit items-center gap-1.5 text-sm font-bold text-brand-terracotta-deep underline-offset-2 hover:underline"
+            >
+              {mostrarDetalles ? "Ocultar" : "Ver"} servicios incluidos y condición tributaria
+            </button>
+
+            {mostrarDetalles && (
+              <div className="flex flex-col gap-4 rounded-2xl border border-brand-border/70 bg-brand-sand/30 p-4">
+                <div>
+                  <p className="mb-2 text-sm font-bold uppercase tracking-wider text-brand-ink/80">
+                    ¿Qué incluye la tarifa acordada?
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex min-h-11 items-center gap-2.5 rounded-xl border border-brand-border bg-white px-3.5 py-2.5 text-sm font-semibold text-brand-ink/60">
+                      <input type="checkbox" checked disabled className="h-5 w-5" />
+                      <span>Alojamiento (siempre incluido en la tarifa base)</span>
+                    </label>
+                    <label className="flex min-h-11 items-center gap-2.5 rounded-xl border border-brand-border bg-white px-3.5 py-2.5 text-sm font-semibold text-brand-ink">
+                      <input type="checkbox" checked={incluyeDesayuno} onChange={(e) => setIncluyeDesayuno(e.target.checked)} className="h-5 w-5 accent-brand-terracotta-deep" />
+                      <span>Desayuno</span>
+                    </label>
+                    <label className="flex min-h-11 items-center gap-2.5 rounded-xl border border-brand-border bg-white px-3.5 py-2.5 text-sm font-semibold text-brand-ink">
+                      <input type="checkbox" checked={incluyeAlmuerzo} onChange={(e) => setIncluyeAlmuerzo(e.target.checked)} className="h-5 w-5 accent-brand-terracotta-deep" />
+                      <span>Almuerzo</span>
+                    </label>
+                    <label className="flex min-h-11 items-center gap-2.5 rounded-xl border border-brand-border bg-white px-3.5 py-2.5 text-sm font-semibold text-brand-ink">
+                      <input type="checkbox" checked={incluyeCena} onChange={(e) => setIncluyeCena(e.target.checked)} className="h-5 w-5 accent-brand-terracotta-deep" />
+                      <span>Cena</span>
+                    </label>
+                  </div>
+                  <p className="mt-1.5 text-xs text-brand-ink/80">
+                    Un servicio marcado aquí no se vuelve a cobrar por separado cuando se registre el consumo real.
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="contrato-iva" className="mb-1.5 block text-sm font-bold uppercase tracking-wider text-brand-ink/80">
+                    Condición tributaria de la tarifa
+                  </label>
+                  <select id="contrato-iva"
+                    value={condicionTributaria ?? ""}
+                    onChange={(e) => setCondicionTributaria(e.target.value ? (e.target.value as CondicionTributariaContrato) : null)}
+                    className="w-full rounded-xl border border-brand-border bg-white px-3.5 py-2.5 text-sm font-semibold text-brand-ink"
+                  >
+                    <option value="">No especificada</option>
+                    <option value="neto">Tarifa neta (IVA se cobra aparte)</option>
+                    <option value="con_iva">Tarifa con IVA incluido</option>
+                  </select>
+                  <p className="mt-1.5 text-xs text-brand-ink/80">
+                    Déjalo en "No especificada" si no está claro con la empresa — nunca se asume un tratamiento tributario.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {estimacion && (
+              <EstimacionContratoCard
+                headcount={Number(headcount) || 0}
+                tarifaConvenida={Number(tarifaConvenida) || 0}
+                vigenciaDesde={vigenciaDesde}
+                vigenciaHasta={vigenciaHasta || null}
+                servicios={{ desayuno: incluyeDesayuno, almuerzo: incluyeAlmuerzo, cena: incluyeCena }}
+                condicionTributaria={condicionTributaria}
+                estimacion={estimacion}
+              />
+            )}
+
+            {(error || errorFechas) && (
               <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3.5 text-sm font-semibold text-red-700">
-                {error}
+                {error || errorFechas}
               </div>
             )}
 
             <button
               type="submit"
-              disabled={guardando || !empresaId}
+              disabled={guardando || !empresaId || !!errorFechas}
               className="mt-2 flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-brand-terracotta-deep px-4 py-3.5 text-base font-bold text-white shadow-brand transition-all hover:bg-brand-terracotta-deep active:scale-95 disabled:opacity-50"
             >
               <IconCheck className="h-5 w-5" />

@@ -13,9 +13,21 @@ export const ContratoEmpresaSchema = z.object({
   vigenciaDesde: z.string().min(1, "Indica la fecha de inicio"),
   vigenciaHasta: z.string().optional(),
   headcount: z.number().int().positive("La cantidad de trabajadores debe ser mayor a 0"),
-  tarifaConvenida: z.number().nonnegative("La tarifa no puede ser negativa")
+  tarifaConvenida: z.number().nonnegative("La tarifa no puede ser negativa"),
+  // Servicios incluidos en la tarifa convenida (migración 0026).
+  // Default true: mismo supuesto que ya asume tipo_consumo_config para
+  // TODO contrato hasta hoy — un contrato viejo que nunca mandó estos
+  // campos no cambia de significado.
+  incluyeDesayuno: z.boolean().default(true),
+  incluyeAlmuerzo: z.boolean().default(true),
+  incluyeCena: z.boolean().default(true),
+  // Nunca se infiere: null = no especificada.
+  condicionTributaria: z.enum(["neto", "con_iva"]).nullable().default(null)
 });
-export type ContratoEmpresaInput = z.infer<typeof ContratoEmpresaSchema>;
+// z.input (no z.infer): los campos con .default() deben seguir siendo
+// OPCIONALES para quien llama (compatibilidad con código existente que
+// no conocía incluye_*/condicion_tributaria antes de la migración 0026).
+export type ContratoEmpresaInput = z.input<typeof ContratoEmpresaSchema>;
 
 export class ContratoSolapadoError extends Error {
   constructor() {
@@ -65,8 +77,9 @@ export async function crearContratoEmpresa(usuarioId: string, input: ContratoEmp
   const id = crypto.randomUUID();
   await powersync.execute(
     `insert into contrato_empresa
-       (id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida, creado_por, created_at)
-     values (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida,
+        incluye_desayuno, incluye_almuerzo, incluye_cena, condicion_tributaria, creado_por, created_at)
+     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       datos.empresaId,
@@ -74,6 +87,10 @@ export async function crearContratoEmpresa(usuarioId: string, input: ContratoEmp
       datos.vigenciaHasta || null,
       datos.headcount,
       datos.tarifaConvenida,
+      datos.incluyeDesayuno,
+      datos.incluyeAlmuerzo,
+      datos.incluyeCena,
+      datos.condicionTributaria,
       usuarioId,
       new Date().toISOString()
     ]

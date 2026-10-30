@@ -78,6 +78,14 @@ sync_rules:
           - select * from justificacion_descuadre
           - select * from producto_extra
           - select * from tipo_consumo_config
+          # Migración 0026, sección 8 del alcance: auditoría de ajustes
+          # de cantidad contratada. No lleva montos ($), solo
+          # cantidades y el motivo tipificado — a diferencia de
+          # contrato_empresa, SÍ es una fuente única para ambos roles
+          # (misma fila completa en los dos celulares, como el resto de
+          # este bucket global). En Postgres, la RLS de todas formas
+          # solo permite INSERT a la Administradora.
+          - select * from contrato_empresa_ajuste
           # Sprint 5 (HU-39): parámetros del negocio (contacto, tarifa
           # base, datos de transferencia). Los leen los dos celulares
           # porque el voucher PDF y el mensaje de WhatsApp se arman desde
@@ -107,10 +115,14 @@ sync_rules:
         data:
           - SELECT id, empresa_id, vigencia_desde, vigencia_hasta, headcount, creado_por, created_at FROM contrato_empresa WHERE bucket.puede_ver = 1
 
+      # Migración 0026: incluye_desayuno/incluye_almuerzo/incluye_cena y
+      # condicion_tributaria son la misma condición económica
+      # confidencial que tarifa_convenida (describen la tarifa pactada,
+      # no datos operativos) — mismo tratamiento: solo administradora.
       contrato_empresa_administradora:
         parameters: SELECT 1 as puede_ver FROM usuario WHERE usuario.auth_uid = request.user_id() AND usuario.rol = 'administradora'
         data:
-          - SELECT id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida, creado_por, created_at FROM contrato_empresa WHERE bucket.puede_ver = 1
+          - SELECT id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida, incluye_desayuno, incluye_almuerzo, incluye_cena, condicion_tributaria, creado_por, created_at FROM contrato_empresa WHERE bucket.puede_ver = 1
 
       # usuario (Sprint 5, HU-36). Dos buckets MUTUAMENTE EXCLUYENTES
       # por rol — nunca los dos a la vez para la misma tabla, por la

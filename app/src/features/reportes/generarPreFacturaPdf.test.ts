@@ -13,6 +13,8 @@ function cierreBase(overrides: Partial<EstadoCierreMensual> = {}): EstadoCierreM
     headcountContratado: 30,
     tarifaPactadaDiaria: 25000,
     totalContratoCompleto: 30 * 30 * 25000,
+    serviciosIncluidos: ["Alojamiento", "Desayuno", "Almuerzo", "Cena"],
+    condicionTributariaEtiqueta: "Condición tributaria no especificada",
     totalColacionesExtras: 0,
     granTotal: 30 * 30 * 25000,
     colacionesDetalle: [],

@@ -150,3 +150,19 @@ export function sumarDiasYMD(fechaYMD: string, dias: number): string {
 export function mesHoySantiago(): string {
   return fechaHoySantiago().slice(0, 7);
 }
+
+/**
+ * Diferencia en días de calendario entre dos fechas YYYY-MM-DD
+ * (hasta - desde). Misma técnica que sumarDiasYMD: aritmética pura de
+ * calendario sobre componentes UTC usados solo como calculadora, sin
+ * involucrar la hora real ni ninguna zona horaria — a diferencia de
+ * `(new Date(b).getTime() - new Date(a).getTime()) / 86400000`, que sí
+ * puede desviarse por cambio de horario de verano si las fechas se
+ * interpretaran como instantes locales en vez de como calendario puro.
+ */
+export function diferenciaDiasYMD(desdeYMD: string, hastaYMD: string): number {
+  const a = partesYMD(desdeYMD);
+  const b = partesYMD(hastaYMD);
+  const msPorDia = 24 * 60 * 60 * 1000;
+  return Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / msPorDia);
+}

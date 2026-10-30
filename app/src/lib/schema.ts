@@ -92,14 +92,37 @@ const empresa = new Table({
 // tarifa_convenida llega SOLO al dispositivo de administradora (bucket
 // empresa_tarifas, ver infra/powersync/config.yaml) — en el celular de
 // la Encargada esta columna queda simplemente vacía, nunca se
-// sincroniza. No asumir que siempre tiene valor.
+// sincroniza. No asumir que siempre tiene valor. Migración 0026: los
+// servicios incluidos y la condición tributaria son la misma condición
+// económica confidencial que tarifa_convenida, así que siguen el mismo
+// tratamiento (solo administradora).
 const contrato_empresa = new Table({
   empresa_id: column.text,
   vigencia_desde: column.text,
   vigencia_hasta: column.text,
   headcount: column.integer,
   tarifa_convenida: column.real,
+  incluye_desayuno: column.integer, // SQLite: boolean como 0/1
+  incluye_almuerzo: column.integer,
+  incluye_cena: column.integer,
+  condicion_tributaria: column.text, // 'neto' | 'con_iva' | null
   creado_por: column.text,
+  created_at: column.text
+});
+
+// Auditoría de ajustes de cantidad contratada (migración 0026). No
+// lleva montos ($) — solo cantidades y el motivo tipificado — así que,
+// a diferencia de tarifa_convenida, SÍ se replica a ambos roles (igual
+// que justificacion_descuadre): la RLS en Postgres solo restringe
+// quién puede INSERTAR (administradora), no quién puede leerlo.
+const contrato_empresa_ajuste = new Table({
+  contrato_anterior_id: column.text,
+  contrato_nuevo_id: column.text,
+  cantidad_anterior: column.integer,
+  cantidad_nueva: column.integer,
+  fecha_efectiva: column.text,
+  motivo: column.text,
+  registrado_por: column.text,
   created_at: column.text
 });
 
@@ -272,6 +295,7 @@ export const AppSchema = new Schema({
   aseo,
   empresa,
   contrato_empresa,
+  contrato_empresa_ajuste,
   trabajador,
   consumo,
   producto_extra,

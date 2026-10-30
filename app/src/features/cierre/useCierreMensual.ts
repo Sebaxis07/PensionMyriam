@@ -1,6 +1,11 @@
 import { useQuery } from "@powersync/react";
 import { useMemo } from "react";
 import { fechaHoySantiago, sumarDiasYMD, inicioDiaSantiagoUTC, finDiaSantiagoUTC } from "../../lib/fechaNegocio";
+import {
+  serviciosIncluidosComoLista,
+  etiquetaCondicionTributaria,
+  type CondicionTributariaContrato
+} from "../reservaEmpresa/estimacionContrato";
 
 export interface DiaPendienteConciliacion {
   fecha: string;
@@ -40,6 +45,10 @@ export interface EstadoCierreMensual {
   headcountContratado: number;
   tarifaPactadaDiaria: number;
   totalContratoCompleto: number;
+  /** Lista para mostrar, ej. ["Alojamiento", "Desayuno", "Almuerzo"] — ver estimacionContrato.ts. */
+  serviciosIncluidos: string[];
+  /** Etiqueta legible, nunca infiere: "Condición tributaria no especificada" si es null. */
+  condicionTributariaEtiqueta: string;
   totalColacionesExtras: number;
   granTotal: number;
   colacionesDetalle: ColacionExtraResumen[];
@@ -66,8 +75,14 @@ export function useCierreMensual(
     vigencia_hasta: string | null;
     headcount: number;
     tarifa_convenida: number;
+    incluye_desayuno: number | null;
+    incluye_almuerzo: number | null;
+    incluye_cena: number | null;
+    condicion_tributaria: CondicionTributariaContrato;
   }>(
-    "select id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida from contrato_empresa where id = ?",
+    `select id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida,
+            incluye_desayuno, incluye_almuerzo, incluye_cena, condicion_tributaria
+       from contrato_empresa where id = ?`,
     [contratoEmpresaId]
   );
   const contrato = contratoData?.[0];
@@ -144,6 +159,8 @@ export function useCierreMensual(
         headcountContratado: 0,
         tarifaPactadaDiaria: 0,
         totalContratoCompleto: 0,
+        serviciosIncluidos: [],
+        condicionTributariaEtiqueta: etiquetaCondicionTributaria(null),
         totalColacionesExtras: 0,
         granTotal: 0,
         colacionesDetalle: [],
@@ -273,6 +290,12 @@ export function useCierreMensual(
       headcountContratado: headcount,
       tarifaPactadaDiaria: tarifa,
       totalContratoCompleto,
+      serviciosIncluidos: serviciosIncluidosComoLista({
+        desayuno: Boolean(contrato.incluye_desayuno),
+        almuerzo: Boolean(contrato.incluye_almuerzo),
+        cena: Boolean(contrato.incluye_cena)
+      }),
+      condicionTributariaEtiqueta: etiquetaCondicionTributaria(contrato.condicion_tributaria),
       totalColacionesExtras,
       granTotal,
       colacionesDetalle,

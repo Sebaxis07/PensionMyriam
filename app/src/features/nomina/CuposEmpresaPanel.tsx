@@ -5,11 +5,19 @@ import {AvisoInterfaz,describirErrorUi} from "../../components/MensajeInterfaz";
 import {camasLibresParaContrato,type CamaLibreRow} from "./asignarTrabajador";
 import {identificarCupoEmpresa,reservarCuposEmpresa,type ContratoCupos,type CupoEmpresa} from "./cuposEmpresa";
 import type {TrabajadorRow} from "./useNomina";
+import {calcularEstimacionContrato} from "../reservaEmpresa/estimacionContrato";
+import {EstimacionContratoCard} from "../reservaEmpresa/EstimacionContratoCard";
+
+// Solo llega con valor en el teléfono de la Administradora (bucket
+// contrato_empresa_administradora, migración 0026) — en el de la
+// Encargada esta fila simplemente no existe, por diseño (no ve costos).
+interface ContratoEconomico{tarifa_convenida:number;incluye_desayuno:number;incluye_almuerzo:number;incluye_cena:number;}
 
 export function CuposEmpresaPanel({contrato,usuarioId,nomina}:{contrato:ContratoCupos|undefined;usuarioId:string;nomina:TrabajadorRow[]}){
   const {data:reservas=[]}=useQuery<CupoEmpresa>(`select r.id,r.cupo_numero,r.cama_id,r.trabajador_id,h.numero as habitacion_numero,c.numero as cama_numero
     from reserva r join cama c on c.id=r.cama_id join habitacion h on h.id=c.habitacion_id
     where r.contrato_empresa_id=? and r.estado='confirmada' order by r.cupo_numero,r.created_at`,[contrato?.id??""]);
+  const {data:economico=[]}=useQuery<ContratoEconomico>("select tarifa_convenida,incluye_desayuno,incluye_almuerzo,incluye_cena from contrato_empresa where id=?",[contrato?.id??""]);
   const [reservando,setReservando]=useState(false);
   const [identificando,setIdentificando]=useState<CupoEmpresa|null>(null);
   const [mensaje,setMensaje]=useState<string|null>(null);
@@ -18,6 +26,7 @@ export function CuposEmpresaPanel({contrato,usuarioId,nomina}:{contrato:Contrato
   const numeros=new Set(reservas.map(r=>r.cupo_numero));
   const pendientes:number[]=[];let numero=1;while(pendientes.length<faltan){if(!numeros.has(numero))pendientes.push(numero);numero++;}
   const nombresPendientes=Math.max(0,contrato.headcount-nomina.length);
+  const datosEconomicos=economico[0];
   return <section aria-label="Cupos y camas del contrato" className="space-y-4 rounded-3xl border border-brand-border bg-brand-card p-4 sm:p-6">
     <p className="text-sm font-bold text-brand-terracotta-deep">1 de 3 etapas · Contrato, nómina y llegada</p>
     <div className="grid grid-cols-3 gap-2 text-center">
@@ -25,6 +34,15 @@ export function CuposEmpresaPanel({contrato,usuarioId,nomina}:{contrato:Contrato
     </div>
     <div><h3 className="font-display text-lg font-bold">¿Todavía no tienes los nombres?</h3><p className="mt-2 text-sm">Puedes reservar las camas ahora y completar la nómina cuando la empresa te envíe los datos.</p></div>
     <p className="text-sm">Vigencia: {contrato.vigencia_desde}{contrato.vigencia_hasta?` al ${contrato.vigencia_hasta}`:" · Sin fecha de término"}.</p>
+    {datosEconomicos&&<EstimacionContratoCard compacta
+      headcount={contrato.headcount}
+      tarifaConvenida={datosEconomicos.tarifa_convenida}
+      vigenciaDesde={contrato.vigencia_desde}
+      vigenciaHasta={contrato.vigencia_hasta}
+      servicios={{desayuno:Boolean(datosEconomicos.incluye_desayuno),almuerzo:Boolean(datosEconomicos.incluye_almuerzo),cena:Boolean(datosEconomicos.incluye_cena)}}
+      condicionTributaria={null}
+      estimacion={calcularEstimacionContrato({headcount:contrato.headcount,tarifaConvenida:datosEconomicos.tarifa_convenida,vigenciaDesde:contrato.vigencia_desde,vigenciaHasta:contrato.vigencia_hasta})}
+    />}
     {faltan>0 && <button type="button" onClick={()=>setReservando(true)} className="min-h-12 w-full rounded-xl bg-brand-terracotta-deep px-4 py-3 font-bold text-white">Reservar camas sin nómina</button>}
     <p className="text-sm">Las camas reservadas dejan de ofrecerse durante las fechas del contrato. Sin conexión, el bloqueo queda en este teléfono hasta sincronizar.</p>
     {mensaje&&<AvisoInterfaz tono="exito">{mensaje}</AvisoInterfaz>}

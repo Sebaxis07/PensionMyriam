@@ -107,7 +107,9 @@ export function construirDocDefinicionPreFactura(datos: DatosPreFactura): TDocum
                       {
                         stack: [
                           { text: [{ text: "Dotación pactada: ", bold: true }, `${cierre.headcountContratado} trabajadores`] },
-                          { text: [{ text: "Tarifa diaria pactada: ", bold: true }, formatearMonedaCLP(cierre.tarifaPactadaDiaria)] }
+                          { text: [{ text: "Tarifa diaria pactada: ", bold: true }, formatearMonedaCLP(cierre.tarifaPactadaDiaria)] },
+                          { text: [{ text: "Incluido en la tarifa: ", bold: true }, cierre.serviciosIncluidos.join(", ")], fontSize: 8 },
+                          { text: cierre.condicionTributariaEtiqueta, fontSize: 8, italics: true }
                         ],
                         alignment: "right"
                       }
