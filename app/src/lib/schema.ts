@@ -73,12 +73,28 @@ const checkout = new Table({
   uuid_idempotente: column.text
 });
 
+// 0027_aseo_detallado.sql: bitácora opcional de aseo por habitación y
+// cama, ADICIONAL al flujo de `tipo` (diario/post_checkout) de arriba
+// — ninguna columna nueva es obligatoria. `pendiente` es boolean en
+// Postgres; PowerSync/SQLite no tiene boolean nativo, así que llega
+// como 0/1 (column.integer), igual que cualquier otro boolean de
+// PowerSync. `tareas` es un array de claves de tarea codificado como
+// JSON en un solo `text` (no jsonb/text[]), para replicarse 1:1 igual
+// que el resto de este esquema.
 const aseo = new Table({
   habitacion_id: column.text,
   tipo: column.text,
   responsable: column.text,
   fecha_hora: column.text,
-  uuid_idempotente: column.text
+  uuid_idempotente: column.text,
+  cama_id: column.text,
+  modalidad: column.text,
+  tareas: column.text,
+  observaciones: column.text,
+  pendiente: column.integer,
+  responsable_declarado: column.text,
+  aseo_corregido_id: column.text,
+  justificacion_correccion: column.text
 });
 
 // Sprint 2 (EP-03): empresas, nómina y libro de consumos.
