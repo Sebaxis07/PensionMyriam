@@ -25,6 +25,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // no cachear la API/auth: solo el shell de la app. Los datos
         // los maneja PowerSync (SQLite local), no el service worker.
         navigateFallbackDenylist: [/^\/auth/, /^\/rest/],
@@ -58,4 +59,18 @@ export default defineConfig({
   },
   preview: {
     headers: {
-      "Cross-Origin-Opener-Policy": "same-ori
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp"
+    }
+  },
+  worker: { format: "es" },
+  optimizeDeps: {
+    // @powersync/web crea sus propios Web Workers (new Worker(new
+    // URL(...))). El pre-bundler de esbuild en dev no sabe seguir esa
+    // referencia y sirve un archivo que no existe en
+    // .vite/deps/WASQLiteDB.worker.js, dejando la conexión a PowerSync
+    // colgada para siempre sin ningún error visible ("Failed to fetch a
+    // worker script"). Excluirlo del pre-bundle es el fix documentado.
+    exclude: ["@powersync/web"]
+  }
+});

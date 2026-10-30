@@ -1,18 +1,60 @@
 {$SITE_DOMAIN} {
 	encode gzip
 
+	@origin_dev header_regexp Origin ^https?://(localhost|127\.0\.0\.1)(:\d+)?$
+
+	@options {
+		method OPTIONS
+		header_regexp Origin ^https?://(localhost|127\.0\.0\.1)(:\d+)?$
+	}
+
+	# GoTrue y PostgREST ya ponen su propio Access-Control-Allow-Origin
+	# por defecto (típicamente "*") en sus respuestas reales, aunque no
+	# configuremos nada — solo el preflight OPTIONS los necesita
+	# explícitos, y ese lo responde Caddy directo (ver @options) sin
+	# tocarlos. Sin quitar el de ellos, la respuesta real queda con DOS
+	# valores de Access-Control-Allow-Origin y el navegador la rechaza
+	# entera por encabezado duplicado. Cada reverse_proxy de abajo usa
+	# header_down para quitar el del backend antes de que este bloque
+	# ponga el nuestro.
+	header @origin_dev {
+		Access-Control-Allow-Origin "{header.Origin}"
+		Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+		Access-Control-Allow-Headers "Authorization, Content-Type, apikey, x-client-info, x-supabase-api-version, prefer, content-profile, accept-profile, range, x-upsert, if-match, if-none-match"
+		Access-Control-Expose-Headers "content-range, content-location, content-profile, accept-profile"
+		Access-Control-Allow-Credentials "true"
+		Access-Control-Max-Age "3600"
+		Vary "Origin"
+	}
+
+	handle @options {
+		respond 204
+	}
+
 	# Mismas rutas que espera supabase-js: /auth/v1 y /rest/v1.
 	handle_path /auth/v1/* {
-		reverse_proxy gotrue:9999
+		reverse_proxy gotrue:9999 {
+			header_down -Access-Control-Allow-Origin
+			header_down -Access-Control-Allow-Credentials
+			header_down -Access-Control-Allow-Methods
+		}
 	}
 
 	handle_path /rest/v1/* {
-		reverse_proxy postgrest:3000
+		reverse_proxy postgrest:3000 {
+			header_down -Access-Control-Allow-Origin
+			header_down -Access-Control-Allow-Credentials
+			header_down -Access-Control-Allow-Methods
+		}
 	}
 
 	# Canal de sincronización de PowerSync (WSS + HTTP).
 	handle_path /sync/* {
-		reverse_proxy powersync:8080
+		reverse_proxy powersync:8080 {
+			header_down -Access-Control-Allow-Origin
+			header_down -Access-Control-Allow-Methods
+			header_down -Access-Control-Allow-Headers
+		}
 	}
 
 	# El resto sirve el build estático de la PWA (Sprint 0: placeholder;

@@ -8,7 +8,13 @@ set -euo pipefail
 
 CONTAINER=pension_myriam_pg_dev
 IMAGE=supabase/postgres:15.8.1.049   # incluye pgTAP, pg_cron, uuid-ossp, btree_gist
-PORT=54329
+# El puerto solo sirve para inspeccionar la base a mano: los pgTAP corren
+# por `docker exec`, no por TCP. Se deja configurable porque Windows
+# reserva rangos enteros para Hyper-V/WSL (ver
+# `netsh int ipv4 show excludedportrange protocol=tcp`) y 54329 cae
+# dentro de uno de ellos en algunas maquinas del equipo, con lo que
+# `docker run -p` falla con "ports are not available".
+PORT="${PGTAP_PORT:-54329}"
 PGPASSWORD=devpassword
 
 cd "$(dirname "$0")/.."

@@ -1,0 +1,16 @@
+import {beforeEach,afterEach,expect,it,vi} from "vitest";
+const {getAll,subir,buscar,confirmar,resolver}=vi.hoisted(()=>({getAll:vi.fn(),subir:vi.fn(),buscar:vi.fn(),confirmar:vi.fn(),resolver:vi.fn()}));
+vi.mock("../../lib/powersync",()=>({powersync:{getAll}}));
+vi.mock("../sync/operacionesRechazadas",()=>({resolverOperacionRechazada:resolver}));
+vi.mock("../../lib/supabase",()=>({supabase:{from:()=>{const q:any={select:()=>q,eq:()=>q,maybeSingle:buscar,single:confirmar,upsert:subir};return q;}}}));
+import {reintentarContratoRechazado} from "./reintentarContratoRechazado";
+const usuario="10000000-0000-0000-0000-00000000cb01";
+const datos={empresa_id:"20000000-0000-0000-0000-00000000cb01",vigencia_desde:"2035-01-01",vigencia_hasta:null,headcount:10,tarifa_convenida:25000,creado_por:usuario,created_at:"2026-10-27T12:00:00Z"};
+const registro={id:"rechazo",tabla:"contrato_empresa",operacion:"PUT",motivo:"permission denied",datos_json:JSON.stringify(datos),fecha_hora:"2026-10-27",resuelta:0,resuelta_por:null,resuelta_en:null};
+beforeEach(()=>{vi.resetAllMocks();vi.stubGlobal("navigator",{onLine:true});getAll.mockResolvedValueOnce([{rol:"administradora"}]).mockResolvedValue([]);buscar.mockResolvedValue({data:null,error:null});subir.mockResolvedValue({error:null});confirmar.mockResolvedValue({data:{id:"contrato"},error:null});});
+afterEach(()=>vi.unstubAllGlobals());
+it("recupera el respaldo aunque la réplica ya retiró el contrato local",async()=>{await reintentarContratoRechazado(registro,usuario);expect(subir).toHaveBeenCalledWith({...datos,id:expect.any(String)},{onConflict:"id",ignoreDuplicates:true});expect(resolver).toHaveBeenCalledWith("rechazo",usuario);});
+it("si ya existe en servidor, no duplica ni sobrescribe",async()=>{buscar.mockResolvedValue({data:{id:"contrato"},error:null});await reintentarContratoRechazado(registro,usuario);expect(subir).not.toHaveBeenCalled();expect(resolver).toHaveBeenCalledOnce();});
+it("no oculta el aviso si el servidor rechaza el alta",async()=>{subir.mockResolvedValue({error:{code:"23P01"}});await expect(reintentarContratoRechazado(registro,usuario)).rejects.toThrow("esas fechas");expect(resolver).not.toHaveBeenCalled();});
+it("sin conexión no envía ni marca como resuelto",async()=>{vi.stubGlobal("navigator",{onLine:false});await expect(reintentarContratoRechazado(registro,usuario)).rejects.toThrow("conexión");expect(subir).not.toHaveBeenCalled();expect(resolver).not.toHaveBeenCalled();});
+it("la Encargada no accede a datos financieros ni reintenta contratos",async()=>{getAll.mockReset().mockResolvedValue([{rol:"encargada"}]);await expect(reintentarContratoRechazado(registro,usuario)).rejects.toThrow("Administradora");expect(getAll).toHaveBeenCalledTimes(1);expect(subir).not.toHaveBeenCalled();});

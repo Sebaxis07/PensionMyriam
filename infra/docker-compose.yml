@@ -73,9 +73,16 @@ services:
     command:
       - |
         set -euo pipefail
+        psql -h postgres -U supabase_admin -d postgres -c "create table if not exists public.schema_migrations (version text primary key, applied_at timestamptz default now());"
         for f in /migrations/*.sql; do
-          echo "Aplicando migración: $$f"
-          psql -h postgres -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f "$$f"
+          base=$$(basename "$$f")
+          if psql -h postgres -U supabase_admin -d postgres -tA -c "select 1 from public.schema_migrations where version = '$$base'" | grep -q 1; then
+            echo "Migración ya aplicada: $$base"
+          else
+            echo "Aplicando migración: $$f"
+            psql -h postgres -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f "$$f"
+            psql -h postgres -U supabase_admin -d postgres -c "insert into public.schema_migrations (version) values ('$$base');"
+          fi
         done
 
   gotrue:
@@ -112,6 +119,11 @@ services:
       GOTRUE_MAILER_AUTOCONFIRM: "true"
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      # CORS para dev se resuelve en infra/Caddyfile (un solo lugar para
+      # auth/rest/sync). NO agregar GOTRUE_CORS_ALLOWED_ORIGINS aquí:
+      # sumaría un segundo Access-Control-Allow-Origin a la respuesta
+      # (uno de Caddy, otro de GoTrue) y el navegador la rechaza entera
+      # por encabezado duplicado.
     ports:
       - "127.0.0.1:9999:9999"
     deploy:
@@ -140,6 +152,7 @@ services:
       # Necesario para que current_setting('request.jwt.claims', true)
       # funcione tal como lo usan app.uid()/app.rol() en 0001_init.sql.
       PGRST_DB_USE_LEGACY_GUCS: "true"
+      PGRST_LOG_LEVEL: info
     ports:
       - "127.0.0.1:3000:3000"
     deploy:
@@ -193,6 +206,13 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # SITE_DOMAIN de desarrollo (infra/.env.example) es ":8080" — un
+      # bloque de sitio por puerto, sin dominio real, para levantar todo
+      # en localhost sin certificado. Sin publicar este puerto, Caddy
+      # escucha 8080 solo dentro del contenedor y nunca es alcanzable
+      # desde el host. En producción, SITE_DOMAIN pasa a ser el dominio
+      # real (HTTPS automático por 80/443) y este puerto queda sin uso.
+      - "8080:8080"
     deploy:
       resources:
         limits:

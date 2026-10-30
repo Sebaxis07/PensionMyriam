@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+
+# Builds
+app/dist/
+dist/
+
+# Env locales (nunca commitear secretos reales)
+.env
+infra/.env
+
+# Override de puertos solo para desarrollo local (choque con otro stack
+# del host en 5432) — nunca forma parte del despliegue real.
+infra/docker-compose.override.yml
+
+# Playwright
+app/test-results/
+app/playwright-report/
+test-results/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+
+# Evidencias locales de las pruebas de presentación
+/output/revision-ui/
+/output/revision-sprints34/

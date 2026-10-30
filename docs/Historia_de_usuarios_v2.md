@@ -139,38 +139,43 @@ Prioridad: Alta
 
 **Prioridad:** Alta
 
-**HU-13 — Registrar consumo diario de raciones (libro inmutable)**
+**HU-13 — Registrar consumo diario (libro inmutable, 5 tipos)**
 
-**Como** Encargada de Registro, **quiero** marcar qué trabajador(es) recibieron desayuno, almuerzo o cena en el día, **para** dejar un registro exacto y con fecha/hora, reemplazando el cuaderno físico.
+**Como** Encargada de Registro, **quiero** marcar qué trabajador(es) recibieron cama-noche, desayuno, almuerzo o cena en el día, **para** dejar un registro exacto y con fecha/hora, reemplazando el cuaderno físico.
 
 - **Dado** un trabajador alojado, **cuando** marco "Almuerzo servido" para su cama, **entonces** el sistema genera una transacción inmutable (no editable ni eliminable) con fecha, hora y responsable del registro.
+- **Dado** el corte de cada noche, **cuando** el sistema genera automáticamente la cama-noche de cada trabajador con cama asignada bajo un contrato vigente, **entonces** queda un registro por trabajador por noche, sin necesitar que nadie lo marque a mano (aunque también admite registro/corrección manual puntual, ej. un trabajador nuevo que la generación automática de esa noche todavía no alcanzó a incluir).
+- **Dado** un trabajador que no durmió esa noche (ej. salió de franco), **cuando** se detecta después, **entonces** la cama-noche ya generada se corrige con una transacción explícita y justificada (igual que cualquier otro tipo) — la empresa la sigue pagando por contrato completo, pero queda trazabilidad de que no durmió.
 - **Dado** que me equivoco al registrar, **cuando** intento corregir, **entonces** el sistema no permite borrar la transacción original, sino que exige registrar una transacción de corrección explícita y justificada.
 
 **Prioridad:** Alta
 
 **HU-14 — Registrar consumo masivo con barra de consumo rápido**
 
-**Como** Encargada de Registro, **quiero** marcar desayunos, almuerzos o cenas de varios trabajadores a la vez desde un panel de un toque en la pantalla principal, **para** no tener que navegar pantalla por pantalla en cada comida.
+**Como** Encargada de Registro, **quiero** marcar cualquiera de los 5 tipos (cama-noche, desayuno, almuerzo, cena, colación) de varios trabajadores a la vez desde un panel de un toque en la pantalla principal, **para** no tener que navegar pantalla por pantalla en cada comida.
 
-- **Dado** el panel de consumo rápido, **cuando** selecciono "Almuerzo" y marco varios trabajadores a la vez, **entonces** el sistema genera una transacción inmutable independiente por cada uno.
+- **Dado** el panel de consumo rápido, **cuando** selecciono un tipo y marco varios trabajadores a la vez, **entonces** el sistema genera una transacción inmutable independiente por cada uno.
 
 **Prioridad:** Alta
 
-**HU-15 — Registrar colación extra o plato especial**
+**HU-15 — Registrar colación de terreno o plato especial**
 
-**Como** Encargada de Registro, **quiero** registrar cuando un trabajador consume una colación de terreno o un plato especial fuera del menú de casa, **para** que se cobre el recargo correspondiente y no se pierda ese ingreso.
+**Como** Encargada de Registro, **quiero** registrar cuando un trabajador consume una colación de terreno o un plato especial fuera del menú de casa, eligiendo el producto de una lista de precios, **para** que se cobre la tarifa diferencial correspondiente y no se pierda ese ingreso.
 
-- **Dado** un trabajador con consumo registrado, **cuando** marco "Plato Especial" o "Colación Extra", **entonces** el sistema aplica el recargo definido y deja el registro identificado como fuera de convenio.
+- **Dado** un trabajador, **cuando** marco "Colación" y elijo el producto (ej. "Colación de terreno", "Plato especial") de la lista de precios que carga la Administradora, **entonces** el sistema copia el precio de ese producto al monto de la transacción y deja el registro identificado como fuera de convenio.
+- **Dado** que la lista de precios cambia más adelante, **cuando** reviso una colación ya registrada, **entonces** el monto que quedó cobrado en esa fila no cambia (el ledger es inmutable: el precio nuevo solo aplica a colaciones futuras).
+- ⚠️ **Supuesto pendiente de confirmar con la Administradora:** la colación se factura **por consumo real** (cada unidad registrada), no por contrato completo como cama-noche/desayuno/almuerzo/cena — queda configurable por tipo en el sistema (`tipo_consumo_config`) para poder revertirlo sin cambios de esquema si la Administradora decide lo contrario.
 
 **Prioridad:** Media
 
-**HU-16 — Conciliar automáticamente consumos contra nómina**
+**HU-16 — Conciliar automáticamente consumos contra nómina, por tipo**
 
-Como Administradora, quiero que el sistema compare diariamente lo registrado contra la nómina esperada de cada empresa, para detectar diferencias antes de que se acumulen —sin que ello bloquee la facturación, ya que la empresa paga por la totalidad de trabajadores contratados, consuman o no cada día.
+Como Administradora, quiero que el sistema compare diariamente, **para cada tipo por separado** (cama-noche, desayuno, almuerzo, cena), lo registrado contra la nómina esperada de cada empresa, para detectar diferencias antes de que se acumulen —sin que ello bloquee la facturación, ya que la empresa paga por la totalidad de trabajadores contratados, consuman o no cada día. Colación no entra en esta comparación (se factura por consumo real, ver HU-15).
 
-Dado que la cantidad de raciones servidas coincide con los trabajadores esperados, cuando se ejecuta la conciliación del día, entonces el estado pasa automáticamente a "Conciliado" y factura por la totalidad de trabajadores contratados.
+Dado que la cantidad servida de un tipo coincide con los trabajadores contratados (headcount), cuando se ejecuta la conciliación del día, entonces ese tipo pasa automáticamente a "Conciliado" y factura por la totalidad de trabajadores contratados.
 
-- Dado que hay una diferencia (ej. 10 trabajadores esperados vs. 8 almuerzos servidos), cuando se ejecuta la conciliación, entonces el sistema factura igualmente por los 10 trabajadores contratados y solicita una justificación auditable, sin detener el cierre del día.
+- Dado que hay una diferencia en algún tipo (ej. 10 trabajadores esperados vs. 8 almuerzos servidos — el "esperado" es siempre el headcount del contrato, nunca el número de trabajadores realmente asignados con cama), cuando se ejecuta la conciliación, entonces el sistema factura igualmente por los 10 trabajadores contratados y solicita una justificación auditable para ese tipo, sin detener el cierre del día.
+- Dado que faltan camas por asignar a la nómina completa, cuando se genera la cama-noche de esa fecha, entonces el hueco entre el headcount contratado y las camas realmente asignadas queda visible como descuadre justificable — nunca oculto.
 
 **Prioridad:** Alta
 
@@ -189,7 +194,7 @@ Dado un día con diferencia entre lo servido y lo esperado, cuando selecciono un
 
 **Como** Administradora, **quiero** obtener un resumen consolidado de todos los días "Conciliados" del mes por empresa**, para** enviarlo directamente a la contadora externa sin recalcular manualmente.
 
-- **Dado** que todos los días del mes de una empresa están "Conciliado" o "Facturable", **cuando** solicito el cierre mensual, **entonces** el sistema genera un resumen con el total de raciones y camas-noche por trabajador.
+- **Dado** que todos los días del mes de una empresa están "Conciliado" o "Facturable" **para los 4 tipos de contrato completo** (cama-noche, desayuno, almuerzo, cena), **cuando** solicito el cierre mensual, **entonces** el sistema genera un resumen con el total de cada tipo por trabajador — cama-noche ya es una transacción más del ledger (`consumo`, tipo `cama_noche`), no un cálculo aparte — más el detalle de colaciones consumidas (facturadas por separado, por consumo real).
 - **Dado** que existen días aún no conciliados dentro del mes, **cuando** intento cerrar el mes, **entonces** el sistema lo impide y lista los días pendientes.
 
 **Prioridad:** Alta
