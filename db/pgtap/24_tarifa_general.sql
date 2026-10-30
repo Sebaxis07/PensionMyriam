@@ -1,6 +1,6 @@
 -- Migración 0025: catálogo de tarifas generales versionado (EP-04/EP-01).
 begin;
-select plan(6);
+select plan(7);
 
 insert into auth.users (id) values
   ('00000000-0000-0000-0000-0000000000c1'),
@@ -43,6 +43,14 @@ select lives_ok(
   $$ insert into public.tarifa_general (tipo, monto, vigencia_desde, creado_por)
      values ('desayuno', 5500, '2026-06-01', '10000000-0000-0000-0000-0000000000c1') $$,
   'Tras cerrar la vigencia previa, sí se puede agregar la versión nueva sin solape'
+);
+
+-- El monto de una fila ya creada es inmutable: el GRANT de columna
+-- solo permite escribir vigencia_hasta, incluso para la Administradora.
+select throws_ok(
+  $$ update public.tarifa_general set monto = 1 where tipo = 'desayuno' and vigencia_hasta = '2026-05-31' $$,
+  null,
+  'El monto de una tarifa histórica no se puede corregir en sitio (ni la Administradora) — solo vigencia_hasta'
 );
 
 reset role;

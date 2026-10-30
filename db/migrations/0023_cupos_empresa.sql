@@ -136,7 +136,7 @@ revoke all on function public.identificar_cupo_empresa(uuid,uuid,text,uuid,times
 grant execute on function public.reservar_cupos_empresa(jsonb) to authenticated;
 grant execute on function public.identificar_cupo_empresa(uuid,uuid,text,uuid,timestamptz) to authenticated;
 create or replace function app.validar_cancelacion_reserva() returns trigger
-language plpgsql set search_path = pg_catalog, public, app as $
+language plpgsql set search_path = pg_catalog, public, app as $$
 begin
   if tg_op = 'UPDATE' and old.estado = 'cancelada' then
     if new.estado is distinct from old.estado
@@ -174,13 +174,13 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 
 -- Al cerrar una versión del contrato, sus cupos dejan de bloquear
 -- fechas posteriores. No se cambia headcount ni tarifa de esa versión.
 create function app.ajustar_vigencia_cupos() returns trigger
-language plpgsql security definer set search_path=pg_catalog,public as $
+language plpgsql security definer set search_path=pg_catalog,public as $$
 begin
   if row(new.vigencia_desde,new.vigencia_hasta) is distinct from row(old.vigencia_desde,old.vigencia_hasta) then
     update public.reserva set fecha_inicio=new.vigencia_desde,fecha_fin=new.vigencia_hasta
@@ -188,7 +188,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 create trigger ajustar_vigencia_cupos after update on public.contrato_empresa for each row execute function app.ajustar_vigencia_cupos();
 
 notify pgrst,'reload schema';

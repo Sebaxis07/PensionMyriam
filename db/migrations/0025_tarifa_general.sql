@@ -55,16 +55,22 @@ alter table public.tarifa_general enable row level security;
 
 -- Mismo patrón que config_negocio: todos leen (la Encargada también
 -- necesita saber la tarifa vigente para cobrar extras/colaciones),
--- solo la Administradora agrega versiones nuevas. Sin UPDATE/DELETE
--- para nadie: una tarifa ya creada es histórica, no se corrige en
--- sitio (si se cargó mal, se cierra su vigencia_hasta y se crea una
--- fila nueva correcta, igual que un consumo corregido en el ledger).
+-- solo la Administradora agrega versiones nuevas. Monto, tipo y
+-- vigencia_desde de una fila ya creada son inmutables (igual que un
+-- consumo del ledger) — lo único que se permite tocar después es
+-- `vigencia_hasta`, para poder cerrar la vigencia de la versión
+-- anterior cuando se carga una corrección (fila nueva, no se reescribe
+-- el monto viejo). El GRANT a nivel de columna impide escribir
+-- cualquier otro campo aunque la RLS lo dejara pasar.
 create policy tarifa_general_select on public.tarifa_general for select
   using (app.rol() is not null);
 create policy tarifa_general_insert on public.tarifa_general for insert
   with check (app.es_administradora());
+create policy tarifa_general_update on public.tarifa_general for update
+  using (app.es_administradora()) with check (app.es_administradora());
 
 grant select, insert on public.tarifa_general to authenticated;
+grant update (vigencia_hasta) on public.tarifa_general to authenticated;
 
 -- No se carga ningún dato de referencia aquí: esta migración corre
 -- ANTES de que exista cualquier usuario `administradora` (creado_por
