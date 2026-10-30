@@ -39,6 +39,18 @@ Si aparece "No se pudo ingresar. Revisa tu usuario y contraseña", vuelva a escr
 
 **Cómo saber si funcionó:** el color de cada pieza coincide con lo que usted sabe que está pasando en la pensión en ese momento.
 
+### Cómo registrar aseo (opcional)
+
+**Importante:** registrar la limpieza en el sistema es **totalmente opcional**. Usted puede seguir limpiando las piezas todos los días sin anotar nada acá — el sistema nunca le va a impedir reservar, ocupar o liberar una cama por falta de este registro, ni va a mostrar una pieza como "sucia" solo porque nadie la anotó.
+
+**Quiero:** dejar constancia de que se limpió una pieza, o anotar algún detalle (qué se hizo, en qué cama, alguna observación).
+**Dónde entrar:** toque cualquier pieza y luego **Registrar aseo**.
+**Qué veo:**
+- Un botón grande **"Aseo realizado"** — un solo toque, sin nada más que llenar.
+- Un enlace **"Agregar detalles (opcional)"** que, si lo abre, le deja marcar qué tareas hizo (barrer, cambiar sábanas, etc. — ninguna es obligatoria, puede marcar una, varias o ninguna), a qué cama corresponde (si la pieza tiene más de una), escribir una observación y marcar si queda algo pendiente.
+
+**Cómo saber si funcionó:** aparece un mensaje breve confirmando el registro. Para revisar lo anotado antes, toque **"Historial de aseo"** dentro de la misma pieza.
+
 ---
 
 ## 4. Cómo reservar (turista)

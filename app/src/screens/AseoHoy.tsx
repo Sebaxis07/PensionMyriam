@@ -2,7 +2,7 @@ import { Dialogo } from "../components/Dialogo";
 import { useState, useMemo } from "react";
 import { useQuery } from "@powersync/react";
 import { powersync } from "../lib/powersync";
-import { nuevoUuidIdempotente } from "../lib/idempotencia";
+import { registrarAseoRapido } from "../features/aseo/registrarAseo";
 import { calcularPrioridadAseo, estaEnVentanaIdeal, type TipoClienteAseo } from "../features/aseo/prioridadAseo";
 import { rangoHoySantiagoUTC } from "../lib/fechaNegocio";
 import {
@@ -204,10 +204,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
   async function marcarAseoDiario(habitacion: HabitacionAseoRow) {
     setProcesandoId(habitacion.id);
     try {
-      await powersync.execute(
-        "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'diario', ?, ?, ?)",
-        [crypto.randomUUID(), habitacion.id, usuarioId, new Date().toISOString(), nuevoUuidIdempotente()]
-      );
+      await registrarAseoRapido(usuarioId, { habitacionId: habitacion.id, tipo: "diario" });
       mostrarAviso(`✓ Aseo diario de Pieza #${habitacion.numero} registrado con éxito.`);
     } catch (err) {
       console.error(err);
@@ -221,10 +218,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
   async function marcarAseoPostCheckout(habitacion: HabitacionAseoRow) {
     setProcesandoId(habitacion.id);
     try {
-      await powersync.execute(
-        "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'post_checkout', ?, ?, ?)",
-        [crypto.randomUUID(), habitacion.id, usuarioId, new Date().toISOString(), nuevoUuidIdempotente()]
-      );
+      await registrarAseoRapido(usuarioId, { habitacionId: habitacion.id, tipo: "post_checkout" });
       // Para retroalimentación inmediata en la base de datos local SQLite:
       await powersync.execute(
         "update habitacion set estado = 'disponible' where id = ? and estado = 'en_aseo'",
@@ -245,10 +239,7 @@ export function AseoHoy({ usuarioId }: { usuarioId: string }) {
     setGuardandoMasivo(true);
     try {
       for (const p of piezasDiariasPendientes) {
-        await powersync.execute(
-          "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'diario', ?, ?, ?)",
-          [crypto.randomUUID(), p.id, usuarioId, new Date().toISOString(), nuevoUuidIdempotente()]
-        );
+        await registrarAseoRapido(usuarioId, { habitacionId: p.id, tipo: "diario" });
       }
       mostrarAviso(`✓ Se completó la ronda de aseo diario en ${piezasDiariasPendientes.length} habitaciones.`);
       setMostrarConfirmacionMasiva(false);

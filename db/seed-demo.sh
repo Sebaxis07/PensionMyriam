@@ -77,7 +77,14 @@ begin;
 set local timezone to 'America/Santiago';
 
 -- El orden respeta las FK. No se toca usuario/auth.users.
-delete from public.aseo;
+-- `aseo` es un libro de bitácora inmutable desde 0027_aseo_detallado.sql
+-- (igual que `consumo`): un DELETE de fila normal lo rechaza el
+-- trigger aseo_sin_delete. TRUNCATE sí puede, porque no dispara
+-- triggers por fila (mismo mecanismo que ya documenta
+-- 0021_privilegios_minimos.sql para RLS) — aceptable acá porque este
+-- script corre como superusuario fuera de la app, solo para resetear
+-- datos de demo/desarrollo, nunca contra una base real.
+truncate public.aseo;
 delete from public.checkout;
 delete from public.checkin;
 delete from public.reserva where trabajador_id is null;  -- solo las de turista (Sprint 1)

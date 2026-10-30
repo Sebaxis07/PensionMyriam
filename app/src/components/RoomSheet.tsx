@@ -1,4 +1,6 @@
 import { CancelarReservaModal } from "../features/reservas/CancelarReservaModal";
+import { RegistrarAseoModal } from "../features/aseo/RegistrarAseoModal";
+import { HistorialAseoModal } from "../features/aseo/HistorialAseoModal";
 import { Dialogo } from "./Dialogo";
 import { useState } from "react";
 import { powersync } from "../lib/powersync";
@@ -7,6 +9,7 @@ import type { PiezaRow } from "../lib/queries";
 import {
   IconBell,
   IconBroom,
+  IconClock,
   IconDoorExit,
   IconPlus,
   IconUnlock,
@@ -40,6 +43,9 @@ export function RoomSheet({
   const [marcandoMantencion, setMarcandoMantencion] = useState(false);
   const [motivo, setMotivo] = useState(MOTIVOS_MANTENCION[0]);
   const [guardando, setGuardando] = useState(false);
+  const [registrandoAseo, setRegistrandoAseo] = useState(false);
+  const [verHistorialAseo, setVerHistorialAseo] = useState(false);
+  const [avisoAseo, setAvisoAseo] = useState<string | null>(null);
 
   async function checkin() {
     if (!pieza.reserva_id || pieza.reserva_sin_identificar) return;
@@ -273,6 +279,35 @@ export function RoomSheet({
               </button>
             )}
 
+            {/* Registro OPCIONAL de aseo (tareas/cama/observaciones) —
+                independiente de la máquina de estados de arriba: no
+                cambia Disponible/Ocupada/En aseo/Mantención, solo deja
+                constancia en la bitácora. Disponible en cualquier
+                estado porque el aseo diario se hace también con la
+                pieza Ocupada. */}
+            <div className="mt-2 flex items-center justify-center gap-4">
+              <button
+                className="flex items-center justify-center gap-1.5 py-2 text-sm font-bold uppercase tracking-wider text-brand-ink/80 hover:text-brand-ink"
+                onClick={() => setRegistrandoAseo(true)}
+              >
+                <IconBroom className="h-3.5 w-3.5" />
+                <span>Registrar aseo</span>
+              </button>
+              <button
+                className="flex items-center justify-center gap-1.5 py-2 text-sm font-bold uppercase tracking-wider text-brand-ink/80 hover:text-brand-ink"
+                onClick={() => setVerHistorialAseo(true)}
+              >
+                <IconClock className="h-3.5 w-3.5" />
+                <span>Historial de aseo</span>
+              </button>
+            </div>
+
+            {avisoAseo && (
+              <p role="status" className="mt-2 text-center text-sm font-semibold text-emerald-700">
+                {avisoAseo}
+              </p>
+            )}
+
       {!pieza.checkin_activo_id && pieza.reserva_id && pieza.reserva_tipo === "turista" && <button onClick={() => setCancelando(true)} className="mt-3 w-full rounded-xl border border-brand-terracotta-deep bg-brand-card px-4 py-3 text-sm font-bold text-brand-terracotta-deep">Cancelar reserva</button>}
             <button
               onClick={onClose}
@@ -286,6 +321,28 @@ export function RoomSheet({
       </div>
 
       {cancelando && pieza.reserva_id && <CancelarReservaModal reservaId={pieza.reserva_id} nombre={pieza.reserva_nombre ?? "Huésped"} usuarioId={usuarioId} onCerrar={() => setCancelando(false)} onCancelada={onClose}/>}
+
+      {registrandoAseo && (
+        <RegistrarAseoModal
+          habitacionId={pieza.id}
+          habitacionNumero={pieza.numero}
+          usuarioId={usuarioId}
+          onCerrar={() => setRegistrandoAseo(false)}
+          onGuardado={(mensaje) => {
+            setRegistrandoAseo(false);
+            setAvisoAseo(mensaje);
+            setTimeout(() => setAvisoAseo((actual) => (actual === mensaje ? null : actual)), 3500);
+          }}
+        />
+      )}
+
+      {verHistorialAseo && (
+        <HistorialAseoModal
+          habitacionId={pieza.id}
+          habitacionNumero={pieza.numero}
+          onCerrar={() => setVerHistorialAseo(false)}
+        />
+      )}
     </Dialogo>
   );
 }

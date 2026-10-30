@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@powersync/react";
 import { powersync } from "../lib/powersync";
-import { nuevoUuidIdempotente } from "../lib/idempotencia";
+import { registrarAseoRapido } from "../features/aseo/registrarAseo";
 import { SyncStatusBadge } from "../components/SyncStatusBadge";
 import { RoomCard } from "../components/RoomCard";
 import { RoomSheet } from "../components/RoomSheet";
@@ -83,27 +83,23 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
   }, [piezas]);
 
   const porcentajeOcupacion = useMemo(() => {
-    const total = piezas?.length || 8;
-    return Math.round((stats.ocupadas / total) * 100);
+    // No asumir una cantidad fija de habitaciones (CLAUDE.md): mientras
+    // no hay datos, 0% en vez de dividir por un "8" que podría ser falso.
+    const total = piezas?.length ?? 0;
+    return total > 0 ? Math.round((stats.ocupadas / total) * 100) : 0;
   }, [piezas, stats.ocupadas]);
 
   async function handleMarcarAseoRapido(habitacionId: string) {
     if (!usuario) return;
     const p = piezas?.find((x) => x.id === habitacionId);
     if (p?.estado === "en_aseo") {
-      await powersync.execute(
-        "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'post_checkout', ?, ?, ?)",
-        [crypto.randomUUID(), habitacionId, usuario.id, new Date().toISOString(), nuevoUuidIdempotente()]
-      );
+      await registrarAseoRapido(usuario.id, { habitacionId, tipo: "post_checkout" });
       await powersync.execute(
         "update habitacion set estado = 'disponible' where id = ? and estado = 'en_aseo'",
         [habitacionId]
       );
     } else {
-      await powersync.execute(
-        "insert into aseo (id, habitacion_id, tipo, responsable, fecha_hora, uuid_idempotente) values (?, ?, 'diario', ?, ?, ?)",
-        [crypto.randomUUID(), habitacionId, usuario.id, new Date().toISOString(), nuevoUuidIdempotente()]
-      );
+      await registrarAseoRapido(usuario.id, { habitacionId, tipo: "diario" });
     }
   }
 

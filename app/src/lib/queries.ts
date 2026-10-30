@@ -110,3 +110,62 @@ export type CamaLibreRow = {
   numero: number;
   capacidad: number;
 };
+
+/** Camas físicas de una habitación, para el selector opcional del registro de aseo por cama. */
+export const QUERY_CAMAS_DE_HABITACION = `
+select id, numero from cama where habitacion_id = ? order by numero
+`;
+
+export type CamaDeHabitacionRow = {
+  id: string;
+  numero: number;
+};
+
+/**
+ * Historial de aseo de UNA habitación (no solo "hoy", a diferencia del
+ * QUERY_HISTORIAL_HOY de AseoHoy.tsx). Incluye las columnas de
+ * 0027_aseo_detallado.sql — todas opcionales, por eso vienen `nullable`.
+ * Las filas de corrección (`aseo_corregido_id` no nulo) se listan igual
+ * que cualquier otra: el historial es un ledger append-only, nunca se
+ * ocultan ni se fusionan con la fila original.
+ */
+export const QUERY_HISTORIAL_ASEO_HABITACION = `
+select
+  a.id,
+  a.habitacion_id,
+  a.cama_id,
+  c.numero as cama_numero,
+  a.tipo,
+  a.modalidad,
+  a.tareas,
+  a.observaciones,
+  a.pendiente,
+  a.fecha_hora,
+  a.responsable_declarado,
+  coalesce(u.nombre, 'Personal de turno') as responsable_nombre,
+  a.aseo_corregido_id,
+  a.justificacion_correccion
+from aseo a
+left join cama c on c.id = a.cama_id
+left join usuario u on u.id = a.responsable
+where a.habitacion_id = ?
+order by a.fecha_hora desc
+limit 100
+`;
+
+export type HistorialAseoRow = {
+  id: string;
+  habitacion_id: string;
+  cama_id: string | null;
+  cama_numero: number | null;
+  tipo: string;
+  modalidad: string;
+  tareas: string | null;
+  observaciones: string | null;
+  pendiente: number;
+  fecha_hora: string;
+  responsable_declarado: string | null;
+  responsable_nombre: string;
+  aseo_corregido_id: string | null;
+  justificacion_correccion: string | null;
+};
