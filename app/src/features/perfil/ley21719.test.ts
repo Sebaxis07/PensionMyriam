@@ -45,6 +45,8 @@ const CIERRE_VACIO = {
   headcountContratado: 10,
   tarifaPactadaDiaria: 25000,
   totalContratoCompleto: 7500000,
+  serviciosIncluidos: ["Alojamiento", "Desayuno", "Almuerzo", "Cena"],
+  condicionTributariaEtiqueta: "Condición tributaria no especificada",
   totalColacionesExtras: 0,
   granTotal: 7500000,
   colacionesDetalle: [],

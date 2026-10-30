@@ -7,6 +7,9 @@ import { useQuery } from "@powersync/react";
 import { IconClipboardCheck, IconFileText, IconUsers } from "../../components/Icons";
 import { CierreMensualModal } from "./CierreMensualModal";
 import { fechaHoySantiago } from "../../lib/fechaNegocio";
+import { calcularEstimacionContrato } from "../../features/reservaEmpresa/estimacionContrato";
+import { EstimacionContratoCard } from "../../features/reservaEmpresa/EstimacionContratoCard";
+import { AjustarCantidadContratoDialogo } from "../../features/reservaEmpresa/AjustarCantidadContratoDialogo";
 
 type VistaEmpresa = "lista" | "nuevo_contrato" | "detalle_contrato";
 type SubTabContrato = "nomina" | "conciliacion" | "cierre";
@@ -17,7 +20,15 @@ type ContratoRow = {
   vigencia_desde: string;
   vigencia_hasta: string | null;
   headcount: number;
-  tarifa_convenida: number;
+  // Las siguientes 4 columnas llegan en null al dispositivo de la
+  // Encargada (bucket contrato_empresa_encargada no las incluye,
+  // migración 0026) — la tarjeta de estimación solo se muestra cuando
+  // tarifa_convenida no es null.
+  tarifa_convenida: number | null;
+  incluye_desayuno: number | null;
+  incluye_almuerzo: number | null;
+  incluye_cena: number | null;
+  condicion_tributaria: "neto" | "con_iva" | null;
 };
 
 export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
@@ -25,10 +36,13 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
   const [empresaIdSeleccionada, setEmpresaIdSeleccionada] = useState<string | null>(null);
   const [contratoIdSeleccionado, setContratoIdSeleccionado] = useState<string | null>(null);
   const [subTab, setSubTab] = useState<SubTabContrato>("nomina");
+  const [ajustando, setAjustando] = useState(false);
 
   // Consultar contratos de la empresa seleccionada si aplica
   const { data: contratos, isLoading } = useQuery<ContratoRow>(
-    "select id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida from contrato_empresa where empresa_id = ? order by vigencia_desde desc",
+    `select id, empresa_id, vigencia_desde, vigencia_hasta, headcount, tarifa_convenida,
+            incluye_desayuno, incluye_almuerzo, incluye_cena, condicion_tributaria
+       from contrato_empresa where empresa_id = ? order by vigencia_desde desc`,
     [empresaIdSeleccionada ?? ""]
   );
 
@@ -129,6 +143,56 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
 
         {contratoActivo ? (
           <div className="space-y-4">
+            {/* Resumen económico del contrato (sección 6 del alcance). Solo
+                se muestra cuando tarifa_convenida llegó a este teléfono
+                (null en el de la Encargada). */}
+            {contratoActivo.tarifa_convenida != null && (
+              <div className="space-y-2">
+                <EstimacionContratoCard
+                  headcount={contratoActivo.headcount}
+                  tarifaConvenida={contratoActivo.tarifa_convenida}
+                  vigenciaDesde={contratoActivo.vigencia_desde}
+                  vigenciaHasta={contratoActivo.vigencia_hasta}
+                  servicios={{
+                    desayuno: Boolean(contratoActivo.incluye_desayuno),
+                    almuerzo: Boolean(contratoActivo.incluye_almuerzo),
+                    cena: Boolean(contratoActivo.incluye_cena)
+                  }}
+                  condicionTributaria={contratoActivo.condicion_tributaria}
+                  estimacion={calcularEstimacionContrato({
+                    headcount: contratoActivo.headcount,
+                    tarifaConvenida: contratoActivo.tarifa_convenida,
+                    vigenciaDesde: contratoActivo.vigencia_desde,
+                    vigenciaHasta: contratoActivo.vigencia_hasta
+                  })}
+                />
+                <button
+                  onClick={() => setAjustando(true)}
+                  className="min-h-11 rounded-xl border border-brand-border bg-white px-4 py-2 text-sm font-bold text-brand-terracotta-deep hover:bg-brand-sand/40"
+                >
+                  Ajustar cantidad contratada
+                </button>
+              </div>
+            )}
+
+            {ajustando && contratoActivo.tarifa_convenida != null && (
+              <AjustarCantidadContratoDialogo
+                usuarioId={usuarioId}
+                contrato={{
+                  id: contratoActivo.id,
+                  headcount: contratoActivo.headcount,
+                  tarifa_convenida: contratoActivo.tarifa_convenida,
+                  vigencia_desde: contratoActivo.vigencia_desde,
+                  vigencia_hasta: contratoActivo.vigencia_hasta
+                }}
+                onCerrar={() => setAjustando(false)}
+                onAjustado={(contratoNuevoId) => {
+                  setAjustando(false);
+                  setContratoIdSeleccionado(contratoNuevoId);
+                }}
+              />
+            )}
+
             {/* Sub-pestañas: Nómina vs. Conciliación */}
             <div className="flex flex-wrap gap-2 border-b border-brand-border/70 bg-brand-sand/30 p-1 rounded-2xl">
               <button
