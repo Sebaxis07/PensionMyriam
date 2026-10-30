@@ -700,19 +700,19 @@ function StatTile({
   sublabel?: string;
 }) {
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-brand-border/80 bg-brand-card p-3.5 md:p-4 shadow-card">
-      <div className="flex items-center gap-1.5">
-        <span className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
-        <span className="text-[10px] md:text-xs font-extrabold uppercase tracking-tight text-brand-muted">
+    <div className="flex flex-col justify-between rounded-2xl border border-brand-border/75 bg-brand-card p-3.5 md:p-4 shadow-card hover:shadow-card-hover transition-all">
+      <div className="flex items-center justify-between gap-1.5">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-brand-muted">
           {label}
         </span>
+        <span className={`h-2.5 w-2.5 rounded-full ${dotColor} shadow-2xs`} />
       </div>
-      <div className="mt-2 flex items-baseline justify-between gap-1">
-        <p className={`font-display text-3xl md:text-4xl font-extrabold leading-none ${numColor}`}>
+      <div className="mt-2.5 flex items-baseline justify-between gap-2">
+        <p className={`font-display text-3xl md:text-4xl font-extrabold tracking-tight leading-none ${numColor}`}>
           {n}
         </p>
         {sublabel && (
-          <span className="text-[10px] md:text-xs text-brand-muted font-medium truncate">
+          <span className="text-xs text-brand-muted font-semibold truncate">
             {sublabel}
           </span>
         )}
