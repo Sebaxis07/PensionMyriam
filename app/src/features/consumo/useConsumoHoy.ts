@@ -1,6 +1,6 @@
 import { useQuery } from "@powersync/react";
 import type { TipoConsumo } from "./registrarConsumo";
-import { rangoHoySantiagoUTC } from "../../lib/fechaNegocio";
+import { rangoHoySantiagoUTC, sqlFechaHoraNormalizada } from "../../lib/fechaNegocio";
 
 export type TrabajadorConsumoRow = {
   id: string;
@@ -30,12 +30,16 @@ export function useConsumoHoy(contratoEmpresaId: string, tipoConsumo: TipoConsum
        exists (
          select 1 from consumo c
          where c.trabajador_id = t.id and c.tipo_consumo = ?
-           and c.consumo_corregido_id is null and c.fecha_hora >= ? and c.fecha_hora < ?
+           and c.consumo_corregido_id is null
+           and ${sqlFechaHoraNormalizada("c.fecha_hora")} >= ${sqlFechaHoraNormalizada("?")}
+           and ${sqlFechaHoraNormalizada("c.fecha_hora")} < ${sqlFechaHoraNormalizada("?")}
        ) as ya_registrado,
        (
          select c.fecha_hora from consumo c
          where c.trabajador_id = t.id and c.tipo_consumo = ?
-           and c.consumo_corregido_id is null and c.fecha_hora >= ? and c.fecha_hora < ?
+           and c.consumo_corregido_id is null
+           and ${sqlFechaHoraNormalizada("c.fecha_hora")} >= ${sqlFechaHoraNormalizada("?")}
+           and ${sqlFechaHoraNormalizada("c.fecha_hora")} < ${sqlFechaHoraNormalizada("?")}
          order by c.fecha_hora desc limit 1
        ) as hora_consumo
      from trabajador t
@@ -60,7 +64,8 @@ export function useResumenConsumosDia(contratoEmpresaId: string) {
      join trabajador t on t.id = c.trabajador_id
      where t.contrato_empresa_id = ?
        and c.consumo_corregido_id is null
-       and c.fecha_hora >= ? and c.fecha_hora < ?
+       and ${sqlFechaHoraNormalizada("c.fecha_hora")} >= ${sqlFechaHoraNormalizada("?")}
+       and ${sqlFechaHoraNormalizada("c.fecha_hora")} < ${sqlFechaHoraNormalizada("?")}
      group by c.tipo_consumo`,
     [contratoEmpresaId, desde, hasta]
   );

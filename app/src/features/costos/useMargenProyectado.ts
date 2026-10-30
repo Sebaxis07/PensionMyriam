@@ -2,7 +2,12 @@ import { useMemo } from "react";
 import { useQuery } from "@powersync/react";
 import { MetricasMargen } from "./types";
 import { generarRecomendacionMargen, obtenerEstadoSemaforo } from "./recomendarMargen";
-import { mesHoySantiago, inicioDiaSantiagoUTC, finDiaSantiagoUTC } from "../../lib/fechaNegocio";
+import {
+  mesHoySantiago,
+  inicioDiaSantiagoUTC,
+  finDiaSantiagoUTC,
+  sqlFechaHoraNormalizada
+} from "../../lib/fechaNegocio";
 
 /** Rango del mes de negocio actual, en Santiago (no en la zona del dispositivo). */
 function obtenerRangoMesActual() {
@@ -74,7 +79,8 @@ export function useMargenProyectado(): MetricasMargen {
   const { data: consumosConteo } = useQuery<{ count: number }>(
     `select count(*) as count
      from consumo
-     where fecha_hora >= ? and fecha_hora < ?
+     where ${sqlFechaHoraNormalizada("fecha_hora")} >= ${sqlFechaHoraNormalizada("?")}
+       and ${sqlFechaHoraNormalizada("fecha_hora")} < ${sqlFechaHoraNormalizada("?")}
        and consumo_corregido_id is null`,
     [inicioDiaSantiagoUTC(primerDia).toISOString(), finDiaSantiagoUTC(ultimoDia).toISOString()]
   );

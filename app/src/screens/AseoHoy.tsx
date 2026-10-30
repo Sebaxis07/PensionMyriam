@@ -4,7 +4,7 @@ import { useQuery } from "@powersync/react";
 import { powersync } from "../lib/powersync";
 import { registrarAseoRapido } from "../features/aseo/registrarAseo";
 import { calcularPrioridadAseo, estaEnVentanaIdeal, type TipoClienteAseo } from "../features/aseo/prioridadAseo";
-import { rangoHoySantiagoUTC } from "../lib/fechaNegocio";
+import { rangoHoySantiagoUTC, sqlFechaHoraNormalizada } from "../lib/fechaNegocio";
 import {
   IconBroom,
   IconCheck,
@@ -67,7 +67,9 @@ ultimo_checkout as (
 aseos_resumen as (
   select habitacion_id, count(*) as aseo_hoy_count, max(fecha_hora) as ultimo_aseo_fecha
   from aseo
-  where fecha_hora >= ? and fecha_hora < ?
+  -- sqlFechaHoraNormalizada: una fila ya sincronizada desde Postgres
+  -- usa espacio en vez de "T" como separador — ver fechaNegocio.ts.
+  where ${sqlFechaHoraNormalizada("fecha_hora")} >= ${sqlFechaHoraNormalizada("?")} and ${sqlFechaHoraNormalizada("fecha_hora")} < ${sqlFechaHoraNormalizada("?")}
   group by habitacion_id
 )
 select
@@ -101,7 +103,7 @@ select
 from aseo a
 join habitacion h on h.id = a.habitacion_id
 left join usuario u on u.id = a.responsable
-where a.fecha_hora >= ? and a.fecha_hora < ?
+where ${sqlFechaHoraNormalizada("a.fecha_hora")} >= ${sqlFechaHoraNormalizada("?")} and ${sqlFechaHoraNormalizada("a.fecha_hora")} < ${sqlFechaHoraNormalizada("?")}
 order by a.fecha_hora desc
 limit 30
 `;
