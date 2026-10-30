@@ -39,7 +39,10 @@ export function NominaScreen({
   onVolver
 }: NominaScreenProps) {
   const nomina = useNomina(contratoEmpresaId);
-  const {data: contratosCupos} = useQuery<ContratoCupos>("select id, headcount, vigencia_desde, vigencia_hasta from contrato_empresa where id = ?", [contratoEmpresaId]);
+  const { data: contratosCupos } = useQuery<ContratoCupos>(
+    "select id, headcount, vigencia_desde, vigencia_hasta from contrato_empresa where id = ?",
+    [contratoEmpresaId]
+  );
   const contrato = contratosCupos?.[0];
 
   // Estados de carga de trabajadores
@@ -68,7 +71,7 @@ export function NominaScreen({
       .catch(() => setCamasLibres([]));
   }, [nomina.length, conCama.length, contrato?.vigencia_desde, contrato?.vigencia_hasta, trabajadorSeleccionado]);
 
-  // Agrupar camas libres por habitación para que sea muy fácil de entender
+  // Agrupar camas libres por habitación
   const habitacionesDisponibles = useMemo(() => {
     const mapa = new Map<number, { habitacionId: string; camas: CamaLibreRow[] }>();
     camasLibres.forEach((c) => {
@@ -91,7 +94,7 @@ export function NominaScreen({
     return nomina;
   }, [nomina, sinCama, conCama, filtro]);
 
-  // Agregar 1 solo trabajador (el modo más fácil y común)
+  // Agregar 1 solo trabajador
   async function handleAgregarIndividual(e: React.FormEvent) {
     e.preventDefault();
     if (!nombreIndividual.trim()) return;
@@ -123,114 +126,108 @@ export function NominaScreen({
       await crearTrabajadores(contratoEmpresaId, lineas);
       setNombresMultiples("");
       setMostrarPegarVarios(false);
-      setMensajeExito(`Se agregaron ${lineas.length} trabajadores a la lista con éxito.`);
+      setMensajeExito(`¡${lineas.length} trabajadores agregados correctamente!`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al agregar los trabajadores.");
+      setError(err instanceof Error ? err.message : "No se pudieron agregar los trabajadores.");
     } finally {
       setGuardandoNombres(false);
     }
   }
 
-  // Asignar una pieza con un solo toque
+  // Asignar cama a un trabajador
   async function handleElegirCama(camaId: string, habitacionNumero: number) {
-    if (!trabajadorSeleccionado || !contrato) return;
+    if (!trabajadorSeleccionado) return;
     setAsignandoCama(true);
     setError(null);
     try {
       await asignarTrabajador(usuarioId, {
+        contratoEmpresaId,
         trabajadorId: trabajadorSeleccionado.id,
         camaId,
-        contratoEmpresaId,
-        fechaInicio: contrato.vigencia_desde,
-        fechaFin: contrato.vigencia_hasta ?? undefined
+        nombre: trabajadorSeleccionado.nombre
       });
       setMensajeExito(`¡Listo! ${trabajadorSeleccionado.nombre} quedó en la Pieza #${habitacionNumero}.`);
       setTrabajadorSeleccionado(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo asignar la pieza.");
+      setError(err instanceof Error ? err.message : "No se pudo asignar la cama.");
     } finally {
       setAsignandoCama(false);
     }
   }
 
-  // Quitar la pieza asignada
+  // Liberar cama de un trabajador
   async function handleDesasignar(trabajador: TrabajadorRow) {
-    if (!confirm(`¿Quieres liberar la cama de ${trabajador.nombre}? Quedará pendiente de pieza.`)) {
-      return;
-    }
     setError(null);
     try {
-      await desasignarTrabajador(trabajador.id);
-      setMensajeExito(`Se liberó la cama de ${trabajador.nombre}.`);
+      await desasignarTrabajador(contratoEmpresaId, trabajador.id);
+      setMensajeExito(`Pieza liberada para ${trabajador.nombre}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo liberar la cama.");
     }
   }
 
-  // Eliminar a la persona de la nómina
+  // Eliminar trabajador de la nómina
   async function handleEliminar(trabajador: TrabajadorRow) {
-    if (!confirm(`¿Estás segura de eliminar a ${trabajador.nombre} de la nómina?`)) {
-      return;
-    }
+    if (!confirm(`¿Eliminar a ${trabajador.nombre} de la nómina?`)) return;
     setError(null);
     try {
-      await eliminarTrabajador(trabajador.id);
-      setMensajeExito(`Se eliminó a ${trabajador.nombre} de la lista.`);
+      await eliminarTrabajador(contratoEmpresaId, trabajador.id);
+      setMensajeExito(`${trabajador.nombre} eliminado.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo eliminar el trabajador.");
+      setError(err instanceof Error ? err.message : "No se pudo eliminar.");
     }
   }
 
-
   return (
-    <div className="ui-operativa mx-auto flex w-full max-w-4xl flex-col gap-5">
+    <div className="ui-operativa mx-auto flex w-full max-w-5xl flex-col gap-4">
       {onVolver && (
         <button
           type="button"
           onClick={onVolver}
-          className="inline-flex w-fit items-center gap-2 rounded-xl bg-brand-sand px-3 py-2 text-sm font-bold text-brand-ink hover:bg-brand-sand transition"
+          className="inline-flex w-fit items-center gap-1.5 rounded-xl bg-white border border-brand-border px-3 py-1.5 text-xs font-bold text-brand-ink hover:bg-brand-sand transition shadow-2xs"
         >
           <IconChevronLeft className="h-4 w-4" />
           <span>Volver al menú de empresa</span>
         </button>
       )}
 
-      {/* 1. Cabecera Clara y Amigable */}
-      <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card space-y-4">
+      {/* 1. Cabecera Clara */}
+      <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-5 sm:p-6 shadow-card space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-sand-deep text-brand-terracotta-deep border border-brand-border">
-              <IconUsers className="h-6 w-6" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-sand-deep text-brand-terracotta border border-brand-border/70">
+              <IconUsers className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="font-display text-2xl font-black text-brand-ink leading-tight">
+              <h2 className="font-display text-xl sm:text-2xl font-black text-brand-ink leading-tight">
                 Lista de Trabajadores
               </h2>
-              <p className="text-sm text-brand-ink/80">
+              <p className="text-xs sm:text-sm text-brand-muted">
                 {contrato ? `${empresaNombre ?? "Este contrato"} · ${contrato.headcount} personas contratadas` : "Cargando contrato…"}
               </p>
             </div>
           </div>
 
-          <span className="self-start sm:self-auto rounded-full bg-brand-sand/80 px-3.5 py-1 text-sm font-bold text-brand-ink border border-brand-border/70">
+          <span className="self-start sm:self-auto rounded-full bg-brand-sand/70 px-3 py-1 text-xs font-bold text-brand-ink border border-brand-border/70">
             {nomina.length} {nomina.length === 1 ? "persona registrada" : "personas registradas"}
           </span>
         </div>
-
       </div>
-      <CuposEmpresaPanel contrato={contrato} usuarioId={usuarioId} nomina={nomina}/>
+
+      {/* Panel de Cupos de Empresa */}
+      <CuposEmpresaPanel contrato={contrato} usuarioId={usuarioId} nomina={nomina} />
 
       {/* Mensajes de Éxito / Error */}
       {mensajeExito && (
-        <div className="flex items-center justify-between rounded-2xl border border-emerald-300 bg-emerald-50 p-3.5 text-sm font-semibold text-emerald-900 shadow-sm animate-fadeIn">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-3.5 text-xs sm:text-sm font-semibold text-emerald-900 shadow-2xs animate-fadeIn">
+          <div className="flex items-center gap-2.5 min-w-0">
             <IconCheckCircle className="h-5 w-5 text-emerald-700 shrink-0" />
-            <span>{mensajeExito}</span>
+            <span className="truncate">{mensajeExito}</span>
           </div>
           <button
             type="button"
             onClick={() => setMensajeExito(null)}
-            className="text-emerald-700 hover:text-emerald-900 p-1"
+            className="text-emerald-700 hover:text-emerald-900 p-1 font-bold shrink-0"
           >
             ✕
           </button>
@@ -238,67 +235,68 @@ export function NominaScreen({
       )}
 
       {error && (
-        <div role="alert" className="rounded-2xl border border-red-300 bg-red-50 p-3.5 text-sm font-semibold text-red-700">
+        <div role="alert" className="rounded-2xl border border-red-300 bg-red-50 p-3.5 text-xs sm:text-sm font-semibold text-red-700">
           ⚠️ {error}
         </div>
       )}
 
-      {/* 2. Agregar Trabajadores: Método Fácil Paso a Paso */}
-      <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card space-y-4">
-        <h3 className="font-display text-lg font-bold text-brand-ink">
+      {/* 2. Agregar Trabajadores */}
+      <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-4 sm:p-5 shadow-card space-y-3.5">
+        <h3 className="font-display text-base sm:text-lg font-bold text-brand-ink">
           Agregar trabajadores identificados
         </h3>
 
-        {/* Formulario 1 por 1 (fácil y directo) */}
-        <form onSubmit={handleAgregarIndividual} className="flex flex-col sm:flex-row gap-3">
+        {/* Formulario 1 por 1 */}
+        <form onSubmit={handleAgregarIndividual} className="flex flex-col sm:flex-row gap-2.5">
           <input
             type="text"
             aria-label="Nombre y apellido del trabajador"
             placeholder="Escribe el nombre y apellido (ej: Manuel Rojas)"
             value={nombreIndividual}
             onChange={(e) => setNombreIndividual(e.target.value)}
-            className="flex-1 rounded-2xl border border-brand-border bg-white px-4 py-3 text-base text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20"
+            className="flex-1 rounded-xl border border-brand-border bg-white px-3.5 py-2.5 text-sm text-brand-ink placeholder:text-stone-400 focus:border-brand-terracotta focus:outline-none focus:ring-2 focus:ring-brand-terracotta/20 shadow-2xs"
           />
 
           <button
             type="submit"
             disabled={guardandoNombres || !nombreIndividual.trim()}
-            className="min-h-[48px] inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-terracotta-deep px-6 py-3 text-sm font-bold text-white shadow-brand hover:bg-brand-terracotta-deep transition active:scale-95 disabled:opacity-50 shrink-0"
+            className="min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-brand-terracotta-deep px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-brand hover:brightness-110 transition active:scale-95 disabled:opacity-50 shrink-0"
           >
-            <IconPlus className="h-5 w-5" />
+            <IconPlus className="h-4 w-4" />
             <span>{guardandoNombres ? "Guardando…" : "Agregar a la lista"}</span>
           </button>
         </form>
 
-        {/* Opción secundaria: Pegar lista de WhatsApp */}
+        {/* Opción para lista múltiple */}
         <div className="pt-2 border-t border-brand-border/40">
           <button
             type="button"
             onClick={() => setMostrarPegarVarios(!mostrarPegarVarios)}
-            className="text-sm font-bold text-brand-terracotta-deep hover:underline"
+            className="text-xs font-bold text-brand-terracotta hover:underline"
           >
             {mostrarPegarVarios
               ? "▲ Ocultar opción de pegar varios nombres"
-              : "▼ ¿Te enviaron una lista por WhatsApp? Toca acá para pegar varios nombres juntos"}
+              : "▼ ¿Tienes varios nombres? Toca aquí para pegarlos juntos"}
           </button>
 
           {mostrarPegarVarios && (
-            <div className="mt-3 space-y-3 rounded-2xl border border-brand-border/70 bg-brand-sand-deep/50 p-4 animate-fadeIn">
-              <p className="text-sm text-brand-ink/80">
+            <div className="mt-2.5 space-y-2.5 rounded-2xl border border-brand-border/70 bg-brand-sand/30 p-3.5 animate-fadeIn">
+              <p className="text-xs text-brand-muted">
                 Pega la lista de nombres uno debajo del otro:
               </p>
-              <textarea aria-label="Nombres de trabajadores, uno por línea"
+              <textarea
+                aria-label="Nombres de trabajadores, uno por línea"
                 rows={4}
                 value={nombresMultiples}
                 onChange={(e) => setNombresMultiples(e.target.value)}
                 placeholder={"Carlos Silva\nPedro Gómez\nAndrés Castro"}
-                className="w-full rounded-xl border border-brand-border bg-white p-3 text-sm text-brand-ink focus:border-brand-terracotta focus:outline-none"
+                className="w-full rounded-xl border border-brand-border bg-white p-3 text-xs sm:text-sm text-brand-ink focus:border-brand-terracotta focus:outline-none shadow-2xs"
               />
               <button
                 type="button"
                 onClick={handleAgregarVarios}
                 disabled={guardandoNombres || !nombresMultiples.trim()}
-                className="rounded-xl bg-brand-ink px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-terracotta-deep disabled:opacity-50"
+                className="rounded-xl bg-brand-ink px-4 py-2 text-xs font-bold text-white hover:bg-brand-terracotta-deep disabled:opacity-50 transition"
               >
                 {guardandoNombres ? "Agregando…" : "Cargar lista completa"}
               </button>
@@ -308,21 +306,21 @@ export function NominaScreen({
       </div>
 
       {/* 3. Lista de Trabajadores con Asignación de Piezas */}
-      <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-brand-border/60">
-          <h3 className="font-display text-lg font-bold text-brand-ink">
+      <div className="rounded-3xl border border-brand-border/80 bg-brand-card p-4 sm:p-5 shadow-card space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-brand-border/50">
+          <h3 className="font-display text-base sm:text-lg font-bold text-brand-ink">
             Personas en esta Empresa
           </h3>
 
-          {/* Filtros visuales grandes */}
-          <div className="flex items-center gap-1.5 overflow-x-auto text-sm pb-1 sm:pb-0">
+          {/* Filtros */}
+          <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-1 sm:pb-0">
             <button
               type="button"
               onClick={() => setFiltro("todos")}
-              className={`rounded-xl px-3 py-2 font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 font-bold transition ${
                 filtro === "todos"
-                  ? "bg-brand-sand/80 text-brand-terracotta-deep shadow-sm"
-                  : "text-brand-ink/80 hover:bg-brand-sand/30"
+                  ? "bg-brand-sand text-brand-terracotta-deep shadow-2xs border border-brand-border/80"
+                  : "text-brand-muted hover:bg-brand-sand/40"
               }`}
             >
               Todos ({nomina.length})
@@ -330,46 +328,46 @@ export function NominaScreen({
             <button
               type="button"
               onClick={() => setFiltro("pendientes")}
-              className={`rounded-xl px-3 py-2 font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 font-bold transition ${
                 filtro === "pendientes"
-                  ? "bg-amber-100 text-amber-900 shadow-sm"
-                  : "text-brand-ink/80 hover:bg-brand-sand/30"
+                  ? "bg-amber-100 text-amber-900 shadow-2xs border border-amber-300/80"
+                  : "text-brand-muted hover:bg-brand-sand/40"
               }`}
             >
-              Faltan por Pieza ({sinCama.length})
+              Sin Pieza ({sinCama.length})
             </button>
             <button
               type="button"
               onClick={() => setFiltro("asignados")}
-              className={`rounded-xl px-3 py-2 font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 font-bold transition ${
                 filtro === "asignados"
-                  ? "bg-emerald-100 text-emerald-800 shadow-sm"
-                  : "text-brand-ink/80 hover:bg-brand-sand/30"
+                  ? "bg-emerald-100 text-emerald-800 shadow-2xs border border-emerald-300/80"
+                  : "text-brand-muted hover:bg-brand-sand/40"
               }`}
             >
-              Con Pieza Lista ({conCama.length})
+              Con Pieza ({conCama.length})
             </button>
           </div>
         </div>
 
-        {/* Lista de Tarjetas de Huéspedes */}
-        <div className="flex flex-col gap-3">
+        {/* Lista de Tarjetas */}
+        <div className="flex flex-col gap-2.5">
           {nominaFiltrada.map((t) => {
             const tienePieza = !!t.cama_id;
 
             return (
               <div
                 key={t.id}
-                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border p-4 transition-all ${
+                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all ${
                   tienePieza
-                    ? "border-brand-border/80 bg-white"
-                    : "border-amber-300 bg-amber-50/50"
+                    ? "border-brand-border/75 bg-white shadow-2xs"
+                    : "border-amber-300/80 bg-amber-50/40"
                 }`}
               >
                 {/* Nombre y Estado */}
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-bold ${
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold ${
                       tienePieza
                         ? "bg-emerald-100 text-emerald-800"
                         : "bg-amber-100 text-amber-900"
@@ -379,21 +377,21 @@ export function NominaScreen({
                   </div>
 
                   <div className="min-w-0">
-                    <p className="font-display text-base font-bold text-brand-ink leading-tight truncate">
+                    <p className="font-display text-sm sm:text-base font-bold text-brand-ink leading-tight truncate">
                       {t.nombre}
                     </p>
 
                     <div className="mt-1 flex items-center gap-2">
                       {tienePieza ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-0.5 text-sm font-black text-emerald-800 border border-emerald-300">
-                          <IconBed className="h-3.5 w-3.5 text-emerald-700" />
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800 border border-emerald-300/70">
+                          <IconBed className="h-3 w-3 text-emerald-600" />
                           <span>
                             Pieza #{t.habitacion_numero ?? "?"}
                             {t.cama_numero ? ` (Cama ${t.cama_numero})` : ""}
                           </span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-0.5 text-sm font-bold text-amber-900 border border-amber-300">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900 border border-amber-300/70">
                           <span>⚠️ Sin pieza asignada</span>
                         </span>
                       )}
@@ -401,13 +399,13 @@ export function NominaScreen({
                   </div>
                 </div>
 
-                {/* Botones de Acción (Grandes y claros) */}
-                <div className="flex items-center gap-2 self-end sm:self-center shrink-0 pt-2 sm:pt-0">
+                {/* Acciones */}
+                <div className="flex items-center gap-2 self-end sm:self-center shrink-0 pt-1 sm:pt-0">
                   {!tienePieza ? (
                     <button
                       type="button"
                       onClick={() => setTrabajadorSeleccionado(t)}
-                      className="min-h-[44px] inline-flex items-center gap-2 rounded-xl bg-brand-terracotta-deep hover:bg-brand-terracotta-deep px-4 py-2.5 text-sm font-bold text-white shadow-sm active:scale-95 transition"
+                      className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-brand-terracotta-deep hover:brightness-110 px-3.5 py-2 text-xs font-bold text-white shadow-brand active:scale-95 transition"
                     >
                       <IconBed className="h-4 w-4" />
                       <span>Asignar Pieza</span>
@@ -417,7 +415,7 @@ export function NominaScreen({
                       <button
                         type="button"
                         onClick={() => setTrabajadorSeleccionado(t)}
-                        className="rounded-xl border border-brand-border bg-brand-sand-deep hover:bg-brand-sand px-3 py-2 text-sm font-bold text-brand-ink transition"
+                        className="rounded-xl border border-brand-border bg-brand-sand/50 hover:bg-brand-sand px-3 py-1.5 text-xs font-bold text-brand-ink transition shadow-2xs"
                       >
                         Cambiar pieza
                       </button>
@@ -426,7 +424,7 @@ export function NominaScreen({
                         type="button"
                         onClick={() => handleDesasignar(t)}
                         title="Liberar la pieza de este trabajador"
-                        className="rounded-xl border border-stone-300 px-2.5 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-100 transition"
+                        className="rounded-xl border border-stone-200 px-2.5 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-100 transition"
                       >
                         Liberar
                       </button>
@@ -438,7 +436,7 @@ export function NominaScreen({
                     onClick={() => handleEliminar(t)}
                     title="Eliminar de la nómina"
                     aria-label={`Eliminar a ${t.nombre} de la nómina`}
-                    className="rounded-xl p-2 text-stone-400 hover:bg-red-50 hover:text-red-600 transition"
+                    className="rounded-xl p-2 text-stone-400 hover:bg-rose-50 hover:text-rose-600 transition"
                   >
                     🗑️
                   </button>
@@ -448,7 +446,7 @@ export function NominaScreen({
           })}
 
           {!nominaFiltrada.length && (
-            <div className="rounded-2xl border border-dashed border-brand-border p-8 text-center text-sm text-brand-ink/80">
+            <div className="rounded-2xl border border-dashed border-brand-border p-8 text-center text-xs sm:text-sm text-brand-muted">
               {nomina.length === 0
                 ? "Todavía no has agregado ningún trabajador a esta empresa. Escribe el nombre arriba para empezar."
                 : "No hay trabajadores con el filtro seleccionado."}
@@ -457,20 +455,20 @@ export function NominaScreen({
         </div>
       </div>
 
-      {/* 4. Modal para Asignar Pieza (Fácil y Visual: Solo toca la pieza deseada) */}
+      {/* 4. Modal para Asignar Pieza */}
       {trabajadorSeleccionado && (
-        <Dialogo titulo="Asignar cama" onCerrar={() => setTrabajadorSeleccionado(null)} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md rounded-3xl border border-brand-border bg-brand-card p-6 shadow-2xl space-y-4">
+        <Dialogo titulo="Asignar cama" onCerrar={() => setTrabajadorSeleccionado(null)} className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-md rounded-3xl border border-brand-border bg-brand-card p-5 sm:p-6 shadow-2xl space-y-4">
             <div className="flex items-start justify-between pb-3 border-b border-brand-border/60">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-brand-terracotta-deep">
                   Asignar Habitación
                 </span>
-                <h3 className="font-display text-lg font-black text-brand-ink">
+                <h3 className="font-display text-base sm:text-lg font-black text-brand-ink">
                   {trabajadorSeleccionado.nombre}
                 </h3>
-                <p className="text-sm text-brand-ink/80">
-                  Elige una de las piezas disponibles con un solo toque:
+                <p className="text-xs text-brand-muted mt-0.5">
+                  Elige una pieza disponible con un solo toque:
                 </p>
               </div>
 
@@ -478,46 +476,46 @@ export function NominaScreen({
                 type="button"
                 onClick={() => setTrabajadorSeleccionado(null)}
                 aria-label="Cerrar asignación de cama"
-                className="rounded-full p-1.5 text-brand-ink/80 hover:bg-brand-sand"
+                className="rounded-lg p-1.5 text-brand-muted hover:bg-brand-sand transition"
               >
                 <IconClose className="h-5 w-5" />
               </button>
             </div>
 
             {/* Cuadrícula de Piezas Disponibles */}
-            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {habitacionesDisponibles.map((h) => (
                 <button
                   key={h.numero}
                   type="button"
                   disabled={asignandoCama}
                   onClick={() => handleElegirCama(h.primeraCamaId, h.numero)}
-                  className="w-full flex items-center justify-between rounded-2xl border border-brand-border bg-white hover:border-brand-terracotta hover:bg-orange-50/50 p-4 transition-all text-left shadow-sm active:scale-[0.98] disabled:opacity-50"
+                  className="w-full flex items-center justify-between rounded-xl border border-brand-border bg-white hover:border-brand-terracotta hover:bg-orange-50/40 p-3.5 transition-all text-left shadow-2xs active:scale-[0.985] disabled:opacity-50"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-sand-deep text-brand-terracotta-deep">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-sand-deep text-brand-terracotta">
                       <IconBed className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="font-display text-base font-extrabold text-brand-ink">
+                      <p className="font-display text-sm sm:text-base font-extrabold text-brand-ink">
                         Pieza #{h.numero}
                       </p>
-                      <p className="text-sm text-emerald-800 font-semibold">
+                      <p className="text-xs text-emerald-800 font-semibold">
                         {h.camasLibresCount} {h.camasLibresCount === 1 ? "cama disponible" : "camas disponibles"}
                       </p>
                     </div>
                   </div>
 
-                  <span className="rounded-xl bg-brand-sand px-3 py-1.5 text-sm font-bold text-brand-ink">
+                  <span className="rounded-lg bg-brand-sand px-3 py-1.5 text-xs font-bold text-brand-ink">
                     Elegir →
                   </span>
                 </button>
               ))}
 
               {habitacionesDisponibles.length === 0 && (
-                <div role="alert" className="rounded-2xl border border-red-300 bg-red-50 p-5 text-center text-sm text-red-800 font-medium space-y-1">
+                <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-xs text-red-800 font-medium space-y-1">
                   <p className="font-bold text-sm">No hay piezas libres en este momento</p>
-                  <p className="text-xs text-red-700">
+                  <p className="text-red-700">
                     Revisa si hay camas ocupadas que se puedan liberar o pasajeros que ya hayan hecho check-out.
                   </p>
                 </div>
@@ -528,7 +526,7 @@ export function NominaScreen({
               <button
                 type="button"
                 onClick={() => setTrabajadorSeleccionado(null)}
-                className="rounded-xl px-4 py-2 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
+                className="rounded-xl px-4 py-2 text-xs font-bold text-brand-muted hover:text-brand-ink transition"
               >
                 Cerrar
               </button>

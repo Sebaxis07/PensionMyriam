@@ -4,7 +4,7 @@ import { ContratoScreen } from "./ContratoScreen";
 import { NominaScreen } from "./NominaScreen";
 import { ConciliacionScreen } from "./ConciliacionScreen";
 import { useQuery } from "@powersync/react";
-import { IconClipboardCheck, IconFileText, IconUsers } from "../../components/Icons";
+import { IconChevronLeft, IconClipboardCheck, IconEdit, IconFileText, IconUsers } from "../../components/Icons";
 import { CierreMensualModal } from "./CierreMensualModal";
 import { fechaHoySantiago } from "../../lib/fechaNegocio";
 import { calcularEstimacionContrato } from "../../features/reservaEmpresa/estimacionContrato";
@@ -20,10 +20,6 @@ type ContratoRow = {
   vigencia_desde: string;
   vigencia_hasta: string | null;
   headcount: number;
-  // Las siguientes 4 columnas llegan en null al dispositivo de la
-  // Encargada (bucket contrato_empresa_encargada no las incluye,
-  // migración 0026) — la tarjeta de estimación solo se muestra cuando
-  // tarifa_convenida no es null.
   tarifa_convenida: number | null;
   incluye_desayuno: number | null;
   incluye_almuerzo: number | null;
@@ -83,14 +79,13 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
   if (vista === "detalle_contrato" && empresaIdSeleccionada) {
     if (isLoading) {
       return (
-        <div className="ui-operativa mx-auto flex w-full max-w-4xl justify-center py-12">
+        <div className="ui-operativa mx-auto flex w-full max-w-5xl justify-center py-12">
           <div className="h-8 w-8 motion-safe:animate-spin rounded-full border-4 border-brand-terracotta border-t-transparent" />
         </div>
       );
     }
 
     const hoyIso = fechaHoySantiago();
-    // Si no se ha elegido un contrato específico, preferir el vigente a hoy; de lo contrario el más reciente
     const contratoActivo = contratoIdSeleccionado
       ? (contratos?.find((c) => c.id === contratoIdSeleccionado) ?? contratos?.[0])
       : (contratos?.find((c) => c.vigencia_desde <= hoyIso && (!c.vigencia_hasta || c.vigencia_hasta >= hoyIso)) ?? contratos?.[0]);
@@ -98,22 +93,24 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
     const razonSocialEmpresa = empresasInfo?.[0]?.razon_social;
 
     return (
-      <div className="ui-operativa mx-auto flex w-full max-w-4xl flex-col gap-4">
+      <div className="ui-operativa mx-auto flex w-full max-w-5xl flex-col gap-4">
         {/* Navegación y selector de contratos de la empresa */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-3xl border border-brand-border/70 bg-brand-card p-4 shadow-card">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-3xl border border-brand-border/80 bg-brand-card p-4 sm:p-5 shadow-card">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
+              type="button"
               onClick={() => {
                 setVista("lista");
                 setEmpresaIdSeleccionada(null);
                 setContratoIdSeleccionado(null);
               }}
-              className="text-sm font-bold uppercase tracking-wider text-brand-terracotta-deep hover:underline"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white hover:bg-brand-sand px-3 py-1.5 text-xs font-bold text-brand-ink transition active:scale-95 shadow-2xs"
             >
-              ← Volver a todas las empresas
+              <IconChevronLeft className="h-4 w-4" />
+              <span>Volver a Empresas</span>
             </button>
             {razonSocialEmpresa && (
-              <span className="font-display font-bold text-brand-ink text-sm border-l border-brand-border/60 pl-3">
+              <span className="font-display font-black text-brand-ink text-base md:text-lg sm:border-l sm:border-brand-border/70 sm:pl-3">
                 {razonSocialEmpresa}
               </span>
             )}
@@ -121,11 +118,14 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
 
           {contratos && contratos.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-brand-ink/80">Contrato:</span>
-              <select aria-label="Contrato de la empresa"
+              <span className="text-xs font-bold uppercase tracking-wider text-brand-muted">
+                Contrato:
+              </span>
+              <select
+                aria-label="Contrato de la empresa"
                 value={contratoActivo?.id ?? ""}
                 onChange={(e) => setContratoIdSeleccionado(e.target.value)}
-                className="rounded-xl border border-brand-border bg-white px-3 py-1.5 text-sm font-bold text-brand-ink"
+                className="rounded-xl border border-brand-border bg-white px-3 py-2 text-xs md:text-sm font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none shadow-2xs max-w-[280px] sm:max-w-none truncate"
               >
                 {contratos.map((c) => {
                   const esVigente = c.vigencia_desde <= hoyIso && (!c.vigencia_hasta || c.vigencia_hasta >= hoyIso);
@@ -143,11 +143,9 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
 
         {contratoActivo ? (
           <div className="space-y-4">
-            {/* Resumen económico del contrato (sección 6 del alcance). Solo
-                se muestra cuando tarifa_convenida llegó a este teléfono
-                (null en el de la Encargada). */}
+            {/* Resumen económico del contrato */}
             {contratoActivo.tarifa_convenida != null && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <EstimacionContratoCard
                   headcount={contratoActivo.headcount}
                   tarifaConvenida={contratoActivo.tarifa_convenida}
@@ -166,12 +164,15 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
                     vigenciaHasta: contratoActivo.vigencia_hasta
                   })}
                 />
-                <button
-                  onClick={() => setAjustando(true)}
-                  className="min-h-11 rounded-xl border border-brand-border bg-white px-4 py-2 text-sm font-bold text-brand-terracotta-deep hover:bg-brand-sand/40"
-                >
-                  Ajustar cantidad contratada
-                </button>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setAjustando(true)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-brand-border bg-white px-4 py-2.5 text-xs font-bold text-brand-ink hover:bg-brand-sand/40 hover:border-brand-terracotta/40 transition active:scale-95 shadow-2xs"
+                  >
+                    <span>✏️ Ajustar cantidad contratada</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -193,45 +194,49 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
               />
             )}
 
-            {/* Sub-pestañas: Nómina vs. Conciliación */}
-            <div className="flex flex-wrap gap-2 border-b border-brand-border/70 bg-brand-sand/30 p-1 rounded-2xl">
+            {/* Sub-pestañas estilizadas y responsivas */}
+            <div className="grid grid-cols-3 gap-1 sm:gap-2 rounded-2xl border border-brand-border/70 bg-brand-sand/40 p-1.5 shadow-2xs">
               <button
+                type="button"
                 onClick={() => setSubTab("nomina")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                   subTab === "nomina"
-                    ? "bg-brand-card text-brand-terracotta-deep shadow-sm"
-                    : "text-brand-ink/80 hover:text-brand-ink"
+                    ? "bg-white text-brand-terracotta-deep shadow-sm"
+                    : "text-brand-muted hover:text-brand-ink hover:bg-white/40"
                 }`}
               >
-                <IconUsers className="h-4 w-4" />
-                <span>Nómina y Camas</span>
+                <IconUsers className="h-4 w-4 shrink-0" />
+                <span className="truncate">Nómina y Camas</span>
               </button>
               <button
+                type="button"
                 onClick={() => setSubTab("conciliacion")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                   subTab === "conciliacion"
-                    ? "bg-brand-card text-brand-terracotta-deep shadow-sm"
-                    : "text-brand-ink/80 hover:text-brand-ink"
+                    ? "bg-white text-brand-terracotta-deep shadow-sm"
+                    : "text-brand-muted hover:text-brand-ink hover:bg-white/40"
                 }`}
               >
-                <IconClipboardCheck className="h-4 w-4" />
-                <span>Revisar diferencias</span>
+                <IconClipboardCheck className="h-4 w-4 shrink-0" />
+                <span className="truncate">Revisar diferencias</span>
               </button>
               <button
+                type="button"
                 onClick={() => setSubTab("cierre")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                   subTab === "cierre"
-                    ? "bg-brand-card text-brand-terracotta-deep shadow-sm"
-                    : "text-brand-ink/80 hover:text-brand-ink"
+                    ? "bg-white text-brand-terracotta-deep shadow-sm"
+                    : "text-brand-muted hover:text-brand-ink hover:bg-white/40"
                 }`}
               >
-                <IconFileText className="h-4 w-4" />
-                <span>Cierre y reportes</span>
+                <IconFileText className="h-4 w-4 shrink-0" />
+                <span className="truncate">Cierre y reportes</span>
               </button>
             </div>
 
             {subTab === "nomina" && (
-              <NominaScreen empresaNombre={razonSocialEmpresa ?? undefined}
+              <NominaScreen
+                empresaNombre={razonSocialEmpresa ?? undefined}
                 usuarioId={usuarioId}
                 contratoEmpresaId={contratoActivo.id}
                 onVolver={() => setVista("lista")}
@@ -256,18 +261,13 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
             )}
           </div>
         ) : (
-          <div className="rounded-3xl border border-brand-border/70 bg-brand-card p-10 text-center shadow-card">
-            <h3 className="font-display text-lg font-bold text-brand-ink">
-              Esta empresa no tiene contratos vigentes
-            </h3>
-            <p className="mt-1 text-sm text-brand-ink/80 mb-4">
-              Crea un contrato para habilitar la nómina y el control de consumos.
-            </p>
+          <div className="rounded-3xl border border-brand-border bg-brand-card p-8 text-center text-sm text-brand-muted">
+            Esta empresa no tiene contratos registrados aún.{" "}
             <button
-              onClick={() => setVista("nuevo_contrato")}
-              className="rounded-xl bg-brand-terracotta-deep px-5 py-2.5 text-sm font-bold text-white shadow-brand hover:bg-brand-terracotta-deep"
+              onClick={() => handleNuevoContrato(empresaIdSeleccionada)}
+              className="font-bold text-brand-terracotta-deep underline"
             >
-              + Crear primer contrato
+              Crear el primer contrato
             </button>
           </div>
         )}
@@ -277,6 +277,7 @@ export function ModuloEmpresas({ usuarioId }: { usuarioId: string }) {
 
   return (
     <EmpresasScreen
+      usuarioId={usuarioId}
       onSeleccionarEmpresa={handleSeleccionarEmpresa}
       onNuevoContrato={handleNuevoContrato}
     />
