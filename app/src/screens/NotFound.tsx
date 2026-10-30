@@ -69,7 +69,7 @@ export function NotFound() {
               </span>
             </div>
             <p className="text-[11px] text-brand-muted leading-relaxed">
-              En Paposo contamos con 8 piezas frente al mar, registro diario de aseo, comedor y control de reservas sin necesidad de señal continua.
+              En Paposo contamos con piezas frente al mar, registro diario de aseo, comedor y control de reservas sin necesidad de señal continua.
             </p>
           </div>
 

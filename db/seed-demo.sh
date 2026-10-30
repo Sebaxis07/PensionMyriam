@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Reinicia los datos de demo del Sprint 1 contra el Postgres de
-# infra/docker-compose.yml (ya debe estar levantado). Deja: 8 piezas con
-# capacidades y estados variados, 1 cama por pieza (turista reserva la
-# pieza completa — decisión del Sprint 1; una pieza puede sumar más
-# camas en el Sprint 2 para nómina de empresa, HU-12), 1 reserva de
-# turista lista para check-in hoy, y las 2 usuarias de siempre
-# (Administradora / Encargada), creándolas si todavía no existen.
+# infra/docker-compose.yml (ya debe estar levantado). Deja: las 12
+# piezas reales de la pensión (9 dobles de capacidad 2 + 3 individuales
+# de capacidad 1 — ver docs/auditoria/mejoras-operativas.md), 1 cama
+# por pieza (turista reserva la pieza completa — decisión del Sprint 1;
+# una pieza puede sumar más camas en el Sprint 2 para nómina de
+# empresa, HU-12), 1 reserva de turista lista para check-in hoy, y las
+# 2 usuarias de siempre (Administradora / Encargada), creándolas si
+# todavía no existen.
 #
 # Uso: bash db/seed-demo.sh
 set -euo pipefail
@@ -91,6 +93,8 @@ delete from public.reserva where trabajador_id is null;  -- solo las de turista 
 delete from public.cama;
 delete from public.habitacion;
 
+-- Capacidad real: piezas 1-9 son dobles (capacidad 2) y 10-12 son
+-- individuales (capacidad 1) — ver docs/auditoria/mejoras-operativas.md.
 -- 2, 6 y 8 arrancan Disponible a propósito: el check-in de más abajo
 -- (vía su trigger normal) es lo que las deja Ocupada — igual que en la
 -- operación real, nunca se fuerza el estado "ocupada" a mano.
@@ -98,12 +102,16 @@ with datos (numero, capacidad, estado, motivo) as (
   values
     (1, 2, 'disponible', null),
     (2, 2, 'disponible', null),
-    (3, 3, 'en_aseo', null),
+    (3, 2, 'en_aseo', null),
     (4, 2, 'en_mantencion', 'Baño con fuga'),
     (5, 2, 'disponible', null),
-    (6, 4, 'disponible', null),
+    (6, 2, 'disponible', null),
     (7, 2, 'disponible', null),
-    (8, 2, 'disponible', null)
+    (8, 2, 'disponible', null),
+    (9, 2, 'disponible', null),
+    (10, 1, 'disponible', null),
+    (11, 1, 'disponible', null),
+    (12, 1, 'disponible', null)
 )
 insert into public.habitacion (numero, capacidad, estado, motivo_mantencion)
 select numero, capacidad, estado::estado_habitacion, motivo from datos;

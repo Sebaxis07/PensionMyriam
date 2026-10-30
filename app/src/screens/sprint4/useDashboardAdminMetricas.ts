@@ -99,23 +99,14 @@ export function useDashboardAdminMetricas() {
     return lista;
   }, []);
 
-  // Construir la matriz de 8 piezas × 7 días
+  // Construir la matriz de N piezas × 7 días (N = las piezas que existan en la BD, nunca un número fijo)
   const matrizRackSemanal = useMemo<Record<number, CeldaRackSemanal[]>>(() => {
     const resultado: Record<number, CeldaRackSemanal[]> = {};
     const listaPiezas = piezas ?? [];
 
-    for (let numPieza = 1; numPieza <= 8; numPieza++) {
-      const pieza = listaPiezas.find((p) => p.numero === numPieza);
+    listaPiezas.forEach((pieza) => {
+      const numPieza = pieza.numero;
       resultado[numPieza] = diasSemana.map((dia) => {
-        if (!pieza) {
-          return {
-            habitacionId: `temp-${numPieza}`,
-            habitacionNumero: numPieza,
-            fechaIso: dia.fechaIso,
-            estado: "disponible"
-          };
-        }
-
         // Si la pieza está en mantención
         if (pieza.estado === "mantencion") {
           return {
@@ -175,7 +166,7 @@ export function useDashboardAdminMetricas() {
           estado: "disponible"
         };
       });
-    }
+    });
 
     return resultado;
   }, [piezas, diasSemana, reservasSemana]);
