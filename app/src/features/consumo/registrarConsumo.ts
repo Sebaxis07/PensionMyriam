@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { powersync } from "../../lib/powersync";
-import { rangoHoySantiagoUTC } from "../../lib/fechaNegocio";
+import { rangoHoySantiagoUTC, sqlFechaHoraNormalizada } from "../../lib/fechaNegocio";
 
 // 5 tipos del ledger (0008_ledger_tipos.sql). cama_noche normalmente la
 // genera pg_cron sola (generar_cama_noche, ver
@@ -57,7 +57,8 @@ export async function registrarConsumo(usuarioId: string, input: ConsumoInput): 
   const yaRegistrado = await powersync.getAll<{ n: number }>(
     `select count(*) as n from consumo
      where trabajador_id = ? and tipo_consumo = ? and consumo_corregido_id is null
-       and fecha_hora >= ? and fecha_hora < ?`,
+       and ${sqlFechaHoraNormalizada("fecha_hora")} >= ${sqlFechaHoraNormalizada("?")}
+       and ${sqlFechaHoraNormalizada("fecha_hora")} < ${sqlFechaHoraNormalizada("?")}`,
     [datos.trabajadorId, datos.tipoConsumo, desde, hasta]
   );
   if ((yaRegistrado[0]?.n ?? 0) > 0) {

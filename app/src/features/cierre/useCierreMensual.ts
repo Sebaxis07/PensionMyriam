@@ -1,6 +1,12 @@
 import { useQuery } from "@powersync/react";
 import { useMemo } from "react";
-import { fechaHoySantiago, sumarDiasYMD, inicioDiaSantiagoUTC, finDiaSantiagoUTC } from "../../lib/fechaNegocio";
+import {
+  fechaHoySantiago,
+  sumarDiasYMD,
+  inicioDiaSantiagoUTC,
+  finDiaSantiagoUTC,
+  sqlFechaHoraNormalizada
+} from "../../lib/fechaNegocio";
 import {
   serviciosIncluidosComoLista,
   etiquetaCondicionTributaria,
@@ -138,7 +144,8 @@ export function useCierreMensual(
      join trabajador t on t.id = c.trabajador_id
      left join producto_extra p on p.id = c.producto_extra_id
      where t.contrato_empresa_id = ?
-       and c.fecha_hora >= ? and c.fecha_hora < ?
+       and ${sqlFechaHoraNormalizada("c.fecha_hora")} >= ${sqlFechaHoraNormalizada("?")}
+       and ${sqlFechaHoraNormalizada("c.fecha_hora")} < ${sqlFechaHoraNormalizada("?")}
        and c.consumo_corregido_id is null`,
     [contratoEmpresaId, inicioDiaSantiagoUTC(primerDiaMes).toISOString(), finDiaSantiagoUTC(ultimoDiaMes).toISOString()]
   );

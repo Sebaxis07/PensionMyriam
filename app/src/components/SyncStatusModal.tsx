@@ -107,11 +107,15 @@ export function SyncStatusModal({ usuarioId, onCerrar }: SyncStatusModalProps) {
     }
   }
 
-  // Mapa de última actividad por usuario
+  // Mapa de última actividad por usuario. Se compara normalizando el
+  // separador de fecha_hora: una fila recién escrita localmente usa
+  // "T" (toISOString()) y una ya sincronizada desde Postgres llega con
+  // espacio — comparar los strings tal cual puede elegir la fila
+  // equivocada como "más reciente" (ver fechaNegocio.ts).
   const mapaActividad = new Map<string, string>();
   (ultimasAcciones ?? []).forEach((a) => {
     const prev = mapaActividad.get(a.usuario_id);
-    if (!prev || a.fecha_hora > prev) {
+    if (!prev || a.fecha_hora.replace("T", " ") > prev.replace("T", " ")) {
       mapaActividad.set(a.usuario_id, a.fecha_hora);
     }
   });

@@ -127,6 +127,32 @@ export function rangoHoySantiagoUTC(): { desde: string; hasta: string } {
 }
 
 /**
+ * Defecto transversal descubierto al verificar manualmente HU-08 (aseo
+ * "hoy"): una fila de `fecha_hora` (timestamptz) escrita localmente
+ * usa `toISOString()`, con "T" como separador — p.ej.
+ * "2026-10-30T15:01:38.099Z". Pero cuando esa misma fila YA SE
+ * SINCRONIZÓ (vino replicada desde Postgres vía PowerSync), llega
+ * representada con un ESPACIO en vez de "T" — p.ej.
+ * "2026-10-30 15:01:38.099Z" (confirmado inspeccionando la réplica
+ * local real, no es una suposición). Como ' ' (0x20) < 'T' (0x54) en
+ * ASCII, una comparación de string `fecha_hora >= '...T...'` para
+ * filtrar "hoy" es FALSA para cualquier fila ya sincronizada, sin
+ * importar la hora real — el filtro simplemente deja de verla. Antes
+ * de sincronizar (escritura optimista local) la comparación sí
+ * funciona, así que el síntoma es un parpadeo: el dato aparece bien
+ * un instante y luego "desaparece" al confirmarse con el servidor.
+ *
+ * Esta función envuelve una expresión SQL (columna o parámetro `?`)
+ * para que la comparación sea robusta sin importar qué formato tenga
+ * esa fila en particular — normaliza el separador antes de comparar,
+ * así que cubre tanto las filas locales (con "T") como las ya
+ * sincronizadas (con espacio).
+ */
+export function sqlFechaHoraNormalizada(expresion: string): string {
+  return `replace(${expresion}, 'T', ' ')`;
+}
+
+/**
  * Suma (o resta, con N negativo) días de calendario a una fecha
  * YYYY-MM-DD. Aritmética pura de calendario — no representa ningún
  * instante, así que no hay ambigüedad de zona horaria que resolver

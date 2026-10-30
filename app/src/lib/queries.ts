@@ -1,4 +1,4 @@
-import { fechaHoySantiago, rangoHoySantiagoUTC } from "./fechaNegocio";
+import { fechaHoySantiago, rangoHoySantiagoUTC, sqlFechaHoraNormalizada } from "./fechaNegocio";
 
 /**
  * Consulta combinada para HU-05/06/08: estado de cada pieza más lo que
@@ -13,6 +13,10 @@ import { fechaHoySantiago, rangoHoySantiagoUTC } from "./fechaNegocio";
  * comparan contra el día de negocio de hoy como parámetro. fecha_hora
  * de `aseo` es un instante real: se compara contra el RANGO UTC del
  * día de Santiago (parámetros p0/p1), no contra un solo string de fecha.
+ * La comparación de fecha_hora usa sqlFechaHoraNormalizada (ver
+ * fechaNegocio.ts) porque una fila ya sincronizada desde Postgres usa
+ * espacio como separador en vez de "T", y una comparación de string
+ * directa la pierde silenciosamente.
  */
 export const QUERY_PIEZAS = `
 with reserva_hoy as (
@@ -44,7 +48,7 @@ active_checkin as (
 aseo_hoy as (
   select habitacion_id, count(*) as n
   from aseo
-  where fecha_hora >= ? and fecha_hora < ?
+  where ${sqlFechaHoraNormalizada("fecha_hora")} >= ${sqlFechaHoraNormalizada("?")} and ${sqlFechaHoraNormalizada("fecha_hora")} < ${sqlFechaHoraNormalizada("?")}
   group by habitacion_id
 )
 select
