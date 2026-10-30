@@ -42,8 +42,8 @@ usuario (auth_uid, rol: administradora | encargada), habitacion (estado, motivo_
 RLS en todas las tablas según rol. Todo corte de "día" (ledger, conciliación) se calcula en zona horaria `America/Santiago`, nunca en la del servidor (NYC3, UTC).
 
 ## Alcance funcional
-Las 30 historias de usuario están en docs/Historia_de_usuarios_v2.md (6 épicas EP-01 a EP-06, priorización MoSCoW, RNF-01 a RNF-06).
-Objetivo intermedio: ~75% (23 HU) funcionando antes de la reunión 3 (semana del 9–15 nov 2026). Plan de sprints y priorización vigentes en docs/plan-sprints.md.
+42 historias de usuario (HU-01 a HU-42, 10 épicas EP-01 a EP-06 más EP-07 a EP-10, priorización MoSCoW, RNF-01 a RNF-06) en docs/Historia_de_usuarios_v2.md y docs/historia_v2/historias_usuario.csv. El alcance creció de 30 a 42 HU tras la segunda reunión de seguimiento con la Administradora (HU-31 a HU-42: Ley 21.719, cuentas, guía contextual, configuración del negocio, aviso de rechazos de sincronización).
+Cronograma por Sprint (fechas, historias asignadas, dependencias y avance real documentado) vigente en docs/plan-sprints.md — no lo dupliques aquí para evitar que ambas fuentes se desalineen.
 
 ## Cómo trabajar
 1. Antes de programar, lee docs/ y propone un plan por sprints; espera mi OK.
