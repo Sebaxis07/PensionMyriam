@@ -5,8 +5,9 @@
 # descuadre ya justificado. Se ejecuta DESPUÉS de db/seed-demo.sh
 # (Sprint 1) — no lo reemplaza, lo complementa.
 #
-# Las 8 piezas de seed-demo.sh ya están todas ocupadas por el demo de
-# turistas; para no chocar con eso, esta empresa usa camas ADICIONALES
+# Varias de las 12 piezas de seed-demo.sh ya están ocupadas por el
+# demo de turistas; para no chocar con eso, esta empresa usa camas
+# ADICIONALES
 # en las piezas #5 y #7 (Disponibles, sin reserva de turista pendiente),
 # como si fueran piezas de varias camas para contratistas — coexisten
 # con la cama #1 turista que ya tenían.

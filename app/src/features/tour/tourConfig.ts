@@ -40,7 +40,7 @@ export const pasosTourGeneral: DriveStep[] = [
     popover: {
       title: "Calendario y Ocupación Mensual",
       description:
-        "Una vista mensual con las 8 piezas y todos los días. Te permite planificar con anticipación qué fechas están libres para recibir turistas o grupos de empresas.",
+        "Una vista mensual con todas las piezas y todos los días. Te permite planificar con anticipación qué fechas están libres para recibir turistas o grupos de empresas.",
       side: "right",
       align: "start"
     }
@@ -156,7 +156,7 @@ export const pasosTourAdmin: DriveStep[] = [
     popover: {
       title: "Ocupación Real vs Capacidad",
       description:
-        "Muestra cuántas camas de tus 8 piezas están ocupadas en el mes frente al total disponible de la pensión.",
+        "Muestra cuántas camas de tus piezas están ocupadas en el mes frente al total disponible de la pensión.",
       side: "bottom",
       align: "center"
     }

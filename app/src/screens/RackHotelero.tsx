@@ -64,7 +64,7 @@ export function RackHotelero({
     reserva?: ReservaRow;
   } | null>(null);
 
-  // Consultar las 8 piezas
+  // Consultar las piezas (su cantidad no es fija: ver CLAUDE.md)
   const { data: habitacionesRaw, isLoading: cargandoHabitaciones } = useQuery<HabitacionRow>(
     "select id, numero, capacidad, estado from habitacion order by numero asc"
   );
@@ -186,7 +186,7 @@ export function RackHotelero({
             </h2>
           </div>
           <p className="mt-1 text-sm text-brand-ink/80">
-            Matriz de disponibilidad mensual de las 8 piezas. Toca un día disponible para registrar una reserva.
+            Matriz de disponibilidad mensual de las piezas. Toca un día disponible para registrar una reserva.
           </p>
         </div>
 

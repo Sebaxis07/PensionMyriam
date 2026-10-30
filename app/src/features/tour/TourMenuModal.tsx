@@ -68,7 +68,7 @@ export function TourMenuModal({
                 </span>
               </div>
               <p className="text-sm text-brand-ink/80 mt-0.5 leading-normal">
-                Aprende cómo ver las 8 piezas, recordar el aseo diario, registrar raciones en el comedor y contratos de empresas.
+                Aprende cómo ver las piezas, recordar el aseo diario, registrar raciones en el comedor y contratos de empresas.
               </p>
             </div>
           </button>

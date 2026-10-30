@@ -5,7 +5,8 @@
 # y una consulta tipica de la app. No usa camas fisicas (trabajador
 # .cama_id queda null): esto es volumen de datos y consultas, no una
 # simulacion de ocupacion real de piezas — para eso esta
-# db/seed-demo-empresa.sh, acotado a la capacidad real de 8 piezas.
+# db/seed-demo-empresa.sh, acotado a la capacidad real de 12 piezas
+# (9 dobles + 3 individuales).
 #
 # `consumo` es un libro inmutable de verdad (ni este script puede
 # borrarlo): cada corrida usa un nombre de empresa distinto (sufijo

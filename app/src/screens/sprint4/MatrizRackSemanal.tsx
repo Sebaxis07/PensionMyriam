@@ -66,7 +66,7 @@ export function MatrizRackSemanal({
             </span>
             <BotonExplicacion
               titulo="Matriz Semanal de Habitaciones"
-              queEs="Es un mapa visual que te muestra el estado de las 8 piezas para los próximos 7 días de la semana."
+              queEs="Es un mapa visual que te muestra el estado de todas las piezas para los próximos 7 días de la semana."
               comoSeUsa="Cada cuadrito de color es una pieza en un día (amarillo = empresa, naranja = turista, verde = libre, rojo = aseo). Te ayuda a planificar la semana y saber qué días tendrás camas libres sin riesgo de prometer piezas ya ocupadas."
               ejemplo="Un cuadrito verde en el día viernes significa que esa pieza está 100% disponible para recibir a un turista de fin de semana."
             />

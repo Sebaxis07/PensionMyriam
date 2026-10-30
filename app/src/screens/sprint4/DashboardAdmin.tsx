@@ -347,9 +347,9 @@ export function DashboardAdmin({
                 </span>
                 <BotonExplicacion
                   titulo="Ocupación de Habitaciones"
-                  queEs="Es el porcentaje de las 8 piezas de la pensión que tienen gente durmiendo hoy."
+                  queEs="Es el porcentaje de las piezas de la pensión que tienen gente durmiendo hoy."
                   comoSeUsa="Te dice de un vistazo cuántas piezas están ocupadas por empresas mineras, cuántas por turistas de paso y cuántas te quedan completamente vacías para poder arrendar hoy."
-                  ejemplo="Si 6 de las 8 piezas están ocupadas, tienes un 75% de ocupación y 2 piezas libres para vender."
+                  ejemplo="Si 6 de 8 piezas están ocupadas, tienes un 75% de ocupación y 2 piezas libres para vender."
                 />
               </div>
               <IconBed className="h-4 w-4 text-brand-terracotta-deep" />
@@ -415,7 +415,7 @@ export function DashboardAdmin({
         </div>
       </div>
 
-      {/* Gráfico 3: Matriz Táctica de 8 Piezas × 7 Días */}
+      {/* Gráfico 3: Matriz Táctica de Piezas × 7 Días */}
       <div id="tour-chart-rack-semanal">
         <MatrizRackSemanal
           diasSemana={diasSemana}

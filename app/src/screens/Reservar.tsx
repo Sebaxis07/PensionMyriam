@@ -593,7 +593,7 @@ export function Reservar({
 
       {/* Grid Principal: Selector Visual de Habitaciones + Formulario Lateral */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Selector de las 8 Habitaciones (8 columnas en lg) */}
+        {/* Selector de Habitaciones */}
         <div className="lg:col-span-7 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
