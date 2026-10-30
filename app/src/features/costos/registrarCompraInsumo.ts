@@ -1,6 +1,6 @@
 import { powersync } from "../../lib/powersync";
 import { nuevoUuidIdempotente } from "../../lib/idempotencia";
-import { CategoriaCompra } from "./types";
+import { CategoriaCompra, MedioPagoCompra } from "./types";
 import { fechaHoySantiago } from "../../lib/fechaNegocio";
 
 export interface RegistrarCompraParams {
@@ -13,6 +13,18 @@ export interface RegistrarCompraParams {
   rendimientoEstimado?: number | null;
   fecha?: string;
   registradoPor: string;
+  /**
+   * Detalle del comprobante real (boleta/factura de proveedor), todo
+   * opcional: no toda compra trae este nivel de detalle. Ver migración
+   * 0024_compra_insumo_detalle.sql.
+   */
+  proveedor?: string | null;
+  descripcion?: string | null;
+  medioPago?: MedioPagoCompra | null;
+  referenciaComprobante?: string | null;
+  montoNeto?: number | null;
+  montoIva?: number | null;
+  observaciones?: string | null;
 }
 
 /**
@@ -29,7 +41,14 @@ export async function registrarCompraInsumo(params: RegistrarCompraParams): Prom
     cantidad,
     rendimientoEstimado = null,
     fecha = fechaHoySantiago(),
-    registradoPor
+    registradoPor,
+    proveedor = null,
+    descripcion = null,
+    medioPago = null,
+    referenciaComprobante = null,
+    montoNeto = null,
+    montoIva = null,
+    observaciones = null
   } = params;
 
   if (montoTotal < 0) {
@@ -40,6 +59,9 @@ export async function registrarCompraInsumo(params: RegistrarCompraParams): Prom
   }
   if (!nombreInsumo.trim()) {
     throw new Error("El nombre del producto o insumo es obligatorio.");
+  }
+  if (montoNeto != null && montoIva != null && Math.abs(montoNeto + montoIva - montoTotal) > 1) {
+    throw new Error("El neto más el IVA del comprobante no coincide con el monto total pagado.");
   }
 
   const compraId = crypto.randomUUID();
@@ -98,8 +120,9 @@ export async function registrarCompraInsumo(params: RegistrarCompraParams): Prom
     // 2. Registrar la compra inmutable en el historial
     await tx.execute(
       `insert into compra_insumo (
-        id, insumo_id, categoria, monto_total, cantidad, rendimiento_estimado, fecha, registrado_por, uuid_idempotente, created_at
-      ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, insumo_id, categoria, monto_total, cantidad, rendimiento_estimado, fecha, registrado_por, uuid_idempotente, created_at,
+        proveedor, descripcion, medio_pago, referencia_comprobante, monto_neto, monto_iva, observaciones
+      ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         compraId,
         insumoIdReal,
@@ -110,7 +133,14 @@ export async function registrarCompraInsumo(params: RegistrarCompraParams): Prom
         fecha,
         registradoPor,
         idempotencia,
-        new Date().toISOString()
+        new Date().toISOString(),
+        proveedor?.trim() || null,
+        descripcion?.trim() || null,
+        medioPago,
+        referenciaComprobante?.trim() || null,
+        montoNeto,
+        montoIva,
+        observaciones?.trim() || null
       ]
     );
   });

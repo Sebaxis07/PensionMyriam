@@ -12,7 +12,9 @@ export function useComprasRecientes(limite: number = 20): CompraInsumoRow[] {
   const { data } = useQuery<CompraInsumoRow>(
     `select ci.id, ci.insumo_id, i.nombre as insumo_nombre, ci.categoria,
             ci.monto_total, ci.cantidad, ci.rendimiento_estimado, ci.fecha,
-            ci.registrado_por, ci.uuid_idempotente, ci.created_at
+            ci.registrado_por, ci.uuid_idempotente, ci.created_at,
+            ci.proveedor, ci.descripcion, ci.medio_pago, ci.referencia_comprobante,
+            ci.monto_neto, ci.monto_iva, ci.observaciones
      from compra_insumo ci
      left join insumo i on i.id = ci.insumo_id
      order by ci.fecha desc, ci.created_at desc

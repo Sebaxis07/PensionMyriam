@@ -1,7 +1,7 @@
 import { describirErrorUi } from "../../components/MensajeInterfaz";
 import { Dialogo } from "../../components/Dialogo";
 import { useState, FormEvent } from "react";
-import { CategoriaCompra } from "../../features/costos/types";
+import { CategoriaCompra, MedioPagoCompra } from "../../features/costos/types";
 import { registrarCompraInsumo } from "../../features/costos/registrarCompraInsumo";
 import { useInsumos } from "../../features/costos/useInsumos";
 import {
@@ -89,6 +89,13 @@ export function RegistrarCompraModal({
   const [rendimiento, setRendimiento] = useState<number | "">("");
   const [fecha, setFecha] = useState(fechaHoySantiago());
 
+  const [mostrarComprobante, setMostrarComprobante] = useState(false);
+  const [proveedor, setProveedor] = useState("");
+  const [medioPago, setMedioPago] = useState<MedioPagoCompra | "">("");
+  const [referenciaComprobante, setReferenciaComprobante] = useState("");
+  const [montoIva, setMontoIva] = useState<number | "">("");
+  const [observaciones, setObservaciones] = useState("");
+
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,6 +131,12 @@ export function RegistrarCompraModal({
       return;
     }
 
+    const ivaNum = montoIva === "" ? null : Number(montoIva);
+    if (ivaNum != null && (ivaNum < 0 || ivaNum >= montoNum)) {
+      setError("El IVA del comprobante debe ser menor que el total pagado.");
+      return;
+    }
+
     setGuardando(true);
     try {
       await registrarCompraInsumo({
@@ -134,7 +147,13 @@ export function RegistrarCompraModal({
         cantidad: cantNum,
         rendimientoEstimado: rendimiento ? Number(rendimiento) : null,
         fecha,
-        registradoPor: usuarioId
+        registradoPor: usuarioId,
+        proveedor: proveedor.trim() || null,
+        medioPago: medioPago || null,
+        referenciaComprobante: referenciaComprobante.trim() || null,
+        montoIva: ivaNum,
+        montoNeto: ivaNum != null ? montoNum - ivaNum : null,
+        observaciones: observaciones.trim() || null
       });
 
       onCompraGuardada?.();
@@ -334,6 +353,94 @@ export function RegistrarCompraModal({
               onChange={(e) => setFecha(e.target.value)}
               className="rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-ink shadow-sm"
             />
+          </div>
+
+          {/* Datos del comprobante: opcional, plegado por defecto para no
+              alargar el formulario en el caso común. */}
+          <div className="rounded-2xl border border-brand-border/60 bg-white p-3.5">
+            <button
+              type="button"
+              onClick={() => setMostrarComprobante((v) => !v)}
+              className="flex w-full items-center justify-between text-sm font-bold text-brand-ink"
+            >
+              <span>Datos del comprobante (opcional)</span>
+              <span className="text-brand-ink/60">{mostrarComprobante ? "Ocultar" : "Agregar"}</span>
+            </button>
+            {mostrarComprobante && (
+              <div className="mt-3 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="registrarcompramodal-proveedor-1" className="block text-xs font-bold text-brand-ink/80 mb-1">
+                      Proveedor
+                    </label>
+                    <input id="registrarcompramodal-proveedor-1"
+                      type="text"
+                      value={proveedor}
+                      onChange={(e) => setProveedor(e.target.value)}
+                      placeholder="Ej. Copec, Feria, Distribuidora..."
+                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-semibold text-brand-ink"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="registrarcompramodal-mediopago-1" className="block text-xs font-bold text-brand-ink/80 mb-1">
+                      Medio de pago
+                    </label>
+                    <select id="registrarcompramodal-mediopago-1"
+                      value={medioPago}
+                      onChange={(e) => setMedioPago(e.target.value as MedioPagoCompra | "")}
+                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-semibold text-brand-ink"
+                    >
+                      <option value="">Sin especificar</option>
+                      <option value="efectivo">Efectivo</option>
+                      <option value="transferencia">Transferencia</option>
+                      <option value="tarjeta_debito">Tarjeta débito</option>
+                      <option value="tarjeta_credito">Tarjeta crédito</option>
+                      <option value="otro">Otro</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="registrarcompramodal-referencia-1" className="block text-xs font-bold text-brand-ink/80 mb-1">
+                      N° de boleta o factura
+                    </label>
+                    <input id="registrarcompramodal-referencia-1"
+                      type="text"
+                      value={referenciaComprobante}
+                      onChange={(e) => setReferenciaComprobante(e.target.value)}
+                      placeholder="Ej. 223505"
+                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-semibold text-brand-ink"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="registrarcompramodal-iva-1" className="block text-xs font-bold text-brand-ink/80 mb-1">
+                      IVA del comprobante ($, si lo indica)
+                    </label>
+                    <input id="registrarcompramodal-iva-1"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={montoIva}
+                      onChange={(e) => setMontoIva(e.target.value ? Number(e.target.value) : "")}
+                      placeholder="Ej. 2687"
+                      className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-semibold text-brand-ink"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="registrarcompramodal-observaciones-1" className="block text-xs font-bold text-brand-ink/80 mb-1">
+                    Observaciones
+                  </label>
+                  <input id="registrarcompramodal-observaciones-1"
+                    type="text"
+                    value={observaciones}
+                    onChange={(e) => setObservaciones(e.target.value)}
+                    placeholder="Opcional"
+                    className="w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-semibold text-brand-ink"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {error && (

@@ -313,7 +313,7 @@ export function Piezas({ onLogout }: { onLogout?: () => void }) {
 
                 {/* Layout Desktop: Habitaciones (izquierda) + Centro de Operaciones (derecha) */}
                 <div className="xl:grid xl:grid-cols-12 xl:gap-6 items-start">
-                  {/* Cuadrícula de 8 habitaciones */}
+                  {/* Cuadrícula de habitaciones (cantidad flexible, no fija) */}
                   <div className="xl:col-span-8 space-y-3.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

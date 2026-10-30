@@ -28,9 +28,9 @@ export const pasosTourGeneral: DriveStep[] = [
   {
     element: "#tour-nav-habitaciones, #tour-nav-habitaciones-mobile",
     popover: {
-      title: "Las 8 Habitaciones en tiempo real",
+      title: "Tus Habitaciones en tiempo real",
       description:
-        "Aquí ves tus 8 piezas de un vistazo: Verde (Libre), Amarillo (Ocupada), Rojo (Falta hacer aseo) y Gris (Mantención). Al tocar una pieza puedes ver quién está o marcar su salida.",
+        "Aquí ves todas tus piezas de un vistazo: Verde (Libre), Amarillo (Ocupada), Rojo (Falta hacer aseo) y Gris (Mantención). Al tocar una pieza puedes ver quién está o marcar su salida.",
       side: "right",
       align: "start"
     }

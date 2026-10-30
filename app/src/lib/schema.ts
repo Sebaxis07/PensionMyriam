@@ -190,7 +190,17 @@ const compra_insumo = new Table({
   fecha: column.text,
   registrado_por: column.text,
   uuid_idempotente: column.text,
-  created_at: column.text
+  created_at: column.text,
+  // Migración 0024: detalle real del comprobante (proveedor, medio de
+  // pago, N° de boleta/factura, desglose neto/IVA). Todos opcionales:
+  // no toda compra trae un comprobante con ese nivel de detalle.
+  proveedor: column.text,
+  descripcion: column.text,
+  medio_pago: column.text,
+  referencia_comprobante: column.text,
+  monto_neto: column.real,
+  monto_iva: column.real,
+  observaciones: column.text
 });
 
 // Sprint 5 (HU-39): parámetros del negocio que la Administradora edita

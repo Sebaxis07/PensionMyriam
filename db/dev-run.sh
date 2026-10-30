@@ -26,8 +26,16 @@ apply_migrations() {
     # "supabase_admin" lo es); estas migraciones necesitan superusuario
     # (create extension pg_cron, alter de roles reservados como
     # authenticator/supabase_auth_admin, bypassrls).
-    docker exec -i -e PGPASSWORD="$PGPASSWORD" "$CONTAINER" \
-      psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f /dev/stdin < "$m"
+    #
+    # tr -d '\r': en Windows con core.autocrlf=true, el checkout deja
+    # los .sql con CRLF aunque el repo los guarda en LF. Postgres rompe
+    # al parsear un cuerpo plpgsql entre $$...$$ cuyo primer salto de
+    # línea es CRLF ("syntax error at or near $"), así que se limpia
+    # antes de mandarlo por stdin — inofensivo en Linux/mac, donde ya
+    # no hay \r que quitar.
+    tr -d '\r' < "$m" | \
+      docker exec -i -e PGPASSWORD="$PGPASSWORD" "$CONTAINER" \
+        psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f /dev/stdin
   done
 }
 
@@ -79,8 +87,9 @@ docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER" \
 FAIL=0
 for f in db/pgtap/*.sql; do
   echo "--- $f ---"
-  docker exec -i -e PGPASSWORD="$PGPASSWORD" "$CONTAINER" \
-    psql -U postgres -v ON_ERROR_STOP=1 -f /dev/stdin < "$f" || FAIL=1
+  tr -d '\r' < "$f" | \
+    docker exec -i -e PGPASSWORD="$PGPASSWORD" "$CONTAINER" \
+      psql -U postgres -v ON_ERROR_STOP=1 -f /dev/stdin || FAIL=1
 done
 
 echo "=== Limpiando contenedor de desarrollo ==="
