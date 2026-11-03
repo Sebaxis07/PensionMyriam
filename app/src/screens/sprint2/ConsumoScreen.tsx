@@ -8,9 +8,18 @@ import {
   type TrabajadorConsumoRow
 } from "../../features/consumo/useConsumoHoy";
 import { consumoRapido } from "../../features/consumo/consumoRapido";
-import { registrarConsumo, type TipoConsumo } from "../../features/consumo/registrarConsumo";
+import { registrarConsumo, ConsumoDuplicadoError, type TipoConsumo } from "../../features/consumo/registrarConsumo";
 import { corregirConsumo } from "../../features/consumo/corregirConsumo";
 import { useProductosExtra } from "../../features/consumo/useProductosExtra";
+import { crearProductoExtra } from "../../features/consumo/crearProductoExtra";
+import {
+  justificarDescuadre,
+  MOTIVOS_DESCUADRE,
+  ETIQUETAS_MOTIVO,
+  type MotivoDescuadre
+} from "../../features/conciliacion/justificarDescuadre";
+import { recalcularConciliacion, obtenerConciliacionDeHoy } from "../../features/conciliacion/useConciliacion";
+import { fechaHoySantiago } from "../../lib/fechaNegocio";
 import {
   armarResumenDiaTexto,
   copiarResumenDiaTexto,
@@ -34,6 +43,22 @@ import {
   LISTA_SERVICIOS_ORDENADA,
   obtenerServicioSugeridoPorHora
 } from "../../features/consumo/serviciosInfo";
+
+// Tipos que facturan por CONTRATO COMPLETO (tipo_consumo_config) y por
+// lo tanto generan fila en conciliacion_diaria — "colacion" no entra
+// acá (se factura por consumo real, nunca tiene "faltantes" que
+// justificar). Duplicado a propósito del mismo supuesto que ya deja
+// explícito el comentario de useConciliacion.ts: no hay forma de leer
+// tipo_consumo_config desde este componente sin una consulta aparte.
+const TIPOS_CON_CONCILIACION: TipoConsumo[] = ["cama_noche", "desayuno", "almuerzo", "cena"];
+
+// Nombre fijo del producto de catálogo que representa un segundo plato
+// sin costo (decisión validada con el equipo: la repetición es solo
+// una nota operativa, no cambia nada de lo facturado a la empresa,
+// porque las comidas se cobran por contrato completo, no por consumo
+// real — CLAUDE.md). Se crea solo una vez, la primera vez que alguien
+// pide una repetición.
+const NOMBRE_PRODUCTO_REPETICION = "Repetición (sin costo)";
 
 type ConsumoRecienteRow = {
   id: string;
@@ -72,6 +97,16 @@ export function ConsumoScreen({
   const [mostrarResumen, setMostrarResumen] = useState(false);
   const [avisoResumen, setAvisoResumen] = useState<{ tono: "informacion" | "exito" | "error"; texto: string } | null>(null);
   const [toastExito, setToastExito] = useState<string | null>(null);
+
+  // Modal de "quedaron faltantes" tras un registro en lote
+  const [faltantesPendientes, setFaltantesPendientes] = useState<number | null>(null);
+  const [justificandoFaltante, setJustificandoFaltante] = useState(false);
+  const [motivoFaltante, setMotivoFaltante] = useState<MotivoDescuadre>("ausencia_justificada");
+  const [supervisorFaltante, setSupervisorFaltante] = useState("");
+  const [errorFaltante, setErrorFaltante] = useState<string | null>(null);
+
+  // Repetición (segundo plato, sin costo)
+  const [pidiendoRepeticion, setPidiendoRepeticion] = useState<string | null>(null);
 
   // Catálogo de productos extra para colación
   const productosExtra = useProductosExtra();
@@ -211,9 +246,100 @@ export function ConsumoScreen({
         setToastExito(`✓ Se registraron ${exitosos} ${info.nombreCorto.toLowerCase()}(s) en lote`);
         setTimeout(() => setToastExito(null), 4000);
       }
+
+      // "Salto a alguien": si quedan personas sin esta comida registrada
+      // y el tipo factura por contrato completo, se avisa altiro para
+      // decidir si se justifica ahora o más tarde — nunca se pierde el
+      // dato, porque el recálculo de abajo deja la fila de conciliación
+      // de hoy marcada de cualquier forma (ver handleCerrarFaltantes).
+      const quedanSinRegistrar = pendientes.length - exitosos;
+      if (quedanSinRegistrar > 0 && headcount && TIPOS_CON_CONCILIACION.includes(tipoRacion)) {
+        setFaltantesPendientes(quedanSinRegistrar);
+        setMotivoFaltante("ausencia_justificada");
+        setSupervisorFaltante("");
+        setErrorFaltante(null);
+      }
+
       setSeleccionados([]);
     } finally {
       setGuardandoLote(false);
+    }
+  }
+
+  // Deja marcada la diferencia de hoy en conciliacion_diaria aunque la
+  // Administradora no justifique ahora mismo ("más tarde" no debe
+  // significar "se pierde"). Necesita conexión (recalcular_conciliacion
+  // vive en Postgres); si falla, el cron de la noche lo recalculará
+  // igual — no se le muestra un error a la Encargada por esto.
+  async function recalcularSilencioso() {
+    try {
+      await recalcularConciliacion(contratoEmpresaId, fechaHoySantiago());
+    } catch {
+      // Silencioso a propósito: no es una acción que la usuaria haya
+      // pedido explícitamente, y el cierre nocturno lo corrige igual.
+    }
+  }
+
+  async function handleCerrarFaltantesMasTarde() {
+    setFaltantesPendientes(null);
+    await recalcularSilencioso();
+  }
+
+  async function handleJustificarFaltanteAhora() {
+    if (!supervisorFaltante.trim()) {
+      setErrorFaltante("Escribe el nombre del supervisor que autorizó.");
+      return;
+    }
+    setJustificandoFaltante(true);
+    setErrorFaltante(null);
+    try {
+      await recalcularConciliacion(contratoEmpresaId, fechaHoySantiago());
+      const conciliacionId = await obtenerConciliacionDeHoy(contratoEmpresaId, fechaHoySantiago(), tipoRacion);
+      if (!conciliacionId) {
+        throw new Error("No se pudo encontrar la conciliación de hoy para este servicio. Inténtalo desde Conciliación más tarde.");
+      }
+      await justificarDescuadre(usuarioId, {
+        conciliacionDiariaId: conciliacionId,
+        motivo: motivoFaltante,
+        supervisorNombre: supervisorFaltante.trim()
+      });
+      setFaltantesPendientes(null);
+      setToastExito("✓ Motivo guardado. Queda visible en Conciliación.");
+      setTimeout(() => setToastExito(null), 4000);
+    } catch (err) {
+      setErrorFaltante(describirErrorUi(err instanceof Error ? err.message : "No se pudo guardar el motivo."));
+    } finally {
+      setJustificandoFaltante(false);
+    }
+  }
+
+  // Repetición: segundo plato sin costo (ver NOMBRE_PRODUCTO_REPETICION).
+  // Se modela como una colación a $0 para reusar el mismo mecanismo ya
+  // validado — no cambia nada de lo facturado a la empresa.
+  async function handlePedirRepeticion(trabajador: TrabajadorConsumoRow) {
+    setPidiendoRepeticion(trabajador.id);
+    setMensajesError([]);
+    try {
+      let repeticionId = productosExtra.find((p) => p.nombre === NOMBRE_PRODUCTO_REPETICION)?.id;
+      if (!repeticionId) {
+        repeticionId = await crearProductoExtra({ nombre: NOMBRE_PRODUCTO_REPETICION, precioUnitario: 0 });
+      }
+      await registrarConsumo(usuarioId, {
+        trabajadorId: trabajador.id,
+        tipoConsumo: "colacion",
+        productoExtraId: repeticionId,
+        recargo: 0
+      });
+      setToastExito(`✓ Repetición anotada para ${trabajador.nombre} (sin costo)`);
+      setTimeout(() => setToastExito(null), 3500);
+    } catch (err) {
+      if (err instanceof ConsumoDuplicadoError) {
+        setMensajesError([`${trabajador.nombre} ya tiene una colación o repetición registrada hoy. Solo se puede anotar una por día.`]);
+      } else {
+        setMensajesError([describirErrorUi(err instanceof Error ? err.message : "No se pudo anotar la repetición.")]);
+      }
+    } finally {
+      setPidiendoRepeticion(null);
     }
   }
 
@@ -821,18 +947,31 @@ export function ConsumoScreen({
                     <span>{estaGuardando ? "Guardando…" : infoServicio.verbo}</span>
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTrabajadorSeleccionado(f);
-                      setConsumoACorregir(null);
-                      setMotivoCorreccion("");
-                    }}
-                    title="Ver historial o corregir error"
-                    className="rounded-xl border border-emerald-300 bg-white px-3 py-1.5 text-sm font-bold text-emerald-800 hover:bg-emerald-50 transition"
-                  >
-                    Detalle
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTrabajadorSeleccionado(f);
+                        setConsumoACorregir(null);
+                        setMotivoCorreccion("");
+                      }}
+                      title="Ver historial o corregir error"
+                      className="rounded-xl border border-emerald-300 bg-white px-3 py-1.5 text-sm font-bold text-emerald-800 hover:bg-emerald-50 transition"
+                    >
+                      Detalle
+                    </button>
+                    {infoServicio.esComidaComedor && (
+                      <button
+                        type="button"
+                        onClick={() => handlePedirRepeticion(f)}
+                        disabled={pidiendoRepeticion === f.id}
+                        title={`Anotar repetición de ${infoServicio.nombreCorto.toLowerCase()} para ${f.nombre} (sin costo)`}
+                        className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-800 hover:bg-amber-100 transition disabled:opacity-50"
+                      >
+                        {pidiendoRepeticion === f.id ? "Anotando…" : "+ Repetición"}
+                      </button>
+                    )}
+                  </>
                 )}
 
                 {/* Botón secundario para opciones / extras */}
@@ -1084,6 +1223,86 @@ export function ConsumoScreen({
           setProductoExtraId(nuevoId);
         }}
       />
+
+      {/* Modal: quedaron personas sin esta comida registrada tras el lote */}
+      {faltantesPendientes !== null && (
+        <Dialogo
+          titulo="Personas sin registrar"
+          onCerrar={() => {
+            if (!justificandoFaltante) handleCerrarFaltantesMasTarde();
+          }}
+          className="ui-operativa fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 p-4 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md rounded-3xl border border-amber-300 bg-brand-card p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <h3 className="font-display text-lg font-bold text-brand-ink">
+                  Quedaron {faltantesPendientes} sin {infoServicio.nombreCorto.toLowerCase()}
+                </h3>
+                <p className="text-sm text-brand-ink/80 mt-0.5">
+                  La empresa se sigue facturando por el contrato completo. Puedes dejar el motivo ahora o más tarde desde Conciliación — ningún dato se pierde.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="consumoscreen-motivofaltante" className="block text-sm font-bold text-brand-ink mb-1">
+                Motivo
+              </label>
+              <select
+                id="consumoscreen-motivofaltante"
+                disabled={justificandoFaltante}
+                value={motivoFaltante}
+                onChange={(e) => setMotivoFaltante(e.target.value as MotivoDescuadre)}
+                className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-sm font-bold text-brand-ink focus:border-brand-terracotta focus:outline-none"
+              >
+                {MOTIVOS_DESCUADRE.map((m) => (
+                  <option key={m} value={m}>
+                    {ETIQUETAS_MOTIVO[m]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="consumoscreen-supervisorfaltante" className="block text-sm font-bold text-brand-ink mb-1">
+                Supervisor que autorizó <span className="text-brand-terracotta-deep">*</span>
+              </label>
+              <input
+                id="consumoscreen-supervisorfaltante"
+                type="text"
+                disabled={justificandoFaltante}
+                placeholder="Nombre del supervisor"
+                value={supervisorFaltante}
+                onChange={(e) => setSupervisorFaltante(e.target.value)}
+                className="w-full rounded-xl border border-brand-border bg-white p-2.5 text-sm text-brand-ink focus:border-brand-terracotta focus:outline-none"
+              />
+            </div>
+
+            {errorFaltante && <AvisoInterfaz tono="error">{errorFaltante}</AvisoInterfaz>}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={justificandoFaltante}
+                onClick={handleCerrarFaltantesMasTarde}
+                className="rounded-xl border border-brand-border bg-white px-4 py-2.5 text-sm font-bold text-brand-ink/80 hover:text-brand-ink"
+              >
+                Más tarde
+              </button>
+              <button
+                type="button"
+                disabled={justificandoFaltante}
+                onClick={handleJustificarFaltanteAhora}
+                className="rounded-xl bg-brand-terracotta-deep px-4 py-2.5 text-sm font-bold text-white shadow-brand disabled:opacity-50"
+              >
+                {justificandoFaltante ? "Guardando…" : "Justificar ahora"}
+              </button>
+            </div>
+          </div>
+        </Dialogo>
+      )}
     </div>
   );
 }

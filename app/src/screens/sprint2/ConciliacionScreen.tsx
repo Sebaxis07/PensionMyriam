@@ -12,6 +12,7 @@ import {
 import {
   justificarDescuadre,
   MOTIVOS_DESCUADRE,
+  ETIQUETAS_MOTIVO,
   type MotivoDescuadre
 } from "../../features/conciliacion/justificarDescuadre";
 import { fechaHoySantiago, sumarDiasYMD } from "../../lib/fechaNegocio";
@@ -24,14 +25,6 @@ import {
   IconClose,
   IconRefresh
 } from "../../components/Icons";
-
-const ETIQUETAS_MOTIVO: Record<MotivoDescuadre, string> = {
-  turno_extra: "Turno Extra",
-  almuerzo_mina: "Almuerzo en Mina",
-  corte_ruta: "Corte de Ruta",
-  ausencia_justificada: "Ausencia Justificada",
-  otro: "Otro motivo"
-};
 
 const METADATA_SERVICIOS: Record<
   string,
