@@ -78,12 +78,17 @@ select lives_ok(
 );
 
 -- 5) Dos camas con reserva futura/en curso sobre la pieza (capacidad 2).
+-- La ida y vuelta de capacidad 2->1->2 de los pasos 3-4 ya dejó una
+-- cama provisionada por el trigger de 0029 (habitacion_ajustar_camas_
+-- por_capacidad) — acá solo se completa la que falte (ON CONFLICT DO
+-- NOTHING) en vez de asumir cuáles numero ya existen.
 insert into public.cama (id, habitacion_id, numero) values
   ('50000000-0000-0000-0000-00000000d001', '40000000-0000-0000-0000-00000000d001', 1),
-  ('50000000-0000-0000-0000-00000000d002', '40000000-0000-0000-0000-00000000d001', 2);
-insert into public.reserva (id, tipo_cliente, cama_id, huesped_nombre, fecha_inicio, estado, creado_por, uuid_idempotente) values
-  ('60000000-0000-0000-0000-00000000d001', 'turista', '50000000-0000-0000-0000-00000000d001', 'Huésped de prueba 1', '2035-06-01', 'confirmada', '10000000-0000-0000-0000-00000000d001', gen_random_uuid()),
-  ('60000000-0000-0000-0000-00000000d002', 'turista', '50000000-0000-0000-0000-00000000d002', 'Huésped de prueba 2', '2035-06-01', 'confirmada', '10000000-0000-0000-0000-00000000d001', gen_random_uuid());
+  ('50000000-0000-0000-0000-00000000d002', '40000000-0000-0000-0000-00000000d001', 2)
+on conflict (habitacion_id, numero) do nothing;
+insert into public.reserva (id, tipo_cliente, cama_id, huesped_nombre, fecha_inicio, estado, creado_por, uuid_idempotente)
+  select gen_random_uuid(), 'turista', c.id, 'Huésped de prueba ' || c.numero, '2035-06-01', 'confirmada', '10000000-0000-0000-0000-00000000d001', gen_random_uuid()
+  from public.cama c where c.habitacion_id = '40000000-0000-0000-0000-00000000d001';
 
 -- 6) No se puede desactivar con reservas futuras/en curso.
 select throws_ok(
@@ -109,7 +114,7 @@ select throws_ok(
 
 -- 9) Cancelar ambas reservas y ahora sí poder desactivar.
 update public.reserva set estado = 'cancelada', motivo_cancelacion = 'prueba pgTAP cancelacion', cancelada_por = '10000000-0000-0000-0000-00000000d001', cancelada_en = now(), uuid_cancelacion = gen_random_uuid()
-  where id in ('60000000-0000-0000-0000-00000000d001', '60000000-0000-0000-0000-00000000d002');
+  where cama_id in (select id from public.cama where habitacion_id = '40000000-0000-0000-0000-00000000d001');
 
 select lives_ok(
   $$update public.habitacion set activa = false where id = '40000000-0000-0000-0000-00000000d001'$$,

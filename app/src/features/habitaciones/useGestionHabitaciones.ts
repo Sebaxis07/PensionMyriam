@@ -87,10 +87,25 @@ export function useGestionHabitaciones() {
       throw new Error(`Ya existe una pieza con el número ${datos.numero}.`);
     }
     const id = crypto.randomUUID();
-    await powersync.execute(
-      `insert into habitacion (id, numero, capacidad, estado, activa) values (?, ?, ?, 'disponible', 1)`,
-      [id, datos.numero, datos.capacidad]
-    );
+    await powersync.writeTransaction(async (tx) => {
+      await tx.execute(
+        `insert into habitacion (id, numero, capacidad, estado, activa) values (?, ?, ?, 'disponible', 1)`,
+        [id, datos.numero, datos.capacidad]
+      );
+      // Una pieza doble necesita 2 camas reservables (una para el
+      // turista que arrienda la pieza completa, otra disponible para
+      // nómina de empresa); una individual, solo 1. No hay trigger de
+      // servidor que las cree en el INSERT (colisionaría con fixtures
+      // que insertan su propia cama numero=1 — ver 0029), así que el
+      // CRUD las provisiona acá, en la misma transacción local.
+      for (let numero = 1; numero <= datos.capacidad; numero++) {
+        await tx.execute(`insert into cama (id, habitacion_id, numero) values (?, ?, ?)`, [
+          crypto.randomUUID(),
+          id,
+          numero
+        ]);
+      }
+    });
     return id;
   }, [data]);
 

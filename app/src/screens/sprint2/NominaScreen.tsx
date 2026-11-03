@@ -144,7 +144,8 @@ export function NominaScreen({
         contratoEmpresaId,
         trabajadorId: trabajadorSeleccionado.id,
         camaId,
-        nombre: trabajadorSeleccionado.nombre
+        fechaInicio: contrato?.vigencia_desde ?? fechaHoySantiago(),
+        fechaFin: contrato?.vigencia_hasta ?? undefined
       });
       setMensajeExito(`¡Listo! ${trabajadorSeleccionado.nombre} quedó en la Pieza #${habitacionNumero}.`);
       setTrabajadorSeleccionado(null);
@@ -159,7 +160,7 @@ export function NominaScreen({
   async function handleDesasignar(trabajador: TrabajadorRow) {
     setError(null);
     try {
-      await desasignarTrabajador(contratoEmpresaId, trabajador.id);
+      await desasignarTrabajador(trabajador.id);
       setMensajeExito(`Pieza liberada para ${trabajador.nombre}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo liberar la cama.");
@@ -171,7 +172,7 @@ export function NominaScreen({
     if (!confirm(`¿Eliminar a ${trabajador.nombre} de la nómina?`)) return;
     setError(null);
     try {
-      await eliminarTrabajador(contratoEmpresaId, trabajador.id);
+      await eliminarTrabajador(trabajador.id);
       setMensajeExito(`${trabajador.nombre} eliminado.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo eliminar.");
