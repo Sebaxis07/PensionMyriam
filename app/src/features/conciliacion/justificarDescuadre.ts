@@ -4,6 +4,14 @@ import { powersync } from "../../lib/powersync";
 export const MOTIVOS_DESCUADRE = ["turno_extra", "almuerzo_mina", "corte_ruta", "ausencia_justificada", "otro"] as const;
 export type MotivoDescuadre = (typeof MOTIVOS_DESCUADRE)[number];
 
+export const ETIQUETAS_MOTIVO: Record<MotivoDescuadre, string> = {
+  turno_extra: "Turno Extra",
+  almuerzo_mina: "Almuerzo en Mina",
+  corte_ruta: "Corte de Ruta",
+  ausencia_justificada: "Ausencia Justificada",
+  otro: "Otro motivo"
+};
+
 export const JustificacionSchema = z.object({
   conciliacionDiariaId: z.string().uuid(),
   motivo: z.enum(MOTIVOS_DESCUADRE),

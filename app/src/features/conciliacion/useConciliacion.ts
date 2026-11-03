@@ -79,6 +79,33 @@ export async function generarCamaNoche(fecha: string): Promise<number> {
 }
 
 /**
+ * Busca el id de conciliacion_diaria de HOY para un tipo puntual —
+ * se usa justo después de recalcularConciliacion() para poder
+ * justificar al instante (ConsumoScreen), sin esperar a que la
+ * réplica local de PowerSync bajara la fila recién creada/actualizada
+ * en el servidor. Por eso consulta directo contra PostgREST
+ * (supabase.from), no powersync.getAll.
+ */
+export async function obtenerConciliacionDeHoy(
+  contratoEmpresaId: string,
+  fecha: string,
+  tipo: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("conciliacion_diaria")
+    .select("id")
+    .eq("contrato_empresa_id", contratoEmpresaId)
+    .eq("fecha", fecha)
+    .eq("tipo", tipo)
+    .maybeSingle();
+  if (error) {
+    console.error("Error al buscar la conciliación de hoy:", error);
+    return null;
+  }
+  return data?.id ?? null;
+}
+
+/**
  * Concilia un período completo o rango de fechas en Postgres en una sola operación.
  */
 export async function conciliarPeriodo(
