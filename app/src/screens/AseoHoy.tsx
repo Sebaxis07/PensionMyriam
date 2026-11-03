@@ -89,6 +89,9 @@ from habitacion h
 left join active_checkin ac on ac.habitacion_id = h.id
 left join ultimo_checkout uc on uc.habitacion_id = h.id
 left join aseos_resumen ar on ar.habitacion_id = h.id
+-- CAMBIO-01: una pieza desactivada ya no está en servicio, no debe
+-- aparecer en la lista de aseo de hoy.
+where h.activa = 1
 order by h.numero asc
 `;
 

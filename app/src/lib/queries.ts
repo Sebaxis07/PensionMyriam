@@ -61,6 +61,11 @@ from habitacion h
 left join reserva_hoy rh on rh.habitacion_id = h.id
 left join active_checkin ac on ac.habitacion_id = h.id
 left join aseo_hoy ah on ah.habitacion_id = h.id
+-- Una pieza desactivada (CAMBIO-01) se retiró del día a día: no debe
+-- aparecer en el mapa semanal, en la grilla de Piezas ni en aseo. El
+-- CRUD de Ajustes consulta la tabla habitacion directo (sin este
+-- filtro) para poder reactivarla.
+where h.activa = true
 order by h.numero
 `;
 

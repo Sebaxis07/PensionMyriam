@@ -27,7 +27,11 @@ const habitacion = new Table({
   numero: column.integer,
   capacidad: column.integer,
   estado: column.text,
-  motivo_mantencion: column.text
+  motivo_mantencion: column.text,
+  // CAMBIO-01: CRUD de habitaciones en Ajustes (solo Administradora).
+  activa: column.integer, // SQLite: boolean como 0/1
+  creado_por: column.text,
+  created_at: column.text
 });
 
 const cama = new Table({

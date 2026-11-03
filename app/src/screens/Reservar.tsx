@@ -80,9 +80,10 @@ export function Reservar({
   const [mensajeBloqueo, setMensajeBloqueo] = useState<string | null>(null);
   const [reservaConfirmada, setReservaConfirmada] = useState<DatosVoucherTurista | null>(null);
 
-  // 1. Consultar todas las habitaciones
+  // 1. Consultar todas las habitaciones activas (CAMBIO-01: una pieza
+  // desactivada no debe ofrecerse para una reserva nueva).
   const { data: habitacionesRaw, isLoading: cargandoHabitaciones } = useQuery<HabitacionItem>(
-    "select id, numero, capacidad, estado, motivo_mantencion from habitacion order by numero asc"
+    "select id, numero, capacidad, estado, motivo_mantencion from habitacion where activa = 1 order by numero asc"
   );
   const habitaciones = habitacionesRaw ?? [];
 

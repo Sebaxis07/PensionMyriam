@@ -48,7 +48,8 @@ export function DashboardAdmin({
     metricasConciliacion,
     metricasOcupacion,
     diasSemana,
-    matrizRackSemanal
+    matrizRackSemanal,
+    piezas
   } = useDashboardAdminMetricas();
 
   const [avisoCompra, setAvisoCompra] = useState(false);
@@ -420,6 +421,7 @@ export function DashboardAdmin({
         <MatrizRackSemanal
           diasSemana={diasSemana}
           matriz={matrizRackSemanal}
+          piezas={piezas}
           onIrACalendario={onIrACalendario}
         />
       </div>

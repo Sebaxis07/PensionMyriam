@@ -21,7 +21,7 @@
 -- `INSERT … ON CONFLICT DO UPDATE`. Ver el comentario de
 -- db/migrations/0021_privilegios_minimos.sql.
 begin;
-select plan(11);
+select plan(12);
 
 -- =====================================================================
 -- 1. TRUNCATE: en ninguna tabla, para ninguno de los dos roles de la app
@@ -36,15 +36,32 @@ select is_empty(
 );
 
 -- =====================================================================
--- 2. DELETE: tampoco, en ninguna tabla
+-- 2. DELETE: tampoco, salvo la ÚNICA excepción deliberada agregada por
+-- 0028_habitaciones_crud.sql (CAMBIO-01) — "eliminar de verdad" una
+-- habitación sin ningún historial asociado. No es el mismo hueco que
+-- esta prueba detectó originalmente: ahí el privilegio alcanzaba CUALQUIER
+-- fila porque la policy era FOR ALL sin distinguir verbos; acá hay dos
+-- barreras explícitas antes de que un DELETE real alcance una fila:
+-- la policy `habitacion_delete` (solo `app.es_administradora()`) y el
+-- chequeo de historial dentro de `eliminar_habitacion()`. `anon` sigue
+-- sin NINGÚN privilegio de DELETE.
 -- =====================================================================
 select is_empty(
   $$ select table_name::text
        from information_schema.role_table_grants
       where table_schema = 'public'
-        and grantee in ('authenticated', 'anon')
+        and grantee = 'anon'
         and privilege_type = 'DELETE' $$,
-  'ninguna tabla debe conceder DELETE: en las de policy FOR ALL (justificaciones, check-in, aseo) el privilegio sí alcanzaba filas'
+  'anon sigue sin privilegio de DELETE en ninguna tabla'
+);
+select is(
+  (select array_agg(table_name::text order by table_name)
+     from information_schema.role_table_grants
+    where table_schema = 'public'
+      and grantee = 'authenticated'
+      and privilege_type = 'DELETE'),
+  array['habitacion'],
+  'authenticated solo tiene DELETE en habitacion (CAMBIO-01); ninguna otra tabla debe concederlo'
 );
 
 -- =====================================================================
