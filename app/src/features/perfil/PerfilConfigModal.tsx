@@ -16,10 +16,12 @@ import {
   IconSearch,
   IconFileText,
   IconClipboardCheck,
-  IconUsers
+  IconUsers,
+  IconBed
 } from "../../components/Icons";
 import { useConfigPension, type ConfigPension } from "./useConfigPension";
 import { GestionCuentasTab } from "../usuarios/GestionCuentasTab";
+import { HabitacionesTab } from "../habitaciones/HabitacionesTab";
 import { LARGO_MINIMO_PASSWORD } from "../usuarios/useGestionUsuarios";
 import {
   solicitarSupresionDatos,
@@ -30,7 +32,7 @@ import {
 import { supabase } from "../../lib/supabase";
 import { powersync } from "../../lib/powersync";
 
-export type TabActivoPerfil = "perfil" | "cuentas" | "pension" | "privacidad" | "preferencias" | "sistema";
+export type TabActivoPerfil = "perfil" | "cuentas" | "habitaciones" | "pension" | "privacidad" | "preferencias" | "sistema";
 
 interface PerfilConfigModalProps {
   onCerrar: () => void;
@@ -390,6 +392,21 @@ export function PerfilConfigModal({
             </button>
           )}
 
+          {esAdmin && (
+            <button
+              type="button"
+              aria-pressed={tab === "habitaciones"} onClick={() => setTab("habitaciones")}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-sm font-bold transition-all border-b-2 whitespace-nowrap ${
+                tab === "habitaciones"
+                  ? "border-brand-terracotta text-brand-terracotta-deep bg-brand-sand-light/50 font-extrabold"
+                  : "border-transparent text-brand-ink/80 hover:text-brand-ink"
+              }`}
+            >
+              <IconBed className="h-3.5 w-3.5 text-brand-terracotta" />
+              <span>Habitaciones</span>
+            </button>
+          )}
+
           <button
             type="button"
             aria-pressed={tab === "pension"} onClick={() => setTab("pension")}
@@ -553,6 +570,11 @@ export function PerfilConfigModal({
           {tab === "cuentas" && esAdmin && (
             <GestionCuentasTab usuarioActual={usuario} />
           )}
+
+          {/* ========================================================= */}
+          {/* PESTAÑA: HABITACIONES (SOLO ADMINISTRADORA) — CAMBIO-01    */}
+          {/* ========================================================= */}
+          {tab === "habitaciones" && esAdmin && <HabitacionesTab />}
 
           {/* ========================================================= */}
           {/* PESTAÑA 2: PENSIÓN Y BANCO                                 */}

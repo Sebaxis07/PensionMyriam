@@ -4,6 +4,7 @@ import {
   CeldaRackSemanal,
   EstadoCeldaRack
 } from "./useDashboardAdminMetricas";
+import type { PiezaRow } from "../../lib/queries";
 import {
   IconBed,
   IconBriefcase,
@@ -15,6 +16,7 @@ import { BotonExplicacion } from "../../components/BotonExplicacion";
 interface MatrizRackSemanalProps {
   diasSemana: DiaSemanaInfo[];
   matriz: Record<number, CeldaRackSemanal[]>;
+  piezas: PiezaRow[];
   onIrACalendario?: () => void;
 }
 
@@ -52,9 +54,16 @@ const CONFIG_ESTADOS: Record<
 export function MatrizRackSemanal({
   diasSemana,
   matriz,
+  piezas,
   onIrACalendario
 }: MatrizRackSemanalProps) {
   const [celdaSeleccionada, setCeldaSeleccionada] = useState<CeldaRackSemanal | null>(null);
+
+  // Todas las piezas activas que existan en la BD, ordenadas por
+  // número, sin ningún límite fijo (antes era un [1..8] hardcodeado —
+  // CAMBIO-01). `piezas` ya viene filtrada a activa=true desde
+  // QUERY_PIEZAS.
+  const piezasOrdenadas = [...piezas].sort((a, b) => a.numero - b.numero);
 
   return (
     <div className="ui-operativa flex flex-col justify-between rounded-3xl border border-brand-border/80 bg-brand-card p-5 md:p-6 shadow-card">
@@ -116,16 +125,23 @@ export function MatrizRackSemanal({
               ))}
             </div>
 
-            {/* Filas: Piezas 1 a 8 */}
+            {/* Filas: todas las piezas activas que existan en la BD */}
             <div className="space-y-1.5">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((numPieza) => {
+              {piezasOrdenadas.map((pieza) => {
+                const numPieza = pieza.numero;
                 const celdas = matriz[numPieza] || [];
                 return (
                   <div key={numPieza} className="grid grid-cols-8 gap-1.5 items-center">
-                    {/* Etiqueta de la Pieza */}
-                    <div className="flex items-center justify-center rounded-xl bg-brand-sand/60 py-2 border border-brand-border/60">
-                      <span className="font-display font-black text-sm text-brand-ink">
+                    {/* Etiqueta de la Pieza, con su capacidad debajo */}
+                    <div
+                      className="flex flex-col items-center justify-center rounded-xl bg-brand-sand/60 py-1.5 border border-brand-border/60"
+                      title={`Pieza ${numPieza} · capacidad ${pieza.capacidad} ${pieza.capacidad === 1 ? "persona" : "personas"}`}
+                    >
+                      <span className="font-display font-black text-sm text-brand-ink leading-none">
                         P{numPieza}
+                      </span>
+                      <span className="text-[10px] font-semibold text-brand-ink/70 leading-none mt-0.5">
+                        {pieza.capacidad} pers.
                       </span>
                     </div>
 

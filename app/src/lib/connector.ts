@@ -189,6 +189,29 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
             await database.execute("update habitacion set estado = ? where id = ?", [habitacion!.estado, cama!.habitacion_id]);
           }
 
+          // CAMBIO-01: un PATCH de habitacion puede rechazarse por reglas
+          // de negocio del servidor (desactivar con reservas futuras,
+          // reducir capacidad por debajo de camas ocupadas, editar sin
+          // ser Administradora). Sin esto, el dato local optimista
+          // (p. ej. activa=false) se queda pegado para siempre aunque el
+          // servidor nunca lo aceptó — la pieza se vería "desactivada" en
+          // este teléfono sin estarlo de verdad. Se revierte al valor
+          // real leyéndolo del servidor, igual que ya hace este conector
+          // para checkin/reserva.
+          if (op.table === "habitacion" && op.op === UpdateType.PATCH) {
+            const { data: real, error: errorHabitacion } = await supabase
+              .from("habitacion")
+              .select("numero,capacidad,estado,motivo_mantencion,activa")
+              .eq("id", op.id)
+              .maybeSingle();
+            if (!errorHabitacion && real) {
+              await database.execute(
+                "update habitacion set numero = ?, capacidad = ?, estado = ?, motivo_mantencion = ?, activa = ? where id = ?",
+                [real.numero, real.capacidad, real.estado, real.motivo_mantencion, real.activa ? 1 : 0, op.id]
+              );
+            }
+          }
+
           // Rechazo permanente genuino (HU-42): no queda solo en consola.
           // Se guarda en la tabla local operacion_rechazada para que la
           // Administradora pueda revisarlo después — el dato no
